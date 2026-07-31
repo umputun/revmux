@@ -1,11 +1,14 @@
 package ui
 
 import (
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -50,6 +53,10 @@ func TestNew(t *testing.T) {
 	assert.Equal(t, stateWaiting, m.agents[0].state)
 	assert.Equal(t, 0, m.view.tab, "the combined view is focused by default")
 	assert.NotNil(t, m.combined)
+	assert.NotNil(t, m.md, "the document renderer is wired at construction, so nothing downstream guards nil")
+	assert.Equal(t, m.style.profile, m.md.profile, "and it is profiled against the same surface as the frame")
+	assert.Equal(t, mdStyle(m.style.dark), m.md.style,
+		"and takes its palette from the same background, or a light terminal gets the dark one")
 
 	t.Run("an empty roster still renders", func(t *testing.T) {
 		empty := New(ModelConfig{})
@@ -214,6 +221,131 @@ func TestModel_Update(t *testing.T) {
 		next, cmd := m.Update("something else")
 		assert.Nil(t, cmd)
 		assert.Equal(t, m.View(), next.(Model).View())
+	})
+}
+
+// mdWidths is every width the document renderer currently holds a renderer for.
+func mdWidths(m Model) []int {
+	out := make([]int, 0, len(m.md.renderers))
+	for w := range m.md.renderers {
+		out = append(out, w)
+	}
+	slices.Sort(out)
+	return out
+}
+
+func TestModel_Update_resizeEvictsDocuments(t *testing.T) {
+	doc := InputDocument{Label: "scope", Path: "input/scope.md", Markdown: true,
+		Content: "| col | other |\n|---|---|\n| a | b |\n\n" + strings.Repeat("word ", 60)}
+	sized := func(t *testing.T, cols int) Model {
+		t.Helper()
+		m := New(ModelConfig{Roster: roster(), Inputs: []InputDocument{doc}})
+		return feed(t, m, tea.WindowSizeMsg{Width: cols, Height: 40}, CompletedMsg{Report: report()})
+	}
+	sentinel := func(m Model, width int) mdCacheKey {
+		k := mdCacheKey{key: "sentinel", width: width}
+		m.md.cache[k] = []string{"x"}
+		return k
+	}
+
+	t.Run("a width change drops the renderers and the cache", func(t *testing.T) {
+		m := sized(t, 100)
+		require.NotEmpty(t, m.md.cache, "the completed report renders its documents")
+		mark := sentinel(m, 100)
+
+		m = feed(t, m, tea.WindowSizeMsg{Width: 60, Height: 40})
+		assert.NotContains(t, m.md.cache, mark, "the old width is not kept around")
+		for k := range m.md.cache {
+			assert.LessOrEqual(t, k.width, 60, "nothing cached at a width the terminal no longer has")
+		}
+		for _, w := range mdWidths(m) {
+			assert.LessOrEqual(t, w, 60)
+		}
+		for _, line := range m.paneLines() {
+			assert.LessOrEqual(t, lipgloss.Width(line), 60, "and the pane re-wrapped to the new width")
+		}
+	})
+
+	t.Run("a height-only resize keeps the cache", func(t *testing.T) {
+		m := sized(t, 100)
+		mark := sentinel(m, 100)
+
+		m = feed(t, m, tea.WindowSizeMsg{Width: 100, Height: 20})
+		assert.Contains(t, m.md.cache, mark,
+			"a drag-resize delivers a stream of these and maxScroll re-renders every document on each one")
+	})
+
+	t.Run("a repeated identical resize keeps the cache", func(t *testing.T) {
+		m := sized(t, 100)
+		mark := sentinel(m, 100)
+
+		m = feed(t, m, tea.WindowSizeMsg{Width: 100, Height: 40}, tea.WindowSizeMsg{Width: 100, Height: 40})
+		assert.Contains(t, m.md.cache, mark)
+	})
+
+	t.Run("switching panes keeps both widths resident", func(t *testing.T) {
+		m := sized(t, 100)
+		require.Equal(t, []int{100 - mdIndent}, mdWidths(m), "the browser renders at the padded width")
+
+		m = feed(t, m, press("i"))
+		require.Equal(t, []int{100 - mdIndent, 100}, mdWidths(m), "and the input viewer at the full one")
+
+		m = feed(t, m, press("i"), press("i"))
+		assert.Equal(t, []int{100 - mdIndent, 100}, mdWidths(m), "switching panes is not a width change")
+	})
+
+	t.Run("a large report resizes without leaving the old width behind", func(t *testing.T) {
+		rep := finding.Report{}
+		for i := range 60 {
+			rep.Findings = append(rep.Findings, finding.Finding{
+				ID: "f" + strconv.Itoa(i), File: "app/ui/view.go", Line: i, Severity: finding.Major, Confidence: 70,
+				Title: "finding " + strconv.Itoa(i), Body: "- one\n- two\n\n" + strings.Repeat("prose ", 40),
+				Fix: "```go\nx := 1\n```",
+			})
+		}
+		m := feed(t, New(ModelConfig{Roster: roster()}),
+			tea.WindowSizeMsg{Width: 120, Height: 40}, CompletedMsg{Report: rep})
+		require.Len(t, m.md.cache, 2*len(rep.Findings), "one body and one fix per finding")
+
+		m = feed(t, m, tea.WindowSizeMsg{Width: 70, Height: 40})
+		assert.Equal(t, []int{70 - mdIndent}, mdWidths(m), "only the live width survives")
+		assert.Len(t, m.md.cache, 2*len(rep.Findings), "and the report is cached again rather than re-rendered per line")
+		for _, line := range m.paneLines() {
+			assert.LessOrEqual(t, lipgloss.Width(line), 70)
+		}
+	})
+}
+
+func TestModel_Update_resizeKeepsScrollAndFilter(t *testing.T) {
+	t.Run("scroll stays in range when a wider terminal shortens the document", func(t *testing.T) {
+		m := browsed(t, report())
+		m = feed(t, m, tea.WindowSizeMsg{Width: 40, Height: len(roster()) + chromeLines + 5}, press("g"))
+		require.Positive(t, m.view.scroll, "the report is longer than the pane at 40 columns")
+
+		m = feed(t, m, tea.WindowSizeMsg{Width: 160, Height: len(roster()) + chromeLines + 5})
+		assert.LessOrEqual(t, m.view.scroll, m.maxScroll(), "a shorter document cannot leave the offset past its end")
+	})
+
+	t.Run("maxScroll counts rendered lines, not source lines", func(t *testing.T) {
+		m := New(ModelConfig{Roster: roster(), Inputs: []InputDocument{
+			{Label: "scope", Path: "input/scope.md", Markdown: true, Content: strings.Repeat("word ", 200)},
+		}})
+		m = feed(t, m, tea.WindowSizeMsg{Width: 60, Height: 20}, press("i"))
+
+		assert.Equal(t, max(0, len(m.paneLines())-m.paneHeight()), m.maxScroll())
+		assert.Greater(t, len(m.paneLines()), 1, "one source line renders as many wrapped ones")
+	})
+
+	t.Run("the filter still narrows after a resize", func(t *testing.T) {
+		m := browsed(t, report())
+		m = feed(t, m, press("/"), press("s"), press("t"), press("a"), press("l"), press("e"), press("enter"))
+		require.Len(t, m.findings.matches, 1)
+
+		m = feed(t, m, tea.WindowSizeMsg{Width: 60, Height: 40})
+		require.Len(t, m.findings.matches, 1, "a resize does not touch the query")
+		pane := strings.Join(m.findings.render(m.view.width()), "\n")
+		assert.Contains(t, pane, "stale comment")
+		assert.NotContains(t, pane, "unchecked error", "and no cached body from another finding is served")
 	})
 }
 

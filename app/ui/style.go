@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 )
 
 // The palette. Adaptive rather than fixed: a reviewer running a light terminal gets legible muted
@@ -30,6 +31,12 @@ type styles struct {
 	warn   lipgloss.Style
 	bad    lipgloss.Style
 	run    lipgloss.Style
+
+	// what the surface can do, read from the same renderer the styles above are built against. The
+	// document renderer is handed both rather than profiling the terminal a second time: two answers to
+	// "what can this terminal do" can disagree, and then the frame and the panes inside it disagree.
+	profile termenv.Profile
+	dark    bool
 }
 
 // newStyles builds the palette against the surface the frame is actually written to.
@@ -56,6 +63,9 @@ func newStyles(w io.Writer) styles {
 		warn:   r.NewStyle().Foreground(colWarn),
 		bad:    r.NewStyle().Foreground(colErr),
 		run:    r.NewStyle().Foreground(colAccent),
+
+		profile: r.ColorProfile(),
+		dark:    r.HasDarkBackground(),
 	}
 }
 

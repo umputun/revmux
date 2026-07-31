@@ -5,9 +5,10 @@ import (
 	"strings"
 )
 
-// Inline markdown a model writes into a finding's body. Both are common in review prose: paths,
-// identifiers and flags arrive in backticks, and the emphasis a model puts on the one sentence that
-// matters arrives in asterisks. Left raw, the reader sees the punctuation instead of the effect.
+// Inline markdown a model writes into a line of prose — a log entry, a finding's title, its location
+// or its attribution. Both spans are common there: paths, identifiers and flags arrive in backticks,
+// and the emphasis a model puts on the one sentence that matters arrives in asterisks. Left raw, the
+// reader sees the punctuation instead of the effect.
 var (
 	mdCode = regexp.MustCompile("`([^`\n]+)`")
 	mdBold = regexp.MustCompile(`\*\*([^*\n]+)\*\*`)
@@ -37,8 +38,9 @@ func heading(level int, text string) string {
 }
 
 // markdown renders the inline markdown in one line of model prose. Block constructs are deliberately
-// not handled: a finding's body is a paragraph or two, and the browser already supplies the structure
-// around it.
+// not handled: every caller left here holds a single line — a log event, an agent's scrollback row,
+// the browser's title, location and attribution rows, and the document renderer's own per-line
+// fallback. What is a document rather than a line goes to mdRenderer instead.
 func markdown(s string) string { return markdownWithin(s, "") }
 
 // markdownWithin renders inline markdown that sits inside an enclosing style, re-opening that style

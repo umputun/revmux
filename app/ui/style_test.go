@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,6 +23,22 @@ func TestStyles_profiledAgainstTheGivenSurface(t *testing.T) {
 		m := New(ModelConfig{Roster: roster(), Output: &bytes.Buffer{}})
 		assert.NotContains(t, m.rule(), "\x1b[", "a plain buffer reports no color, so none is emitted")
 		assert.NotContains(t, m.header(), "\x1b[", "and the header follows the same renderer")
+	})
+
+	t.Run("the same surface answers for the document renderer", func(t *testing.T) {
+		st := newStyles(&bytes.Buffer{})
+		assert.Equal(t, termenv.Ascii, st.profile, "a plain buffer reports no color")
+		assert.NotEmpty(t, newMDRenderer(st.profile, st.dark).render("# heading", 40))
+	})
+
+	t.Run("a nil surface still reports a usable profile and background", func(t *testing.T) {
+		st := newStyles(nil)
+		// the default renderer, which profiles os.Stdout — the stream a color decision must never be
+		// taken against, and the reason production always passes the tty in
+		assert.Equal(t, lipgloss.DefaultRenderer().ColorProfile(), st.profile)
+		assert.Equal(t, lipgloss.DefaultRenderer().HasDarkBackground(), st.dark)
+		lines := newMDRenderer(st.profile, st.dark).render("# heading", 40)
+		assert.Contains(t, plainMD(lines), "# heading", "which is the path every test takes")
 	})
 }
 

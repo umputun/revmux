@@ -30,6 +30,24 @@ type findingsState struct {
 	matches []int
 	query   string
 	typing  bool
+	md      *mdRenderer
+}
+
+// mdIndent is what the browser puts in front of a rendered document. glamour's own document margin
+// supplies two more columns, so a body lines up with the four-column pad indent gives the single-line
+// rows beside it.
+const mdIndent = 2
+
+// findingRow is a finding's index into rows, and the one place the format of its cache keys is
+// written down — a key built in pieces along the call chain hides which index it names.
+//
+// That index is the finding's own, never its position in the filtered slice: keyed on the latter,
+// typing a filter makes position 0 a different finding at the same width and the browser is served
+// the previous one's body. rows never mutates after newFindings, so the index is stable.
+type findingRow int
+
+func (row findingRow) key(part string) mdKey {
+	return mdKey("finding:" + strconv.Itoa(int(row)) + ":" + part)
 }
 
 // severityRank orders the browser's groups; anything unrecognized sorts last rather than being
@@ -39,15 +57,20 @@ var severityRank = map[finding.Severity]int{finding.Critical: 0, finding.Major: 
 // newFindings builds the browser over a finished report, worst findings first. Open questions,
 // pre-existing and immaterial findings are deliberately not listed: the report on stdout carries
 // them, and mixing them in would put unranked material above a critical bug.
-func newFindings(rep finding.Report) *findingsState {
-	f := &findingsState{rows: slices.Clone(rep.Findings)}
+//
+// The document renderer arrives here rather than being threaded through render, rowLines and detail,
+// which would push two of them to a third parameter for no gain. The browser holds no Model reference
+// and must not gain one.
+func newFindings(rep finding.Report, md *mdRenderer) *findingsState {
+	f := &findingsState{rows: slices.Clone(rep.Findings), md: md}
 	slices.SortStableFunc(f.rows, func(a, b finding.Finding) int { return f.rank(a.Severity) - f.rank(b.Severity) })
 	f.filter("")
 	return f
 }
 
-// filter narrows the list to findings whose title, file or body carry q, case-insensitively. The
-// cursor returns to the top, since the row it sat on may no longer be listed.
+// filter narrows the list to findings whose title, file or body carry q, case-insensitively. It holds
+// no position of its own: the pane owns the scrolling, and editFilter is what returns it to the top of
+// a narrowed report.
 func (f *findingsState) filter(q string) {
 	f.query = q
 	needle := strings.ToLower(q)
@@ -59,15 +82,6 @@ func (f *findingsState) filter(q string) {
 	}
 }
 
-// visible is what the browser lists under the active filter.
-func (f *findingsState) visible() []finding.Finding {
-	out := make([]finding.Finding, 0, len(f.matches))
-	for _, i := range f.matches {
-		out = append(out, f.rows[i])
-	}
-	return out
-}
-
 // findingsPane is the findings browser, which holds nothing until the report arrives.
 func (m Model) findingsPane() []string {
 	if m.findings == nil {
@@ -77,24 +91,29 @@ func (m Model) findingsPane() []string {
 }
 
 // render lays the report out the way the rendered report does: a severity heading, then each finding
-// as its title, where it is, its body, its fix and its attribution. Every row wraps — a title runs long
-// often enough, and clipping it takes the confidence marker off the end with it.
+// as its title, where it is, its body, its fix and its attribution. Nothing is clipped: the single-line
+// rows wrap — a title runs long often enough, and clipping it takes the confidence marker off the end
+// with it — and the body and the fix are rendered as documents, wrapped by the document renderer.
 func (f *findingsState) render(width int) []string {
 	lines := []string{}
 	if f.typing || f.query != "" {
 		lines = append(lines, f.prompt())
 	}
 
-	vis := f.visible()
-	if len(vis) == 0 {
+	if len(f.matches) == 0 {
 		return append(lines, f.empty())
 	}
-	for i, v := range vis {
-		if i == 0 || v.Severity != vis[i-1].Severity {
+	// walking matches rather than a second slice built beside it, so what reaches detail is the
+	// finding's own index into rows — see findingRow
+	var prev finding.Severity
+	for n, row := range f.matches {
+		v := f.rows[row]
+		if n == 0 || v.Severity != prev {
 			lines = append(lines, f.heading(v.Severity))
 		}
+		prev = v.Severity
 		lines = append(lines, f.rowLines(v, width)...)
-		lines = append(lines, f.detail(v, width)...)
+		lines = append(lines, f.detail(v, findingRow(row), width)...)
 	}
 	return lines
 }
@@ -149,23 +168,44 @@ func (f *findingsState) rowLines(v finding.Finding, width int) []string {
 }
 
 // detail is the rest of the report's entry, in the report's own order: where it is, the body, the fix,
-// then the attribution. It is what the reader came for, so it is shown by default and folded away on
-// request rather than the other way round.
-func (f *findingsState) detail(v finding.Finding, width int) []string {
+// then the attribution. It is what the reader came for, so all of it is on screen without a keystroke.
+//
+// The body and the fix are markdown documents a model wrote, so they are rendered as documents — a
+// list is a list and a fenced snippet is a code block. They are rendered **separately**, never composed
+// into one document: an unbalanced fence in a body would otherwise swallow the fix and the attribution
+// under it.
+//
+// row names the finding's cache entries through findingRow.key. It is a named type rather than a bare
+// int for the same reason mdKey exists at all: beside width it would otherwise be two adjacent
+// parameters the compiler lets a caller swap. Where it is and the attribution stay single-line rows
+// on the wrapping path.
+func (f *findingsState) detail(v finding.Finding, row findingRow, width int) []string {
 	out := f.indent(v.Location(), width)
 	if v.Body != "" {
 		out = append(out, "")
-		out = append(out, f.indent(v.Body, width)...)
+		out = append(out, f.document(row.key("body"), v.Body, width)...)
 	}
 	if v.Fix != "" {
+		// the label is its own markdown line rather than a "fix: " prefix: prefixed, a fix opening with
+		// a fence or a bullet stops being a block and renders as literal punctuation
 		out = append(out, "")
-		out = append(out, f.indent("fix: "+v.Fix, width)...)
+		out = append(out, f.document(row.key("fix"), "fix:\n"+v.Fix, width)...)
 	}
 	if meta := f.meta(v); meta != "" {
 		out = append(out, "")
 		out = append(out, f.indent(meta, width)...)
 	}
 	return append(out, "")
+}
+
+// document renders one of a finding's markdown parts, padded so it lines up with the single-line rows
+// around it. The pad goes to the renderer rather than being applied here: it is what the renderer
+// takes off the pane width so the pad and the document together still fit, and it is part of what the
+// renderer caches, which this pane needs because it re-lays the whole report on every frame.
+// glamour's own margin is left where it is, since stripping it cuts into a code row that opens with a
+// background sequence.
+func (f *findingsState) document(key mdKey, src string, width int) []string {
+	return f.md.lines(mdDoc{key: key, src: src, width: width, indent: mdIndent})
 }
 
 func (f *findingsState) meta(v finding.Finding) string {

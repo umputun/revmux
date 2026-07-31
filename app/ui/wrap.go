@@ -16,12 +16,17 @@ const minWrapCols = 20
 // than under whatever head names it. The first row carries head; the rest are indented to head's width
 // so the entry reads as one thing and the columns stay scannable.
 //
-// **There is one of these, and there were three.** The combined log, an agent's scrollback, the
-// findings browser, input viewer Markdown prose and the plain `--no-tui` renderer all wrap the same
-// way, and three separate copies of this loop had already drifted — two measured display width and one
-// counted runes, so the same text broke in different places depending on which pane it landed in. Two
-// implementations of one rule diverging is this project's most reliable defect; the fix is for there
-// to be one. It is exported for `app/progress.go`, which is the fifth caller and lives in `package main`.
+// **There is one of these, and there were three.** Everything on the inline path — the combined log,
+// an agent's scrollback, the findings browser's title, location and attribution rows, and the plain
+// `--no-tui` renderer — wraps the same way, and three separate copies of this loop had already drifted
+// — two measured display width and one counted runes, so the same text broke in different places
+// depending on which pane it landed in. Two implementations of one rule diverging is this project's
+// most reliable defect; the fix is for there to be one. It is exported for `app/progress.go`, which
+// lives in `package main`.
+//
+// Document panes do not come here. The input viewer and a finding's body and fix are markdown
+// documents rendered by mdRenderer, which wraps them itself; this stays the line-breaker for text that
+// is one line per entry.
 //
 // Clipping instead loses the end of exactly the lines worth reading: a narrated step, a command, a
 // finding's body. A pane is where a reader went looking for detail, so it is the last place to throw

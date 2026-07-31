@@ -98,6 +98,7 @@ type Model struct {
 	agents   []*agentState
 	combined *combinedState
 	findings *findingsState
+	md       *mdRenderer // documents rendered for the input viewer and the findings browser
 	stage    string
 	now      time.Time // the newest event time seen, which is what every row's elapsed is measured against
 	found    tally
@@ -155,7 +156,9 @@ func (m Model) tick() tea.Cmd {
 
 // New builds the model over the resolved roster, one row per agent in roster order.
 func New(cfg ModelConfig) Model {
-	m := Model{cfg: cfg, style: newStyles(cfg.Output), combined: &combinedState{},
+	style := newStyles(cfg.Output)
+	m := Model{cfg: cfg, style: style, combined: &combinedState{},
+		md:   newMDRenderer(style.profile, style.dark),
 		view: viewState{cols: defaultCols, rows: defaultRows, inputs: navState{scroll: -1}}}
 	m.agents = make([]*agentState, 0, len(cfg.Roster))
 	for _, spec := range cfg.Roster {
@@ -172,6 +175,13 @@ func (m Model) Init() tea.Cmd { return m.next() }
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
+		// only when the width actually moved. Both renderer maps are keyed by width, so a resize already
+		// renders at the new width and this bounds memory rather than fixing anything — while a blanket
+		// drop on every message would throw the cache away on a height-only resize, and maxScroll below
+		// re-renders every document through glamour on the spot.
+		if msg.Width != m.view.cols {
+			m.md.reset()
+		}
 		m.view.cols, m.view.rows = msg.Width, msg.Height
 		m.view.scroll = min(m.view.scroll, m.maxScroll())
 		return m, nil
@@ -207,7 +217,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // to quit: package main writes the report once the reader is done with the terminal, and the agent
 // tabs stay reachable so he can check why a finding was raised.
 func (m *Model) complete(rep finding.Report) {
-	m.findings = newFindings(rep)
+	m.findings = newFindings(rep, m.md)
 	// **the header's count is rebuilt from the report, not left as the last event's.** Two stages after
 	// synthesis change the set without emitting a findings event — verify moves rejected findings into
 	// Immaterial and PreExisting, and --min-confidence filters before the report is handed over — so a

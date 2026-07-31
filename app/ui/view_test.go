@@ -218,7 +218,7 @@ func TestTabToken(t *testing.T) {
 		// unreachable — silently, and only on a run with enough panes to get that far
 		for _, b := range []key.Binding{keys.quit, keys.nextTab, keys.prevTab, keys.up, keys.down,
 			keys.pageUp, keys.pageDown, keys.top, keys.bottom, keys.findings, keys.inputs,
-			keys.expand, keys.startFilter} {
+			keys.startFilter} {
 			for _, k := range b.Keys() {
 				assert.Equal(t, -1, m0.tabIndex(k), "key %q is bound already and must not also name a tab", k)
 			}

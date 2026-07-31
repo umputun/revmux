@@ -29,6 +29,15 @@ func report() finding.Report {
 	}
 }
 
+// listed is what the browser lists under the active filter, in the order render walks it.
+func listed(f *findingsState) []finding.Finding {
+	out := make([]finding.Finding, 0, len(f.matches))
+	for _, i := range f.matches {
+		out = append(out, f.rows[i])
+	}
+	return out
+}
+
 // browsed is a model with the report already in it, sized so the findings pane shows exactly 5 lines.
 func browsed(t *testing.T, rep finding.Report) Model {
 	t.Helper()
@@ -48,7 +57,7 @@ func TestModel_complete(t *testing.T) {
 	assert.True(t, m.browsing())
 
 	t.Run("worst findings first", func(t *testing.T) {
-		vis := m.findings.visible()
+		vis := listed(m.findings)
 		require.Len(t, vis, 3)
 		assert.Equal(t, []string{"f2", "f3", "f1"}, []string{vis[0].ID, vis[1].ID, vis[2].ID})
 	})
@@ -152,7 +161,8 @@ func TestFindingsState_rendersTheWholeReport(t *testing.T) {
 	assert.Contains(t, pane, "\x1b[1m\x1b[36m### unchecked error  [95]\x1b[39m\x1b[22m", "the title, as the report's ### heading")
 	assert.Contains(t, pane, "    app/main.go:42-48", "where it is, on the line under it")
 	assert.Contains(t, pane, "    the write error is dropped", "the body, indented under that")
-	assert.Contains(t, pane, "    so a short write reads as success", "keeping its own line breaks")
+	assert.Contains(t, pane, "so a short write reads as success",
+		"as a rendered document, so a soft line break folds into the paragraph rather than breaking it")
 	assert.Contains(t, pane, "    fix: check it")
 	assert.Contains(t, pane, "    sources: bugs+impl, codex | lenses: bugs | verdict: confirmed")
 
@@ -174,6 +184,107 @@ func TestFindingsState_rendersTheWholeReport(t *testing.T) {
 	})
 }
 
+func TestFindingsState_rendersBodyAndFixAsDocuments(t *testing.T) {
+	t.Run("a list in a body renders as a list", func(t *testing.T) {
+		rep := finding.Report{Findings: []finding.Finding{{
+			File: "a.go", Line: 1, Severity: finding.Major, Title: "listy",
+			Body: "two things go wrong here:\n\n- the first one\n- the second one"}}}
+		pane := plainMD(browsed(t, rep).findingsPane())
+		assert.Contains(t, pane, "• the first one")
+		assert.Contains(t, pane, "• the second one")
+		assert.NotContains(t, pane, "- the first one", "the raw bullet marker is consumed")
+	})
+
+	t.Run("a fenced snippet in a fix renders as a code block", func(t *testing.T) {
+		rep := finding.Report{Findings: []finding.Finding{{
+			File: "a.go", Line: 1, Severity: finding.Major, Title: "fenced",
+			Fix: "```go\nif err != nil { return err }\n```"}}}
+		pane := plainMD(browsed(t, rep).findingsPane())
+		assert.Contains(t, pane, "fix:", "the label survives as its own line rather than as a prefix")
+		assert.Contains(t, pane, "if err != nil { return err }")
+		assert.NotContains(t, pane, "```", "and the fence delimiters are consumed")
+	})
+
+	t.Run("an unclosed fence in a body cannot swallow the fix and the attribution", func(t *testing.T) {
+		rep := finding.Report{Findings: []finding.Finding{{
+			File: "a.go", Line: 1, Severity: finding.Major, Title: "ragged",
+			Body: "look at this:\n\n```go\nfunc x() {}", Fix: "close the fence",
+			Sources: []string{"bugs"}, Verdict: finding.Confirmed}}}
+		pane := plainMD(browsed(t, rep).findingsPane())
+		assert.Contains(t, pane, "func x() {}")
+		assert.Contains(t, pane, "fix: close the fence", "the fix is its own document, so the fence never reaches it")
+		assert.Contains(t, pane, "sources: bugs | verdict: confirmed")
+	})
+
+	t.Run("angle-bracket text survives in a body and in a fix", func(t *testing.T) {
+		rep := finding.Report{Findings: []finding.Finding{{
+			File: "a.go", Line: 1, Severity: finding.Major, Title: "angles",
+			Body: "the round is <tasks-dir>/<task>/<run>/input/scope.md and the type is List<String>",
+			Fix:  "spell it <binary>[/<model>][:<effort>]\n\n```go\nfunc f(x <T>) {}\n```"}}}
+		pane := plainMD(browsed(t, rep).findingsPane())
+		assert.Contains(t, pane, "<tasks-dir>/<task>/<run>/input/scope.md")
+		assert.Contains(t, pane, "List<String>")
+		assert.Contains(t, pane, "<binary>[/<model>][:<effort>]")
+		assert.Contains(t, pane, "func f(x <T>) {}", "a fenced snippet keeps its angle brackets literally")
+		assert.NotContains(t, pane, "&lt;", "and no entity reaches the screen")
+	})
+
+	t.Run("a row names its own cache entries", func(t *testing.T) {
+		assert.Equal(t, mdKey("finding:3:body"), findingRow(3).key("body"))
+		assert.Equal(t, mdKey("finding:3:fix"), findingRow(3).key("fix"))
+		assert.NotEqual(t, findingRow(3).key("body"), findingRow(30).key("body"),
+			"the row is part of the key, not a prefix of another row's")
+	})
+
+	t.Run("filtering does not serve another finding's cached body", func(t *testing.T) {
+		rep := finding.Report{Findings: []finding.Finding{
+			{File: "alpha.go", Line: 1, Severity: finding.Major, Title: "first", Body: "the alpha body"},
+			{File: "beta.go", Line: 2, Severity: finding.Major, Title: "second", Body: "the beta body"},
+		}}
+		m := browsed(t, rep)
+		require.Contains(t, plainMD(m.findingsPane()), "the alpha body")
+
+		narrowed := feed(t, m, press("/"), press("beta"), press("enter"))
+		pane := plainMD(narrowed.findingsPane())
+		assert.Contains(t, pane, "the beta body")
+		assert.NotContains(t, pane, "the alpha body",
+			"index 0 is a different finding under the filter, and the cache is keyed on the row rather than on it")
+	})
+
+	t.Run("a tab-indented snippet fits the pane", func(t *testing.T) {
+		// a tab measures one cell to lipgloss and up to eight to the terminal, so an unexpanded row is
+		// measured short, passes the wrap untouched and is drawn well past the pane's edge. Models write
+		// Go tab-indented, so this is the ordinary case rather than a corner
+		rep := finding.Report{Findings: []finding.Finding{{
+			File: "a.go", Line: 1, Severity: finding.Major, Title: "tabby",
+			Body: "the guard is missing:\n\n```go\nif err != nil {\n\t\t\t\t\treturn fmt.Errorf(\"write: %w\", err)\n}\n```",
+			Fix:  "```go\nfunc f() {\n\t\t\t\t\tclose(w)\n}\n```"}}}
+		m := feed(t, browsed(t, rep), tea.WindowSizeMsg{Width: 60, Height: 40})
+		lines := m.findingsPane()
+		// the expanded indent is what pushes it past the width, so it arrives broken up rather than whole
+		require.Contains(t, plainMD(lines), "Errorf", "the snippet is on screen at all")
+		require.Contains(t, plainMD(lines), "close(w)", "and so is the fix's")
+		for i, l := range lines {
+			assert.NotContains(t, l, "\t", "line %d still carries a raw tab: %q", i, l)
+			assert.LessOrEqual(t, lipgloss.Width(l), 60, "line %d: %q", i, l)
+		}
+	})
+
+	t.Run("a rendered document still fits the pane", func(t *testing.T) {
+		rep := finding.Report{Findings: []finding.Finding{{
+			File: "a.go", Line: 1, Severity: finding.Major, Title: "wide",
+			Body: "| a wide header | another wide header |\n|---|---|\n| " + strings.Repeat("x", 50) + " | y |",
+			Fix:  "```\n" + strings.Repeat("z", 200) + "\n```"}}}
+		m := browsed(t, rep)
+		for _, width := range []int{60, 80, 200} {
+			m = feed(t, m, tea.WindowSizeMsg{Width: width, Height: 40})
+			for i, l := range m.findingsPane() {
+				assert.LessOrEqual(t, lipgloss.Width(l), width, "width %d, line %d: %q", width, i, l)
+			}
+		}
+	})
+}
+
 func TestFindingsState_filter(t *testing.T) {
 	// a fresh model per case: Model copies share one findingsState pointer, so a query typed in one
 	// subtest would still be there in the next
@@ -188,7 +299,7 @@ func TestFindingsState_filter(t *testing.T) {
 
 	m := querying(t)
 	require.Len(t, m.findings.matches, 1)
-	assert.Equal(t, "pane clipping", m.findings.visible()[0].Title, "the path matches, not only the title")
+	assert.Equal(t, "pane clipping", listed(m.findings)[0].Title, "the path matches, not only the title")
 
 	t.Run("enter accepts the query and hands the keys back", func(t *testing.T) {
 		done := feed(t, querying(t), press("enter"))
@@ -244,7 +355,7 @@ func TestFindingsState_filter(t *testing.T) {
 	t.Run("the filter is case-insensitive", func(t *testing.T) {
 		up := feed(t, browsed(t, report()), press("/"), press("UNCHECKED"), press("enter"))
 		require.Len(t, up.findings.matches, 1)
-		assert.Equal(t, "unchecked error", up.findings.visible()[0].Title)
+		assert.Equal(t, "unchecked error", listed(up.findings)[0].Title)
 	})
 
 	t.Run("a filter key outside the browser is not swallowed", func(t *testing.T) {
