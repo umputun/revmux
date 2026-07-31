@@ -34,6 +34,14 @@ opens the findings browser. Quitting is the reader's decision, or `package main`
 there is nothing to browse. The wait for the program to return is what keeps the report off stdout until the
 terminal is free — writing it while the TUI still owns the screen interleaves it with the final frame.
 
+**Only `ctrl+c` ends a review that is still running.**
+`q` quits once the report is in and is inert until then; `esc` never quits at all — it abandons a filter and
+it leaves the input viewer, and that is the whole of it.
+A reader who hits esc to back out of something, or q expecting a pager, would otherwise lose the view of a
+live run, which is the one thing this binary exists to keep.
+The `ctrl+c` check sits at the top of `key`, ahead of the filter editor that treats every other key as text,
+so a half-typed query is never a trap.
+
 ### Output streams
 
 Render to the **tty**, never to stdout. stdout belongs to the report alone.
@@ -81,18 +89,39 @@ cover both.
   **Every pane renders the markdown a model writes and wraps what will not fit** — the combined log,
   each agent's scrollback and the findings browser alike, every row of it including the browser's
   headings and titles.
+  **There are two renderers, and which one a pane gets follows from what the pane holds.**
+  A pane whose unit is one line — the combined log, an agent's scrollback, the browser's title,
+  location and attribution rows, and the plain `--no-tui` renderer — renders inline spans with
+  `markdown()` and breaks lines with `Wrap`.
+  A pane whose unit is a *document* — an input file, and a finding's body and fix — renders through
+  glamour in `mdrender.go`, which does its own wrapping.
+  **The document path has a size ceiling, `mdMaxDoc`, and above it the inline path takes over.**
+  glamour's cost is structural rather than content-dependent: its `Document` style carries a color, so
+  every emitted row is padded to the wrap width with one escape pair per trailing space and the output
+  runs many times the source. The render is synchronous on the bubbletea `Update` goroutine and the
+  result is then held by the `lines` cache, so a large input both stalls the loop — during which the
+  event channel drops — and is retained. The snapshotter's own 1 MiB-per-file limit was sized for a
+  line-at-a-time renderer and does not bound either cost, which is why the ceiling lives here.
+  The fallback is the same inline renderer the log panes use, so an oversized input stays fully
+  readable rather than blank or truncated.
+  **The log panes keep the inline path deliberately.** They are one line per event with a timestamp and
+  an agent prefix; handing that to a document renderer costs exactly the one-line-per-event view that
+  makes the combined log the situational-awareness pane it exists to be. Do not "finish the migration".
   **There is one `Wrap`, in `app/ui`, and there were three.** Separate copies in the log, the browser
   and the plain renderer had already diverged — two measured display width and one counted runes, so
-  the same text broke differently depending on which pane it landed in. The input viewer now shares it
-  for Markdown prose, and it is exported because `app/progress.go` is the fifth caller and lives in
+  the same text broke differently depending on which pane it landed in. It stays the one line-breaker
+  for every caller on the inline path, and it is exported because `app/progress.go` lives in
   `package main`.
   It walks runes, never bytes: trimming a byte at a time while measuring display cells exits inside a
   multi-byte rune, and since markdown rendering runs first the text also carries ANSI, so a byte cut
   can land inside an escape and spill it as literal characters. A model writes backticks and emphasis into
   its prose whichever pane it lands in, and a forensic view is the last place to throw the end of a
   line away, since it is where a reader went looking for the detail.
-  Headings keep their hashes rather than having them stripped: the pane is showing a markdown document
-  and a reader with the report open beside it should see the same thing.
+  Headings keep their hashes on **both** paths rather than having them stripped: the pane is showing a
+  markdown document and a reader with the report open beside it should see the same thing.
+  glamour's own style breaks that at exactly one level — it renders h1 as a padded band while h2 and h3
+  keep their prefixes — so `mdStyle` restores `H1.Prefix` and drops the band rather than trading the
+  rule away.
   Long entries wrap with a hanging indent rather than being clipped: a narrated step or a command is
   the informative part of the log and the part most likely to run long, and continuation rows carry no
   timestamp and no agent name so the entry still reads as one thing. The plain renderer wraps the same
@@ -103,9 +132,14 @@ cover both.
 - `i` switches the detail area to the startup input snapshot while the status table keeps updating.
   Input tabs are scope, goal, profile and each context file in lexical relative-path order.
   Missing optional inputs keep a tab that says they were not provided.
-  Markdown files render as Markdown and other safe UTF-8 files render verbatim.
-  Fenced code blocks hide their delimiter rows and indent their body as code.
-  `i` or `esc` restores the review tab and scroll position; `q` and `ctrl+c` still quit.
+  Markdown files render as documents through glamour and other safe UTF-8 files render verbatim.
+  Tables, rules, links, emphasis and fenced code all render as themselves; tabs are expanded per line
+  before the document is handed over, since `expandTabs` carries a running column that a whole-document
+  call would never reset on a newline.
+  **The stop it expands at is four for a document and eight for a verbatim row, and the two are not
+  interchangeable.** Which one a caller wants, and what breaks when it takes the other, is written on
+  the two constants in `tabs.go`.
+  `i` or `esc` restores the review tab and scroll position.
   Review and input navigation are independent.
   Completion does not interrupt an open input; it makes findings the review tab restored on return.
   The snapshot never refreshes and is limited to 1 MiB per file, 8 MiB total, 128 context files and
@@ -134,9 +168,21 @@ cover both.
 - **The header degrades rather than being clipped, longest part first.** `statusTable` clips it, and
   the completion notice is the rightmost thing on the line — so the severity breakdown, the longest
   thing on it, would push "complete, closing in 5s" off the edge exactly when it matters. It gives up
-  the breakdown, then the agent count, then the stage, then the total, and clips only under all of that.
+  the breakdown, then the quit hint, then the agent count, then the stage, then the total, and clips only
+  under all of that.
   The total outlives the stage: a reader who has lost the stage still learns whether anything was found,
   while a stage name with no count says only that something is happening.
+  **While the run is live and the width allows, the header ends in `ctrl+c to quit`.** That is the only key
+  that ends a running review, and q and esc are inert until the report is in — so a reader who reaches for
+  either sees a frame that does not change, and the header is the one thing on screen that can tell him why.
+  It outlives the breakdown rather than being spent first, because the two degrade differently: the total
+  that replaces the breakdown keeps the worst severity in its color and the report restates the split at the
+  end, while the hint has no shorter form and nothing else on screen carries it. On the shipped
+  `comprehensive` roster that is the difference between a hint that survives a normal 80-column pane and one
+  that disappears the moment the first finding lands — the full line is 86 columns, the same line with the
+  total alone plus the hint is 55, and the input viewer adds 28 more to both.
+  The hint goes at the third rung, so below roughly 55 columns in review mode the header carries run state
+  only. The completion notice that replaces it sits outside the ladder entirely.
   **The count is rebuilt from the final report, not left as the last event's.** Verify moves rejected
   findings into `Immaterial` and `PreExisting` and `--min-confidence` filters, both without emitting a
   findings event, so a header fed only by events names severities the browser below it does not list.
@@ -154,13 +200,19 @@ cover both.
   the review behind a keystroke and added state that had to be kept in step with the pane's own
   scrolling. What is left is the pane's scrolling and a filter. It opens at the top, not at the newest
   line — that is right for a log and wrong for a report.
-- **A finding opens showing its body, fix and attribution — folding is what the key does, not opening.**
-  The summary line is an index entry, and a browser that lists nothing else puts the whole review behind
-  one keypress per row. The fold is keyed on the finding rather than on its row, so narrowing the filter
-  cannot fold a stranger.
-- The browser also renders the inline markdown a model writes into a finding — backticked spans and
-  `**emphasis**`. Raw ANSI, per the trap below: these are inline spans inside a line lipgloss later
-  clips, so a nested lipgloss render would end in a reset that clears the enclosing style.
+  **Every finding is on screen showing its body, fix and attribution, and there is no key that hides
+  any of it.** A summary line is an index entry, and a browser that lists nothing else puts the whole
+  review behind one keypress per row.
+- **A finding's body and fix are documents, and they are rendered separately.** A model writes lists,
+  tables and fenced snippets into them, so they go through glamour rather than the inline renderer.
+  Never compose the two into one document with the attribution under them: an unbalanced fence in a body
+  would swallow everything below it.
+  Each is cached on the finding's index into `rows`, never on its index into the filtered slice —
+  keyed on the latter, typing a filter serves the previous finding's body at the same width.
+- The browser's own rows — the severity heading, the title line, the location and the attribution —
+  stay on the inline path and keep their raw ANSI, per the trap below: these are inline spans inside a
+  line lipgloss later clips, so a nested lipgloss render would end in a reset that clears the enclosing
+  style.
 
 ### lipgloss and ANSI traps
 
@@ -170,9 +222,43 @@ cover both.
   Never call `lipgloss.NewStyle().Render()` for an inline element inside a lipgloss-rendered parent.
 - As built, that leaves **lipgloss doing measuring and clipping only, never color**: `lipgloss.Width` to size
   the status column and `MaxWidth(...).Render` to clip a pane line, because both have to count display cells
-  while ignoring the ANSI a colored line carries. Every color in this package is raw SGR.
+  while ignoring the ANSI a colored line carries. Every color this package paints itself is raw SGR.
+  **The one carve-out is glamour's output**, which arrives already colored and is passed through
+  untouched: it is a whole document rather than a span inside a styled line, so its own resets close
+  nothing but themselves.
   lipgloss's default renderer also reads its color profile from **stdout**, which is not where the TUI
   writes, so a color decision made through it would be taken against the wrong stream.
+- **glamour reads stdout too, and only on one path.** `getDefaultStyle` consults `os.Stdout` and
+  `termenv.HasDarkBackground` when the style is `AutoStyle`; an explicit style name skips it entirely.
+  So the renderer is always built with `WithStyles` and `WithColorProfile` and never with
+  `WithAutoStyle` or `WithEnvironmentConfig`.
+  Both facts come from the one lipgloss renderer `newStyles` already builds against the tty, which is
+  why `styles` carries `profile` and `dark` rather than a second renderer being built in `New`: two
+  answers to "what can this terminal do" can disagree, and then the frame and the panes inside it do.
+  With `ModelConfig.Output` nil — which happens only in tests — both fall back to
+  `lipgloss.DefaultRenderer()` and are therefore taken against stdout. Production always passes the tty,
+  so that is a caveat of the test path, not a defect.
+  **`HasDarkBackground` is a terminal round-trip, not a lookup**: termenv puts the tty in raw mode,
+  writes OSC 11 and CSI 6n, reads the reply back and discards everything before the first ESC — so it
+  can swallow a keystroke already sitting in the buffer. `newStyles` runs it once at construction,
+  before the bubbletea program owns the terminal, which is the only moment where that is safe. This is
+  the one place in this package that talks to the terminal at all, and it stays a single call in
+  `newStyles` rather than being reached for again from anywhere else.
+  **glamour's h1 needs a second override the background choice does not cover.** Both of its styles
+  spell h1 as color 228 on background 63; `mdStyle` clears the band to keep the markdown hash, so it
+  clears the foreground with it, or a light terminal draws near-white text on white.
+- **glamour deletes raw HTML, and CommonMark calls far more things raw HTML than a reader does.**
+  `ansi.NewRenderContext` hardcodes a bluemonday `StrictPolicy` and every inline and block raw-HTML node
+  goes through it, so `<task>`, `<T>` and `<binary>` are stripped out of a rendered pane with no marker
+  that anything was there — a path template or a type parameter disappears mid-sentence.
+  The inline path keeps that text verbatim, so the two renderers would disagree about what survives, and
+  a forensic view silently dropping text is worse than clipping it.
+  `mdRenderer.escapeHTML` entity-escapes those spans ahead of the render, so glamour prints them instead.
+  **The spans come from a goldmark parse, never from a scan for angle brackets.** Escaping every `<`
+  reaches into fenced and indented code, where an entity is literal text and `&lt;` is what a reader
+  gets; escaping `>` with it turns a blockquote marker into text. A raw-HTML node is none of those by
+  construction — goldmark has already ruled out the code span, the code block, the autolink and the
+  marker. glamour exposes no option to disable the stripper, so the source side is the only lever.
 - The agent-name painter is `prompt.AgentSpec.Paint`, not a helper here.
   Both renderers call it, which is what makes one agent one color in the TUI and under `--no-tui`.
 - Pane rendering and viewport padding emit plain spaces after a reset, so themed panes show the terminal's
@@ -208,7 +294,7 @@ cover both.
 ### Receivers
 
 Keep receivers consistent per type.
-A value receiver on a state sub-struct copies cursor and filter state on every render, which is both
+A value receiver on a state sub-struct copies scroll and filter state on every render, which is both
 wasteful and a source of "why did my mutation vanish" bugs.
 Mutating and reading methods on the same state struct should both take pointers.
 

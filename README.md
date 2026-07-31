@@ -504,7 +504,7 @@ The runtime knobs below also read from the config file, under the same name as t
 | `--max-parallel=<n>` | `max-parallel` | `4` | how many agents run at once |
 | `--verify-groups=<n>` | `verify-groups` | `6` | cap on the number of verifier groups |
 | `--tasks-dir=<dir>` | `tasks-dir` | `./.revmux/tasks` | root directory holding task directories |
-| `--auto-exit=<d>` | `auto-exit` | `0s` | close the terminal UI this long after the report arrives; `0` leaves it open until a key is pressed |
+| `--auto-exit=<d>` | `auto-exit` | `0s` | close the terminal UI this long after the report arrives; 0 never closes it |
 | `--profile=<name>` | `profile` | `comprehensive` | profile naming the roster to run |
 
 `--task` and `--run` are both required for a review, and neither is a config key: a config file naming the
@@ -614,11 +614,15 @@ above minor was found.
 
 Tab `1 all` is the combined chronological view and is focused by default; the tabs after it are per-agent
 full-detail scrollback. On completion the model switches to the findings browser, and the
-agent tabs stay reachable so a reader can check why a finding was raised.
+agent tabs stay reachable so a reader can check why a finding was raised. Each finding's body and fix render
+as markdown documents, so a list or a fenced snippet a model wrote reads as one.
 
 Press `i` to replace those panes with the inputs captured when the TUI started. The status table remains
 visible, and the input tabs show `scope`, `goal`, `profile`, then each file under `context/`.
-Markdown files use the TUI's Markdown rendering; other safe UTF-8 files are shown as text. Press `i` or
+Markdown files render as documents — tables, rules, lists, links, emphasis and fenced code all render as
+themselves rather than as raw markers, up to 64 KiB per file; a larger one falls back to the line-at-a-time
+rendering the log panes use, which shows the same text without the block layout. Other safe UTF-8 files are
+shown as text. Press `i` or
 `esc` to return to the same review pane and scroll position. If the review completes while an input is
 open, the document stays on screen and the return goes to the findings browser.
 
@@ -634,13 +638,16 @@ runs do not read an input snapshot.
 | `1`-`9`, then a letter | focus that pane directly; the token is shown on the tab, and letters already bound to something else are skipped |
 | `f` | jump to the findings browser |
 | `i` | show the startup input snapshot, or return to the review panes |
-| `↑` `↓`, `k` `j` | scroll, or move the cursor in the browser |
+| `↑` `↓`, `k` `j` | scroll |
 | `pgup` `pgdn`, `ctrl+b` `ctrl+f` | page |
 | `home` `end`, `g` `G` | top, bottom |
-| `enter` | fold a finding down to its summary, or open it back up |
 | `/` | filter findings; `enter` accepts, `esc` clears |
-| `esc` | return from the input viewer; otherwise quit |
-| `q`, `ctrl+c` | quit |
+| `esc` | return from the input viewer, or abandon a filter; never quits |
+| `q` | quit, once the report is in |
+| `ctrl+c` | quit, at any point |
+
+Only `ctrl+c` ends a review that is still running. `q` waits for the report, so a reader who reaches for it
+as a pager key does not lose the view of a live run, and `esc` keeps its two jobs and never quits.
 
 Quitting stops watching the run, it does not stop the run: the report is still written to stdout when the
 pipeline finishes.
