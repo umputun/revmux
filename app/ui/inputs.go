@@ -12,7 +12,12 @@ func (m Model) inputLines() []string {
 	return m.inputLinesAt(m.view.tab)
 }
 
+// inputLinesAt is one input tab laid out whole, and it runs the document renderer's layout pass around
+// it for the same reason reviewPaneLines does: a verbatim file, an empty one and a missing one render
+// no document, and a pane that runs no pass sweeps nothing another pane left.
 func (m Model) inputLinesAt(tab int) []string {
+	m.md.beginFrame()
+	defer m.md.endFrame()
 	if tab < 0 || tab >= len(m.cfg.Inputs) {
 		return []string{"no such input"}
 	}
@@ -51,7 +56,8 @@ func (m Model) verbatimInput(text string) []string {
 // markdownInput renders one input document through glamour, cached per tab and width. It reads the
 // content off the tab rather than taking it: the tab is what names the cache entry, so a caller
 // handing over the two separately can name one tab's entry and fill it with another's. Tab expansion
-// is the renderer's, behind that cache and shared with the findings browser.
+// is the renderer's, behind that cache and shared with the findings browser. The pass this runs inside
+// is inputLinesAt's, since a tab holding no markdown is still a pass.
 func (m Model) markdownInput(tab int) []string {
 	return m.md.lines(mdDoc{key: mdKey("input:" + strconv.Itoa(tab)), src: m.cfg.Inputs[tab].Content, width: m.view.width()})
 }

@@ -104,6 +104,14 @@ cover both.
   line-at-a-time renderer and does not bound either cost, which is why the ceiling lives here.
   The fallback is the same inline renderer the log panes use, so an oversized input stays fully
   readable rather than blank or truncated.
+  **Every pane runs a layout pass — `mdRenderer.beginFrame` and a deferred `endFrame`, from `reviewPaneLines` and `inputLinesAt` — and that includes the panes rendering no document at all.**
+  `endFrame` is the only place the bound evicts anything: it drops everything the pass that is closing did not read, and only while the cache is over `mdMaxCache`.
+  `reset` is the other way an entry leaves, and it is a different thing — the cache key carries the width, so the old entries stay valid and it throws them away anyway, to bound what a resize leaves behind rather than to correct anything.
+  Eviction sits at a pass boundary rather than at an insertion because a pass is not made of inserts — the browser re-lays the same report on every repaint, so a pass narrowed to findings it has already rendered is entirely cache hits, and one whose filter matches nothing asks for no document at all.
+  Scoping the pass to the two renderers that do render documents is the same hole one level up: the log panes, an agent's scrollback, a verbatim file and an empty tab would run none, so nothing would sweep what the browser left, and an oversized report would stay resident for as long as the reader sat on a log.
+  Sweeping on the way **in** rather than on the way out is that hole once more: the first log layout would keep the report as the pass that had just finished, and only a second layout would drop it — and after a completed run with no auto-exit, a keypress can be the last message the model sees.
+  A new pane laid out anywhere other than those two entry points has to run a pass, and a pane that does not is a retention bug nothing will report.
+  The closing pass's own working set is the floor and may carry the cache past `mdMaxCache`, because every entry taken from the pass still using it is re-rendered on the next repaint and taken again on the one after — one pane's set is bounded by its own content, and that loop is bounded by nothing.
   **The log panes keep the inline path deliberately.** They are one line per event with a timestamp and
   an agent prefix; handing that to a document renderer costs exactly the one-line-per-event view that
   makes the combined log the situational-awareness pane it exists to be. Do not "finish the migration".

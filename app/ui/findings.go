@@ -94,6 +94,11 @@ func (m Model) findingsPane() []string {
 // as its title, where it is, its body, its fix and its attribution. Nothing is clipped: the single-line
 // rows wrap — a title runs long often enough, and clipping it takes the confidence marker off the end
 // with it — and the body and the fix are rendered as documents, wrapped by the document renderer.
+//
+// It walks every finding it is showing on every repaint, and the documents it reads are that pass's
+// working set — a narrowed filter or another pane makes the next pass read fewer of them, or none,
+// which is exactly what eviction is looking for. The pass itself is run by reviewPaneLines rather than
+// here, since a pane that renders no document has to close this one.
 func (f *findingsState) render(width int) []string {
 	lines := []string{}
 	if f.typing || f.query != "" {

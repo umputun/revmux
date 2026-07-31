@@ -120,6 +120,35 @@ func TestModel_inputLines_verbatimAndNotice(t *testing.T) {
 	})
 }
 
+func TestModel_inputLinesAt_isOnePassPerLayout(t *testing.T) {
+	docs := []InputDocument{
+		{Label: "scope", Path: "input/scope.md", Markdown: true, Content: "# scope\n\nsome prose"},
+		{Label: "goal", Path: "input/goal.md", Markdown: true, Content: "# goal\n\nmore prose"},
+		{Label: "data.json", Path: "input/context/data.json", Content: `{"verbatim":true}`},
+		{Label: "empty", Path: "input/context/empty.md", Markdown: true},
+	}
+	m := New(ModelConfig{Inputs: docs})
+	m.view.mode, m.view.cols = modeInputs, 60
+
+	require.NotEmpty(t, m.inputLinesAt(0))
+	first := m.md.frame
+	require.NotEmpty(t, m.inputLinesAt(1))
+	require.Equal(t, first+1, m.md.frame, "one tab laid out is exactly one pass, whatever it holds")
+	require.Len(t, m.md.cache, 2)
+
+	// the pane the reader leaves is what sweeps the one he left, so a tab that renders no document at
+	// all has to be a pass too — a verbatim file and an empty tab are both that case
+	pastBound(m.md, mdCacheKey{key: "input:1", width: 60})
+	require.NotEmpty(t, m.inputLinesAt(2))
+	assert.Empty(t, m.md.cache, "a verbatim tab renders nothing and still sweeps both markdown tabs")
+
+	require.NotEmpty(t, m.inputLinesAt(0))
+	require.Len(t, m.md.cache, 1)
+	pastBound(m.md, mdCacheKey{key: "input:0", width: 60})
+	require.NotEmpty(t, m.inputLinesAt(3))
+	assert.Empty(t, m.md.cache, "and so does an empty one")
+}
+
 func TestModel_inputLines_nonMarkdownStaysVerbatim(t *testing.T) {
 	m := New(ModelConfig{Inputs: []InputDocument{{
 		Label: "notes.txt", Path: "input/context/notes.txt",
@@ -232,7 +261,13 @@ func TestModel_inputLines_emptyFile(t *testing.T) {
 }
 
 func TestModel_inputLines_missingTab(t *testing.T) {
-	m := New(ModelConfig{})
-	m.view.mode = modeInputs
+	m := New(ModelConfig{Inputs: []InputDocument{{Label: "scope", Path: "input/scope.md", Markdown: true,
+		Content: "# scope\n\nsome prose"}}})
+	m.view.mode, m.view.cols = modeInputs, 60
+	require.NotEmpty(t, m.inputLinesAt(0))
+	pastBound(m.md, mdCacheKey{key: "input:0", width: 60})
+
+	m.view.tab = 7
 	assert.Equal(t, []string{"no such input"}, m.inputLines())
+	assert.Empty(t, m.md.cache, "the close is deferred, so the tab that returns early still ends its pass")
 }

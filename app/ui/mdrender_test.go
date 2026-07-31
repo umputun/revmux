@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"maps"
+	"slices"
 	"strings"
 	"testing"
 
@@ -25,6 +27,29 @@ var mdProfiles = []struct {
 	profile termenv.Profile
 }{
 	{"ascii", termenv.Ascii}, {"ansi", termenv.ANSI}, {"ansi256", termenv.ANSI256}, {"truecolor", termenv.TrueColor},
+}
+
+// pastBound puts the cache over its limit by charging the excess to one entry, so the next pass
+// boundary evicts with the map and the counter still agreeing. Forcing cached alone leaves the two
+// apart, and eviction subtracts what the entries actually hold.
+func pastBound(r *mdRenderer, k mdCacheKey) {
+	over := mdMaxCache + 1
+	e := r.cache[k]
+	r.cached -= e.size
+	e.size = over - r.cached
+	r.cache[k] = e
+	r.cached = over
+}
+
+// pass is one pane laid out whole: it opens, reads the documents that pane holds, and closes. That is
+// the shape reviewPaneLines and inputLinesAt give the renderer, and passing no document is the pane
+// that renders none.
+func pass(r *mdRenderer, docs ...mdDoc) {
+	r.beginFrame()
+	defer r.endFrame()
+	for _, d := range docs {
+		r.lines(d)
+	}
 }
 
 // sumLen is the bytes a rendered slice holds, which is what the cache bounds itself by.
@@ -53,7 +78,7 @@ func TestMDRenderer_linesCaches(t *testing.T) {
 		require.NotEmpty(t, first)
 		require.Len(t, r.cache, 1)
 
-		r.cache[mdCacheKey{key: "input:0", width: 40}] = []string{"sentinel"}
+		r.cache[mdCacheKey{key: "input:0", width: 40}] = mdCacheEntry{lines: []string{"sentinel"}}
 		assert.Equal(t, []string{"sentinel"}, r.lines(mdDoc{key: "input:0", src: "hello there", width: 40}),
 			"the second call must not re-render")
 	})
@@ -81,7 +106,7 @@ func TestMDRenderer_linesCaches(t *testing.T) {
 		r := testMDRenderer()
 		out := r.lines(mdDoc{key: "finding:0:body", src: "the body", width: 40, indent: mdIndent})
 		require.NotEmpty(t, out)
-		assert.Equal(t, out, r.cache[mdCacheKey{key: "finding:0:body", width: 40}],
+		assert.Equal(t, out, r.cache[mdCacheKey{key: "finding:0:body", width: 40}].lines,
 			"the browser re-lays the whole report every frame, so the pad cannot sit outside the cache")
 		for i, l := range out {
 			assert.True(t, strings.HasPrefix(l, strings.Repeat(" ", mdIndent)), "line %d: %q", i, l)
@@ -89,17 +114,74 @@ func TestMDRenderer_linesCaches(t *testing.T) {
 		}
 	})
 
-	t.Run("the cache is dropped once it holds too much", func(t *testing.T) {
+	t.Run("what a pass did not read is dropped when that pass ends", func(t *testing.T) {
 		r := testMDRenderer()
-		r.lines(mdDoc{key: "input:0", src: "first document", width: 40})
-		require.Len(t, r.cache, 1)
+		pass(r, mdDoc{key: "input:0", src: "first document", width: 40})
 		require.Positive(t, r.cached)
+		pastBound(r, mdCacheKey{key: "input:0", width: 40})
 
-		r.cached = mdMaxCache
-		out := r.lines(mdDoc{key: "input:1", src: "second document", width: 40})
-		assert.Len(t, r.cache, 1, "the entries that would not fit are gone")
-		assert.Equal(t, out, r.cache[mdCacheKey{key: "input:1", width: 40}], "and the new one is what is held")
-		assert.Equal(t, r.cached, sumLen(out), "the accounting starts again from what is left")
+		pass(r, mdDoc{key: "input:1", src: "second document", width: 40})
+		out := r.cache[mdCacheKey{key: "input:1", width: 40}].lines
+		assert.Len(t, r.cache, 1, "the entry the finished pass did not ask for is gone")
+		assert.NotEmpty(t, out, "and the one it read is what is held")
+		assert.Equal(t, r.cached, sumLen(out), "the accounting follows what was actually dropped")
+	})
+
+	// pins the browser thrash: a report larger than mdMaxCache cleared the entries the same pass had
+	// just made, so every repaint re-rendered all of it
+	t.Run("the pass in progress keeps what it has already rendered", func(t *testing.T) {
+		r := testMDRenderer()
+		r.beginFrame()
+		body := r.lines(mdDoc{key: "finding:0:body", src: "the body", width: 40})
+		require.Len(t, r.cache, 1)
+
+		pastBound(r, mdCacheKey{key: "finding:0:body", width: 40})
+		r.lines(mdDoc{key: "finding:0:fix", src: "the fix", width: 40})
+		r.endFrame()
+		assert.Len(t, r.cache, 2, "one pass is one working set and no part of it is evicted from under it")
+		assert.Equal(t, body, r.cache[mdCacheKey{key: "finding:0:body", width: 40}].lines)
+		assert.Greater(t, r.cached, mdMaxCache, "the pass is the floor, so the bound gives way to it")
+	})
+
+	t.Run("a hit is what keeps an entry through the pass that read it", func(t *testing.T) {
+		r := testMDRenderer()
+		doc := mdDoc{key: "input:0", src: "first document", width: 40}
+		pass(r, doc)
+		first := r.cache[mdCacheKey{key: "input:0", width: 40}].lines
+		pastBound(r, mdCacheKey{key: "input:0", width: 40})
+
+		r.beginFrame()
+		assert.Equal(t, first, r.lines(doc), "still a hit")
+		require.Equal(t, r.frame, r.cache[mdCacheKey{key: "input:0", width: 40}].frame, "restamped by the read")
+		r.endFrame()
+		assert.Len(t, r.cache, 1, "so an entry read by the pass survives its own sweep")
+	})
+
+	// pins the hole the first fix left: eviction ran only when a miss was about to be inserted, so a
+	// pass that was all hits — the browser narrowing a filter to findings it has already rendered —
+	// left the rest of an oversized report resident with nothing to trigger the sweep
+	t.Run("a pass of nothing but hits still evicts what it did not read", func(t *testing.T) {
+		r := testMDRenderer()
+		alpha := mdDoc{key: "finding:0:body", src: "the alpha body", width: 40}
+		pass(r, alpha, mdDoc{key: "finding:1:body", src: "the beta body", width: 40})
+		pastBound(r, mdCacheKey{key: "finding:1:body", width: 40})
+
+		pass(r, alpha)
+		assert.Equal(t, []mdCacheKey{{key: "finding:0:body", width: 40}}, slices.Collect(maps.Keys(r.cache)),
+			"the filtered-out finding goes even though the pass rendered nothing")
+	})
+
+	// pins what round 4 found: eviction ran on the way into a pass, so the first pane to render no
+	// document kept the whole report and only a second layout would have dropped it — and after a
+	// completed run one keypress produces one View, with no second layout scheduled
+	t.Run("a pass that reads nothing at all evicts before it returns", func(t *testing.T) {
+		r := testMDRenderer()
+		pass(r, mdDoc{key: "finding:0:body", src: "the alpha body", width: 40})
+		pastBound(r, mdCacheKey{key: "finding:0:body", width: 40})
+
+		pass(r)
+		assert.Empty(t, r.cache, "one pane laid out with no document in it is enough")
+		assert.Zero(t, r.cached)
 	})
 
 	t.Run("reset drops both maps and the accounting", func(t *testing.T) {

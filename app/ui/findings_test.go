@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 
@@ -36,6 +37,18 @@ func listed(f *findingsState) []finding.Finding {
 		out = append(out, f.rows[i])
 	}
 	return out
+}
+
+// listedReport is a report whose findings all carry a body and a fix, so the browser caches two
+// documents per row and the cache count is a plain function of the finding count.
+func listedReport() finding.Report {
+	rep := finding.Report{}
+	for i := range 3 {
+		rep.Findings = append(rep.Findings, finding.Finding{
+			File: "a.go", Line: i, Severity: finding.Major, Title: "finding " + strconv.Itoa(i),
+			Body: "- one\n- two", Fix: "```go\nx := " + strconv.Itoa(i) + "\n```"})
+	}
+	return rep
 }
 
 // browsed is a model with the report already in it, sized so the findings pane shows exactly 5 lines.
@@ -268,6 +281,55 @@ func TestFindingsState_rendersBodyAndFixAsDocuments(t *testing.T) {
 			assert.NotContains(t, l, "\t", "line %d still carries a raw tab: %q", i, l)
 			assert.LessOrEqual(t, lipgloss.Width(l), 60, "line %d: %q", i, l)
 		}
+	})
+
+	// pins the wiring the renderer's eviction reads: without it the browser's own entries look stale to
+	// the pass using them, and a report past the cache bound re-renders on every repaint
+	t.Run("laying the pane out is exactly one pass, and every entry the browser reads carries it", func(t *testing.T) {
+		m := browsed(t, listedReport())
+		before := m.md.frame
+		require.Len(t, m.md.cache, 2*len(listedReport().Findings))
+
+		m.paneLines()
+		assert.Equal(t, before+1, m.md.frame,
+			"one pane layout is one pass — a second opened inside it would sweep the report mid-render")
+		for k, e := range m.md.cache {
+			assert.Equal(t, m.md.frame, e.frame, "%v was read by this pass, so eviction may not take it", k)
+		}
+	})
+
+	// closing the pass on the way in rather than on the way out passes every other assertion here: the
+	// premature sweep sees an under-bound cache and the render restamps everything behind it. Over the
+	// bound it takes the whole report first and re-renders it, which is the thrash all of this exists
+	// to stop, so the sentinel is what tells the two orderings apart
+	t.Run("an over-bound report is served from the cache rather than swept and re-rendered", func(t *testing.T) {
+		m := browsed(t, listedReport())
+		key := mdCacheKey{key: findingRow(0).key("body"), width: m.view.width()}
+		require.Contains(t, m.md.cache, key)
+
+		e := m.md.cache[key]
+		e.lines = []string{"  sentinel"}
+		m.md.cache[key] = e
+		pastBound(m.md, key)
+
+		assert.Contains(t, strings.Join(m.paneLines(), "\n"), "sentinel",
+			"the pass reads its own working set before anything can be evicted from under it")
+		assert.Contains(t, m.md.cache, key)
+	})
+
+	// pins the hole the pass-boundary fix left, and the one after it: the pass was opened by the
+	// document renderers, so a pane rendering none never swept what the browser left — and once it did,
+	// eviction still ran on the way in, so the first such layout kept the report and a second one that
+	// may never come was needed to drop it
+	t.Run("the first pane that renders no document sweeps the browser's report", func(t *testing.T) {
+		m := browsed(t, listedReport())
+		require.NotEmpty(t, m.md.cache)
+		pastBound(m.md, mdCacheKey{key: findingRow(0).key("body"), width: m.view.width()})
+
+		m.view.tab = 0 // the combined log, which renders no document at all
+		m.paneLines()
+		assert.Empty(t, m.md.cache, "one log layout is enough, and after a finished run it may be the only one")
+		assert.Zero(t, m.md.cached)
 	})
 
 	t.Run("a rendered document still fits the pane", func(t *testing.T) {

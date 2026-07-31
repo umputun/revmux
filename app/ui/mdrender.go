@@ -41,6 +41,16 @@ type mdDoc struct {
 	indent int
 }
 
+// mdCacheEntry is one rendered document: its pane lines, the bytes they hold, and the frame that last
+// asked for it. The frame stamp is what eviction reads, and the reason it is here rather than derived
+// is that a pane asks for its documents one at a time — nothing else knows which of them belong
+// together.
+type mdCacheEntry struct {
+	lines []string
+	size  int
+	frame uint64
+}
+
 // mdRenderer turns markdown documents into pane lines through glamour.
 //
 // One glamour renderer per width, because WithWordWrap bakes the width in and two panes ask for two
@@ -51,8 +61,9 @@ type mdRenderer struct {
 	profile   termenv.Profile
 	parser    gparser.Parser
 	renderers map[int]*glamour.TermRenderer
-	cache     map[mdCacheKey][]string
-	cached    int // bytes of rendered output the cache is holding
+	cache     map[mdCacheKey]mdCacheEntry
+	cached    int    // bytes of rendered output the cache is holding
+	frame     uint64 // the layout pass in progress, stamped onto every entry it touches
 }
 
 // newMDRenderer takes the two terminal facts the renderer needs. Both are read from the same lipgloss
@@ -69,7 +80,7 @@ func newMDRenderer(profile termenv.Profile, dark bool) *mdRenderer {
 			goldmark.WithParserOptions(gparser.WithAutoHeadingID()),
 		).Parser(),
 		renderers: make(map[int]*glamour.TermRenderer),
-		cache:     make(map[mdCacheKey][]string),
+		cache:     make(map[mdCacheKey]mdCacheEntry),
 	}
 }
 
@@ -96,27 +107,66 @@ func mdStyle(dark bool) ansi.StyleConfig {
 	return s
 }
 
-// mdMaxCache bounds the rendered bytes the cache holds, after which it is dropped whole and refilled
-// on demand.
+// mdMaxCache is the rendered-byte threshold at which a closing pass drops what it did not read. It is
+// not a ceiling: the pass's own working set stays whatever it comes to, so the cache sits above this
+// value for as long as one pane holds that much.
 //
-// Without a bound the cache only ever shrinks on a width change, so at a stable width it grows for as
-// long as the reader keeps opening things. mdMaxDoc bounds one document and not the sum: the
-// snapshotter admits 128 context files, every one of them at or under mdMaxDoc takes the document
-// path, and a rendered document runs many times its source — so the tabs of one snapshot alone can
-// retain an order of magnitude more than the snapshot itself.
+// Without a threshold at all the cache only ever shrinks on a width change, so at a stable width it
+// grows for as long as the reader keeps opening things. mdMaxDoc bounds one document and not the sum:
+// the snapshotter admits 128 context files, every non-empty markdown one of them at or under mdMaxDoc
+// takes the document path, and a rendered document runs many times its source — so the markdown tabs
+// of one snapshot alone can retain an order of magnitude more than the snapshot itself.
 //
-// It is dropped whole rather than evicted entry by entry because there is nothing here worth an LRU:
-// a miss costs one render of one document. The value has to stay well above the largest single
-// frame's working set — one input document, or every body and fix of one report — or a frame would
-// clear the cache it is in the middle of filling and re-render everything on the next repaint.
+// There is nothing here worth an LRU: a miss costs one render of one document, and the entries worth
+// keeping are the ones the closing pass read. evict draws that line.
 const mdMaxCache = 32 << 20
+
+// beginFrame opens a layout pass, and endFrame closes it, evicting what that pass did not read if the
+// cache has gone past mdMaxCache.
+//
+// **A pass is one pane laid out whole, and every pane runs one — not only the two that render
+// documents.** reviewPaneLines and inputLinesAt are where the pair is called, so the log panes, an
+// agent's scrollback, a verbatim file and an empty tab all open a pass and read nothing. Scoping it to
+// the document renderers instead leaves the browser's own entries looking current for as long as the
+// reader stays on a log, with no boundary coming to sweep them. A pane is sometimes laid out twice for
+// one repaint, since maxScroll measures it by building it; a pass that measured a pane is as complete
+// as one that drew it, so each is its own.
+//
+// **The two are separate calls because a pass has to be swept at its own end, not at the next one's
+// start.** Evicting on the way in keeps whatever the previous pass read, so the first log layout after
+// a report retains the whole report and only a second one would drop it — and a second layout is not
+// something to rely on: after a completed run with no auto-exit, a keypress can be the last message
+// the model sees. Sweeping on the way out drops it during that first layout instead.
+func (r *mdRenderer) beginFrame() { r.frame++ }
+
+// endFrame is the only place the bound evicts anything — reset is the other way an entry leaves, and
+// it drops the whole cache on a width change rather than weighing it against mdMaxCache. It is
+// deferred by each pane entry point, so a pane that returns early is still a closed pass.
+//
+// **Eviction belongs at a pass boundary rather than at an insertion.** A pass is not made of inserts:
+// the browser re-lays the same report on every repaint, so a pass that narrows the filter to findings
+// already rendered is entirely cache hits, and one whose filter matches nothing asks for no document
+// at all. Neither reaches an insert, so a cache left over the bound would sit there until some
+// unrelated miss.
+func (r *mdRenderer) endFrame() {
+	if r.cached > mdMaxCache {
+		r.evict()
+	}
+}
 
 // lines renders one document to pane lines, caching by key and width. The width in the key is the
 // pane's, and the document is rendered into what is left of it once the pad is taken off.
+//
+// A hit is restamped with the current frame, which is how a pass tells eviction what it read. That is
+// all it says: the next pass may narrow a filter, or belong to another pane and read none of it.
 func (r *mdRenderer) lines(d mdDoc) []string {
 	ck := mdCacheKey{key: d.key, width: d.width}
-	if out, ok := r.cache[ck]; ok {
-		return out
+	if e, ok := r.cache[ck]; ok {
+		if e.frame != r.frame {
+			e.frame = r.frame
+			r.cache[ck] = e
+		}
+		return e.lines
 	}
 
 	out := r.render(d.src, d.width-d.indent)
@@ -131,13 +181,29 @@ func (r *mdRenderer) lines(d mdDoc) []string {
 	for _, l := range out {
 		size += len(l)
 	}
-	if r.cached+size > mdMaxCache {
-		r.cache = make(map[mdCacheKey][]string)
-		r.cached = 0
-	}
-	r.cache[ck] = out
+	r.cache[ck] = mdCacheEntry{lines: out, size: size, frame: r.frame}
 	r.cached += size
 	return out
+}
+
+// evict drops every entry the pass that has just ended did not ask for, and keeps every entry it did.
+// Only endFrame calls it, and only over the bound.
+//
+// **That pass's own working set is the floor, and it may carry the cache past mdMaxCache.** Neither
+// the number of findings nor the length of one body is bounded, so a report whose rendered bodies and
+// fixes come to more than the threshold is reachable — and dropping one of its entries drops one the
+// next pass asks for immediately, since the browser re-lays the whole report on every repaint.
+// Cleared whole, that report re-renders in full on every frame, keypress and scroll, which is the
+// browser becoming unusable rather than a slow first paint. One pane's working set is bounded by that
+// pane's own content; re-rendering it forever is bounded by nothing.
+func (r *mdRenderer) evict() {
+	for k, e := range r.cache {
+		if e.frame == r.frame {
+			continue
+		}
+		delete(r.cache, k)
+		r.cached -= e.size
+	}
 }
 
 // mdMaxDoc caps the source a document render is attempted on, in bytes.
@@ -331,6 +397,6 @@ func (r *mdRenderer) trim(out string, width int) []string {
 // so a resize renders at the new width without it.
 func (r *mdRenderer) reset() {
 	r.renderers = make(map[int]*glamour.TermRenderer)
-	r.cache = make(map[mdCacheKey][]string)
+	r.cache = make(map[mdCacheKey]mdCacheEntry)
 	r.cached = 0
 }

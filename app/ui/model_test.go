@@ -244,7 +244,7 @@ func TestModel_Update_resizeEvictsDocuments(t *testing.T) {
 	}
 	sentinel := func(m Model, width int) mdCacheKey {
 		k := mdCacheKey{key: "sentinel", width: width}
-		m.md.cache[k] = []string{"x"}
+		m.md.cache[k] = mdCacheEntry{lines: []string{"x"}, size: 1, frame: m.md.frame}
 		return k
 	}
 

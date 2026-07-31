@@ -38,7 +38,16 @@ func (m Model) paneLines() []string {
 	return m.reviewPaneLines(m.view.tab)
 }
 
+// reviewPaneLines is one review pane laid out whole, and it runs the document renderer's layout pass
+// around it.
+//
+// The pass belongs here rather than in the browser, which is the only review pane that renders
+// documents at all: the log and agent panes render none, and a pass they never run is a pass that
+// never sweeps what the browser left. An oversized report would then stay resident for as long as the
+// reader stayed on a log.
 func (m Model) reviewPaneLines(tab int) []string {
+	m.md.beginFrame()
+	defer m.md.endFrame()
 	switch tab {
 	case 0:
 		return m.combinedLines()
