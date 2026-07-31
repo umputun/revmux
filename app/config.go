@@ -62,7 +62,7 @@ type options struct {
 	MaxParallel  int           `long:"max-parallel" ini-name:"max-parallel" default:"4" description:"how many agents run at once"`
 	VerifyGroups int           `long:"verify-groups" ini-name:"verify-groups" default:"6" description:"cap on the number of verifier groups"`
 	TasksDir     string        `long:"tasks-dir" ini-name:"tasks-dir" default:"./.revmux/tasks" description:"root directory holding task directories"`
-	AutoExit     time.Duration `long:"auto-exit" ini-name:"auto-exit" default:"0s" description:"close the terminal UI this long after the report arrives"`
+	AutoExit     time.Duration `long:"auto-exit" ini-name:"auto-exit" default:"0s" description:"close the terminal UI this long after the report arrives; 0 never closes it"`
 	Profile      string        `long:"profile" ini-name:"profile" default:"comprehensive" description:"profile naming the roster to run"`
 
 	ConfigDir    string `long:"config-dir" no-ini:"true" description:"directory holding the config file and the prompt tree"`

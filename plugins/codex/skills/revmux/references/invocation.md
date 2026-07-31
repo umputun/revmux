@@ -83,7 +83,7 @@ Order matters where environments overlap: herdr is checked before kitty because 
 | `REVMUX_AGTERM_PERCENT` | `80` | agterm floating panel size, 1-100 |
 | `REVMUX_POPUP_WIDTH` | `90%` | tmux and zellij popup width |
 | `REVMUX_POPUP_HEIGHT` | `90%` | tmux, zellij and wezterm popup height |
-| `REVMUX_AUTO_EXIT` | `30s` | TUI self-close delay; `0` waits for a keypress |
+| `REVMUX_AUTO_EXIT` | `30s` | TUI self-close delay; `0` waits for the reader to quit |
 | `REVMUX_TMUX_WINDOW` | unset | `1` forces window mode, `0` forces the popup |
 
 ### Why the launcher forwards PATH
@@ -102,9 +102,9 @@ auth, where the variable is inherited normally rather than passed on a command l
 
 ### Auto-exit
 
-revmux leaves the TUI open until a key is pressed (`--auto-exit=0s`). In an overlay opened on the
+revmux leaves the TUI open until the reader quits with `q` or `ctrl+c` (`--auto-exit=0s`). In an overlay opened on the
 user's behalf, that blocks the launcher indefinitely if nobody returns to it, so the launcher injects
-`--auto-exit=30s` unless a value was passed. `REVMUX_AUTO_EXIT=0` restores waiting for a keypress.
+`--auto-exit=30s` unless a value was passed. `REVMUX_AUTO_EXIT=0` restores waiting for the reader.
 
 ### Recovering a report when the launcher dies
 
@@ -470,7 +470,7 @@ These also read from the config file, under the same name as the flag:
 | `--max-parallel=<n>` | `max-parallel` | `4` | how many agents run at once |
 | `--verify-groups=<n>` | `verify-groups` | `6` | cap on the number of verifier groups |
 | `--tasks-dir=<dir>` | `tasks-dir` | `./.revmux/tasks` | root directory holding task directories |
-| `--auto-exit=<d>` | `auto-exit` | `0s` | close the TUI this long after the report arrives; `0` waits for a key |
+| `--auto-exit=<d>` | `auto-exit` | `0s` | close the TUI this long after the report arrives; `0` waits for the reader to quit with `q` or `ctrl+c` |
 | `--profile=<name>` | `profile` | `comprehensive` | profile naming the roster to run |
 
 `--task` and `--run` are not config keys: a config file naming the round to write would make the same

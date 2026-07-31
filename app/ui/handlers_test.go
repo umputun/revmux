@@ -113,13 +113,65 @@ func TestModel_key_scroll(t *testing.T) {
 }
 
 func TestModel_key_quit(t *testing.T) {
-	for _, k := range []string{"q", "ctrl+c", "esc"} {
-		t.Run(k, func(t *testing.T) {
-			_, cmd := New(ModelConfig{Roster: roster()}).Update(press(k))
-			require.NotNil(t, cmd)
-			assert.IsType(t, tea.QuitMsg{}, cmd(), "quitting stops watching the run, package main still writes the report")
-		})
-	}
+	t.Run("ctrl+c ends a running review", func(t *testing.T) {
+		_, cmd := New(ModelConfig{Roster: roster()}).Update(press("ctrl+c"))
+		require.NotNil(t, cmd)
+		assert.IsType(t, tea.QuitMsg{}, cmd(), "quitting stops watching the run, package main still writes the report")
+	})
+
+	t.Run("ctrl+c ends it from a half-typed filter too", func(t *testing.T) {
+		typing := feed(t, browsed(t, report()), press("/"), press("vie"))
+		_, cmd := typing.Update(press("ctrl+c"))
+		require.NotNil(t, cmd)
+		assert.IsType(t, tea.QuitMsg{}, cmd())
+	})
+
+	t.Run("q waits for the report", func(t *testing.T) {
+		next, cmd := New(ModelConfig{Roster: roster()}).Update(press("q"))
+		assert.Nil(t, cmd, "q is inert while the review is still running")
+		assert.False(t, next.(Model).done)
+	})
+
+	t.Run("q quits once the report is in", func(t *testing.T) {
+		_, cmd := browsed(t, report()).Update(press("q"))
+		require.NotNil(t, cmd)
+		assert.IsType(t, tea.QuitMsg{}, cmd())
+	})
+
+	t.Run("esc never quits, mid-run", func(t *testing.T) {
+		_, cmd := New(ModelConfig{Roster: roster()}).Update(press("esc"))
+		assert.Nil(t, cmd)
+	})
+
+	t.Run("esc never quits, in the findings browser", func(t *testing.T) {
+		m := browsed(t, report())
+		require.True(t, m.browsing())
+		next, cmd := m.Update(press("esc"))
+		assert.Nil(t, cmd)
+		assert.True(t, next.(Model).browsing(), "and it does not leave the browser either")
+	})
+
+	t.Run("esc still leaves the input viewer", func(t *testing.T) {
+		m := New(ModelConfig{Roster: roster(), Inputs: []InputDocument{
+			{Label: "scope", Path: "input/scope.md", Content: "read me", Markdown: true},
+		}})
+		m = feed(t, m, press("i"))
+		require.Equal(t, modeInputs, m.view.mode)
+		next, cmd := m.Update(press("esc"))
+		assert.Nil(t, cmd)
+		assert.Equal(t, modeReview, next.(Model).view.mode)
+	})
+
+	t.Run("esc still abandons a filter", func(t *testing.T) {
+		m := feed(t, browsed(t, report()), press("/"), press("vie"))
+		require.Len(t, m.findings.matches, 1)
+		next, cmd := m.Update(press("esc"))
+		assert.Nil(t, cmd)
+		m = next.(Model)
+		assert.False(t, m.findings.typing)
+		assert.Empty(t, m.findings.query)
+		assert.Len(t, m.findings.matches, 3)
+	})
 }
 
 func TestModel_key_inputs(t *testing.T) {
@@ -154,6 +206,11 @@ func TestModel_key_inputs(t *testing.T) {
 	assert.Equal(t, modeReview, m.view.mode)
 
 	m = feed(t, m, press("i"))
+	_, cmd = m.Update(press("q"))
+	assert.Nil(t, cmd, "q does not end a review that is still running, from the input viewer either")
+
+	m = feed(t, m, CompletedMsg{Report: report()})
+	require.Equal(t, modeInputs, m.view.mode, "completion leaves the open document alone")
 	_, cmd = m.Update(press("q"))
 	require.NotNil(t, cmd)
 	assert.IsType(t, tea.QuitMsg{}, cmd())

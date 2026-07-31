@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -638,11 +639,9 @@ func TestRunOpts_render(t *testing.T) {
 	// report handed over the way review does it. The channel is unbuffered and the sends are waited
 	// on, because the second one returns only after the renderer applied the first — without that
 	// the frame under assertion races the quit.
-	// afterEvents runs once both events are in and before the report is handed over. A test that needs
-	// a keystroke presses it there rather than queueing it on the pty: a real terminal is read as soon
-	// as the program starts, so a quit waiting in the buffer ends the program before the first event
-	// lands, nothing drains the channel, and the send above blocks for good.
-	finished := func(t *testing.T, ro runOpts, rep finding.Report, err, arcErr error, afterEvents ...func()) {
+	// A test that needs the reader to close the browser holds the key with holdKey before calling this,
+	// since the wait below only ends once he does.
+	finished := func(t *testing.T, ro runOpts, rep finding.Report, err, arcErr error) {
 		t.Helper()
 		events, sent := make(chan pipeline.Event), make(chan struct{})
 		go func() {
@@ -653,9 +652,13 @@ func TestRunOpts_render(t *testing.T) {
 		}()
 
 		r := ro.render(renderConfig{roster: roster, events: events})
-		<-sent
-		for _, fn := range afterEvents {
-			fn()
+		select {
+		case <-sent:
+		case <-time.After(10 * time.Second):
+			// the sends are unbuffered, so a renderer that stopped reading — a q that quit mid-run
+			// again, say — parks this goroutine. Bounded, that is a named failure rather than the
+			// package timeout ten minutes later
+			t.Fatal("the renderer must drain the events it was given before the report arrives")
 		}
 		done := make(chan struct{})
 		go func() { defer close(done); r.finish(rep, err, arcErr) }()
@@ -734,11 +737,11 @@ func TestRunOpts_render(t *testing.T) {
 	t.Run("a finished report goes to the browser, and the reader closing it ends the wait", func(t *testing.T) {
 		r := newRunOpts(t, options{})
 		ro := r.opts()
-		open, _, typeKeys := ttyPair(t)
+		open, _, press := ttyPair(t)
 		ro.openTTY = open
+		holdKey(t, press, "q")
 
-		finished(t, ro, finding.Report{Findings: []finding.Finding{{Title: "unchecked error"}}}, nil, nil,
-			func() { typeKeys("q") })
+		finished(t, ro, finding.Report{Findings: []finding.Finding{{Title: "unchecked error"}}}, nil, nil)
 		assert.Empty(t, r.stdout.String(), "the browser renders the report, it does not write it")
 		assert.Empty(t, r.stderr.String(), "and the browser is the summary, so stderr gets none of its own")
 	})
@@ -762,7 +765,7 @@ func TestRun_reportWrittenOnce(t *testing.T) {
 		r := newRunOpts(t, base(t))
 		r.result = found
 		ro := r.opts()
-		open, _, typeKeys := ttyPair(t)
+		open, _, press := ttyPair(t)
 		ro.openTTY = open
 		var snapshotted atomic.Bool
 		ro.snapshot = func(reviewContext) []ui.InputDocument {
@@ -774,7 +777,7 @@ func TestRun_reportWrittenOnce(t *testing.T) {
 			assert.True(t, snapshotted.Load(), "the tty snapshot must finish before the first review process starts")
 			return newRunner(spec)
 		}
-		typeKeys("q") // safe to queue here: the pipeline's channel is buffered and drops, never blocks
+		holdKey(t, press, "q")
 
 		assert.Equal(t, 1, run(ro))
 		out := r.stdout.String()
@@ -874,9 +877,9 @@ func TestRun_ttyGate(t *testing.T) {
 		r.result = executor.Result{StructuredOutput: json.RawMessage(
 			`{"findings":[{"file":"a.go","line":1,"severity":"major","confidence":90,"title":"unchecked error"}]}`)}
 		ro := r.opts()
-		open, _, typeKeys := ttyPair(t)
+		open, _, press := ttyPair(t)
 		ro.openTTY = open
-		typeKeys("q") // safe to queue here: the pipeline's channel is buffered and drops, never blocks
+		holdKey(t, press, "q")
 
 		out := redirected(t, ro)
 
@@ -900,24 +903,22 @@ func TestRun_ttyGate(t *testing.T) {
 }
 
 // ttyPair hands the run a real pty and gives the test all three ends of it: the opener yields the
-// slave side, frames reports what was rendered to it, and typeKeys presses keys on it.
+// slave side, frames reports what was rendered to it, and press types keys on it.
+//
+// press returns its error rather than asserting on it: the program closes the slave before the call
+// the test is waiting in returns, and a write to a master with no slave open fails with EIO. Its one
+// caller is holdKey, which is racing exactly that shutdown by design.
 //
 // A regular file cannot stand in for a terminal here, which is what this replaces. It is not
 // pollable, so the input reader falls back to a path that cannot be interrupted, and a program asked
 // to quit never finishes letting go — a hang that only appears on linux and cost a CI timeout to
 // find. A pty is a terminal, so raw mode, polling and shutdown all behave the way they do in use.
 //
-// Keys are pressed on demand rather than queued up front, and that ordering is the whole reason this
-// takes a function. A real terminal is read the moment the program starts, so a quit waiting in the
-// buffer is consumed before the first event arrives: the program exits, stops draining the event
-// channel, and the test's unbuffered send blocks forever. Queueing keys deadlocks the very test it
-// is meant to drive — press them once the events are in.
-//
 // The master is drained continuously rather than read at the end: its buffer is a few kilobytes, an
 // alt-screen frame is bigger than that, and an undrained pty blocks the renderer mid-write. Echo is
 // left alone — bubbletea turns it off with raw mode, and a keystroke echoed before that only adds a
 // character no assertion here looks at.
-func ttyPair(t *testing.T) (open func() (*os.File, error), frames func() string, typeKeys func(string)) {
+func ttyPair(t *testing.T) (open func() (*os.File, error), frames func() string, press func(string) error) {
 	t.Helper()
 	ptmx, tty, err := pty.Open()
 	require.NoError(t, err)
@@ -952,10 +953,41 @@ func ttyPair(t *testing.T) (open func() (*os.File, error), frames func() string,
 			defer mu.Unlock()
 			return buf.String()
 		},
-		func(keys string) {
-			_, writeErr := ptmx.WriteString(keys)
-			assert.NoError(t, writeErr)
+		func(keys string) error {
+			if _, writeErr := ptmx.WriteString(keys); writeErr != nil {
+				return fmt.Errorf("press %q: %w", keys, writeErr)
+			}
+			return nil
 		}
+}
+
+// holdKey presses one key on the pty until the test is over, which is how a test closes the findings
+// browser. A single press cannot: q is inert until the report reaches the browser, and the report is
+// handed over by the same call the test is blocked in, so the one press that would work has to land
+// after it.
+//
+// It stops on the first write error rather than failing the test on one. The key it is pressing ends
+// the program, and the program closes the slave side of the pty before the call the test is waiting
+// in returns — so the write that lands in that window fails with EIO, and asserting on it would turn
+// the shutdown this is driving into a failure whose timing is what decides it.
+func holdKey(t *testing.T, press func(string) error, k string) {
+	t.Helper()
+	stop, wg := make(chan struct{}), &sync.WaitGroup{}
+	wg.Add(1)
+	t.Cleanup(func() { close(stop); wg.Wait() })
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-stop:
+				return
+			case <-time.After(20 * time.Millisecond):
+				if err := press(k); err != nil {
+					return
+				}
+			}
+		}
+	}()
 }
 
 func TestRunOpts_runnerFactory(t *testing.T) {

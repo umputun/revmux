@@ -25,7 +25,7 @@
 # root directory holding task directories
 # tasks-dir = ./.revmux/tasks
 
-# close the terminal UI this long after the report arrives; 0 leaves it open until a key is pressed
+# close the terminal UI this long after the report arrives; 0 never closes it
 # auto-exit = 0s
 
 # profile naming the roster to run

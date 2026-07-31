@@ -27,7 +27,7 @@ func TestModel_statusTable(t *testing.T) {
 	require.Len(t, rows, 6,
 		"a header, the rule under it, a column heading, one row per agent, and the closing rule")
 	assert.Equal(t, m.rule(), rows[1], "the header is separated from the table rather than reading as its first row")
-	assert.Equal(t, "revmux · 2 agents · find", rows[0])
+	assert.Equal(t, "revmux · 2 agents · find · ctrl+c to quit", rows[0])
 	assert.Contains(t, rows[2], "AGENT", "the column heading names what each column holds")
 	assert.Contains(t, rows[2], "ACTIVITY")
 	assert.Contains(t, rows[3], "running")
@@ -60,11 +60,11 @@ func TestModel_statusTable_header(t *testing.T) {
 		msgs []tea.Msg
 		want string
 	}{
-		{"nothing has happened yet", nil, "revmux · 2 agents"},
+		{"nothing has happened yet", nil, "revmux · 2 agents · ctrl+c to quit"},
 		{
 			"a stage is named once it opens",
 			[]tea.Msg{pipeline.Event{Kind: pipeline.EventStage, Stage: "synthesis", At: at}},
-			"revmux · 2 agents · synthesis",
+			"revmux · 2 agents · synthesis · ctrl+c to quit",
 		},
 		{
 			"findings are counted across agents, and broken down by severity",
@@ -74,7 +74,7 @@ func TestModel_statusTable_header(t *testing.T) {
 				pipeline.Event{Kind: pipeline.EventFindings, Agent: "codex", At: at, Findings: []finding.Finding{
 					{Severity: finding.Major}}},
 			},
-			"revmux · 2 agents · 3 findings (1 critical, 1 major, 1 minor)",
+			"revmux · 2 agents · 3 findings (1 critical, 1 major, 1 minor) · ctrl+c to quit",
 		},
 		{
 			"a severity the model invented counts toward the total and is named nowhere",
@@ -82,7 +82,7 @@ func TestModel_statusTable_header(t *testing.T) {
 				pipeline.Event{Kind: pipeline.EventFindings, Agent: "bugs+impl", At: at, Findings: []finding.Finding{
 					{Severity: finding.Major}, {Severity: "invented"}}},
 			},
-			"revmux · 2 agents · 2 findings (0 critical, 1 major, 0 minor)",
+			"revmux · 2 agents · 2 findings (0 critical, 1 major, 0 minor) · ctrl+c to quit",
 		},
 		{
 			"a synthesis row does not inflate the agent count's own findings total",
@@ -92,7 +92,7 @@ func TestModel_statusTable_header(t *testing.T) {
 				pipeline.Event{Kind: pipeline.EventFindings, Agent: "synthesis", At: at, Findings: []finding.Finding{
 					{Severity: finding.Minor}}},
 			},
-			"revmux · 3 agents · 1 findings (0 critical, 0 major, 1 minor)",
+			"revmux · 3 agents · 1 findings (0 critical, 0 major, 1 minor) · ctrl+c to quit",
 		},
 	}
 
@@ -100,6 +100,93 @@ func TestModel_statusTable_header(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := feed(t, New(ModelConfig{Roster: roster()}), tt.msgs...)
 			assert.Equal(t, tt.want, m.header())
+		})
+	}
+}
+
+func TestModel_header_quitHint(t *testing.T) {
+	// q and esc are inert while a review runs, so a reader who tries them sees a frame that does not
+	// change. The header is the only thing on screen that can say which key does work
+	m := feed(t, New(ModelConfig{Roster: roster()}),
+		pipeline.Event{Kind: pipeline.EventStage, Stage: "verify", At: at},
+		pipeline.Event{Kind: pipeline.EventFindings, Agent: "bugs+impl", At: at, Findings: []finding.Finding{
+			{Severity: finding.Critical}, {Severity: finding.Major}, {Severity: finding.Minor}}},
+	)
+
+	t.Run("a running review names the one key that ends it", func(t *testing.T) {
+		wide := feed(t, m, tea.WindowSizeMsg{Width: 120, Height: 24}).header()
+		assert.Contains(t, wide, "ctrl+c to quit")
+		assert.Contains(t, wide, "(1 critical, 1 major, 1 minor)", "and it costs the run state nothing")
+	})
+
+	t.Run("the breakdown is spent before the hint", func(t *testing.T) {
+		narrow := feed(t, m, tea.WindowSizeMsg{Width: 72, Height: 24}).header()
+		assert.Contains(t, narrow, "ctrl+c to quit", "the hint has no shorter form, so it is not what pays for the width")
+		assert.NotContains(t, narrow, "critical", "the breakdown does have one")
+		assert.Contains(t, narrow, "3 findings", "and the total keeps the worst severity in its color")
+	})
+
+	t.Run("the hint goes once the total alone no longer leaves room", func(t *testing.T) {
+		narrow := feed(t, m, tea.WindowSizeMsg{Width: 45, Height: 24}).header()
+		assert.NotContains(t, narrow, "ctrl+c", "run state is what the header is for")
+		assert.Contains(t, narrow, "3 findings")
+	})
+
+	t.Run("a completed run swaps the hint for the completion notice", func(t *testing.T) {
+		done := feed(t, m, CompletedMsg{Report: report()}, tea.WindowSizeMsg{Width: 120, Height: 24}).header()
+		assert.NotContains(t, done, "ctrl+c", "q is the key once the report is in")
+		assert.Contains(t, done, "q to quit")
+	})
+
+	t.Run("the ladder a reader sees is the one that runs", func(t *testing.T) {
+		live := m.headerLevels()
+		require.True(t, live[0].hint, "the hint is offered from the widest rung")
+		require.True(t, live[1].hint)
+		assert.False(t, live[2].hint, "and given up under the breakdown")
+
+		done := feed(t, m, CompletedMsg{Report: report()})
+		levels := done.headerLevels()
+		assert.Equal(t, countFull, levels[0].count, "the breakdown is still the widest rung")
+		for i, l := range levels {
+			assert.False(t, l.hint, "rung %d promises a hint a finished run never prints", i)
+		}
+		assert.Len(t, levels, len(live)-1, "and the rung that only differed by it is gone rather than a duplicate")
+	})
+}
+
+func TestModel_header_quitHintOnARealRun(t *testing.T) {
+	// the band the hint has to survive is the shipped comprehensive roster in a normal pane: four agents
+	// and a severity breakdown put the full line at 86 columns, so anything ordered below the breakdown
+	// is gone from the first EventFindings on — which is the run this hint exists for
+	big := []prompt.AgentSpec{{Name: "bugs+impl"}, {Name: "architecture"}, {Name: "quality+docs"}, {Name: "codex"}}
+	m := feed(t, New(ModelConfig{Roster: big, Task: "pr-123", Run: "after-fix", Inputs: []InputDocument{
+		{Label: "scope", Path: "/tmp/scope.md", Content: "# scope", Markdown: true}}}),
+		pipeline.Event{Kind: pipeline.EventStage, Stage: "find", At: at},
+		pipeline.Event{Kind: pipeline.EventFindings, Agent: "bugs+impl", At: at, Findings: []finding.Finding{
+			{Severity: finding.Critical}, {Severity: finding.Critical},
+			{Severity: finding.Major}, {Severity: finding.Major}, {Severity: finding.Major},
+			{Severity: finding.Minor}, {Severity: finding.Minor}}},
+	)
+
+	for _, width := range []int{80, 90, 100} {
+		t.Run("review mode at "+strconv.Itoa(width)+" columns", func(t *testing.T) {
+			h := feed(t, m, tea.WindowSizeMsg{Width: width, Height: 24}).header()
+			assert.Contains(t, h, "ctrl+c to quit")
+			assert.Contains(t, h, "7 findings", "and the run state a reader came for is still on the line")
+			assert.LessOrEqual(t, lipgloss.Width(h), width)
+		})
+	}
+
+	// the input viewer prepends the mode and the task/run, which is where the margin is tightest — and
+	// where esc is bound to leaving the pane rather than to quitting, so the key is least guessable
+	inputs := feed(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("i")})
+	require.Equal(t, modeInputs, inputs.view.mode, "the case is only about the input viewer's own header")
+	for _, width := range []int{90, 100} {
+		t.Run("input viewer at "+strconv.Itoa(width)+" columns", func(t *testing.T) {
+			h := feed(t, inputs, tea.WindowSizeMsg{Width: width, Height: 24}).header()
+			assert.Contains(t, h, "ctrl+c to quit")
+			assert.Contains(t, h, "pr-123/after-fix", "the round is what the input viewer's header adds")
+			assert.LessOrEqual(t, lipgloss.Width(h), width)
 		})
 	}
 }
@@ -158,7 +245,8 @@ func TestModel_header_ladderOrder(t *testing.T) {
 	assert.Contains(t, at120, "(1 critical, 1 major, 1 minor)", "everything fits")
 
 	at40 := feed(t, m, tea.WindowSizeMsg{Width: 40, Height: 24}).header()
-	assert.NotContains(t, at40, "critical", "the breakdown went first")
+	assert.NotContains(t, at40, "critical", "the breakdown went first, and the quit hint under it")
+	assert.NotContains(t, at40, "ctrl+c")
 	assert.Contains(t, at40, "3 findings", "the total is still here")
 
 	at28 := feed(t, m, tea.WindowSizeMsg{Width: 28, Height: 24}).header()

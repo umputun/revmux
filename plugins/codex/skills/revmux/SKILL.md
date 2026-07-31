@@ -289,7 +289,7 @@ panel at 80% of the pane. Do not pass `--no-tui`; the script rejects it.
 - **its exit codes: `0`/`1`/`2` are revmux's, `3` is a launcher failure, `127` is revmux not
   installed.** A `3` means no review happened — that is the one to retry.
 - overrides: `REVMUX_AGTERM_PERCENT` (80), `REVMUX_POPUP_WIDTH`/`HEIGHT` (90%), `REVMUX_AUTO_EXIT`
-  (30s; `0` waits for a keypress), `REVMUX_TMUX_WINDOW=1` for a disconnect-resilient tmux window
+  (30s; `0` waits for the reader to quit), `REVMUX_TMUX_WINDOW=1` for a disconnect-resilient tmux window
 
 **Choose headless** unless the user asked to watch or is clearly at the terminal.
 

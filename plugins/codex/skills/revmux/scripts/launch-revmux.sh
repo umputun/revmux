@@ -25,7 +25,7 @@
 #   REVMUX_AGTERM_PERCENT  agterm overlay size, 1-100      (default 80)
 #   REVMUX_POPUP_WIDTH     tmux/zellij popup width         (default 90%)
 #   REVMUX_POPUP_HEIGHT    tmux/zellij/wezterm popup height (default 90%)
-#   REVMUX_AUTO_EXIT       TUI self-close delay            (default 30s; 0 waits for a keypress)
+#   REVMUX_AUTO_EXIT       TUI self-close delay            (default 30s; 0 waits for the reader)
 
 set -euEo pipefail
 
@@ -82,9 +82,9 @@ for arg in "$@"; do
     REVMUX_CMD="$REVMUX_CMD $(sq "$arg")"
 done
 
-# revmux leaves the TUI open until a key is pressed (--auto-exit=0s). In an overlay opened on the
+# revmux leaves the TUI open until the reader quits with q or ctrl+c (--auto-exit=0s). In an overlay opened on the
 # user's behalf that means the launcher blocks forever if nobody comes back to it, so give the TUI a
-# self-close delay unless the caller chose one. REVMUX_AUTO_EXIT=0 restores wait-for-keypress.
+# self-close delay unless the caller chose one. REVMUX_AUTO_EXIT=0 restores waiting for the reader.
 AUTO_EXIT="${REVMUX_AUTO_EXIT:-30s}"
 if [ "$HAS_AUTO_EXIT" -eq 0 ] && [ "$AUTO_EXIT" != "0" ]; then
     REVMUX_CMD="$REVMUX_CMD $(sq "--auto-exit=$AUTO_EXIT")"

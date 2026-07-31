@@ -9,9 +9,9 @@ import (
 // digit selects the tab and listing ten bindings here would say the same thing ten times.
 var keys = struct {
 	quit, nextTab, prevTab, up, down, pageUp, pageDown, top, bottom key.Binding
-	findings, inputs, expand, startFilter                           key.Binding
+	findings, inputs, startFilter                                   key.Binding
 }{
-	quit:        key.NewBinding(key.WithKeys("q", "ctrl+c", "esc")),
+	quit:        key.NewBinding(key.WithKeys("q")),
 	nextTab:     key.NewBinding(key.WithKeys("tab", "right", "l")),
 	prevTab:     key.NewBinding(key.WithKeys("shift+tab", "left", "h")),
 	up:          key.NewBinding(key.WithKeys("up", "k")),
@@ -22,12 +22,15 @@ var keys = struct {
 	bottom:      key.NewBinding(key.WithKeys("end", "G")),
 	findings:    key.NewBinding(key.WithKeys("f")),
 	inputs:      key.NewBinding(key.WithKeys("i")),
-	expand:      key.NewBinding(key.WithKeys("enter")),
 	startFilter: key.NewBinding(key.WithKeys("/")),
 }
 
 // key handles one keystroke. Quitting stops watching the run, it does not stop the run: package main
 // still holds the report and writes it once the program has returned.
+//
+// **Only ctrl+c ends a review that is still running.** `q` is inert until the report is in, and esc never
+// quits at all — it abandons a filter and it leaves the input viewer, nothing else. A reader who hits esc
+// to back out of something, or q expecting a pager, would otherwise lose the view of a live run.
 func (m Model) key(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if msg.Type == tea.KeyCtrlC {
 		// checked ahead of the filter editor, which treats every other key as text: a half-typed
@@ -44,7 +47,7 @@ func (m Model) key(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	switch {
 	case key.Matches(msg, keys.quit):
-		return m, tea.Quit
+		return m, m.quitCmd()
 	case key.Matches(msg, keys.inputs):
 		m.toggleInputs()
 	case key.Matches(msg, keys.findings):
@@ -78,6 +81,15 @@ func (m Model) key(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// quitCmd ends the program only once the report is in, and is nil until then: q is the pager key a
+// reader reaches for, and it must not close the view of a review that is still running.
+func (m Model) quitCmd() tea.Cmd {
+	if !m.done {
+		return nil
+	}
+	return tea.Quit
+}
+
 // focus switches panes, ignoring a tab that does not exist so a stray digit cannot blank the view.
 // The new pane opens at its newest line, which is where a live log is worth reading from.
 func (m *Model) focus(tab int) {
@@ -102,8 +114,8 @@ func (m Model) lastTab() int {
 	return len(m.agents)
 }
 
-// browsing says the reader is in the findings browser, which is where the cursor, expansion and
-// filter keys mean something and where up and down move a cursor rather than scroll.
+// browsing says the reader is in the findings browser, which is where the filter keys mean something.
+// Scrolling there is the pane's own: there is no cursor and nothing folds.
 func (m Model) browsing() bool {
 	return m.view.mode == modeReview && m.findings != nil && m.view.tab == m.findingsTab()
 }

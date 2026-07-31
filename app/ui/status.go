@@ -53,24 +53,44 @@ func (m Model) header() string {
 	// which is the longest thing on it, would push exactly the "complete, closing in 5s" off the edge at
 	// the moment it matters most. Parts are given up longest-first, and what a reader needs to know
 	// about where the run is survives longest.
-	// order matters and is stated in .claude/rules/tui.md: the breakdown, then the agent count, then
-	// the stage, then the total. The count outlives the stage because a reader who has lost the stage
-	// still learns whether anything was found, while a stage name without a count says only that
-	// something is happening.
-	for _, level := range []headerParts{
-		{identity: true, agents: true, stage: true, count: countFull},
-		{identity: true, agents: true, stage: true, count: countTotal},
-		{identity: false, agents: true, stage: true, count: countTotal},
-		{identity: false, agents: false, stage: true, count: countTotal},
-		{identity: false, agents: false, stage: false, count: countTotal},
-		{identity: false, agents: false, stage: false, count: countNone},
-	} {
+	for _, level := range m.headerLevels() {
 		if line := m.headerLine(level); lipgloss.Width(line) <= m.view.width() {
 			return line
 		}
 	}
 	// narrower than the notice itself; clipping is the backstop under everything
 	return m.clip(m.headerLine(headerParts{count: countNone}))
+}
+
+// headerLevels is the degrade ladder, widest first.
+//
+// Order matters and is stated in .claude/rules/tui.md: the breakdown, then the quit hint, then the
+// agent count, then the stage, then the total. The count outlives the stage because a reader who has
+// lost the stage still learns whether anything was found, while a stage name without a count says only
+// that something is happening. The hint outlives the breakdown because the breakdown degrades and the
+// hint does not: the total keeps the worst severity in its color and the report restates the split at
+// the end, while a header with no hint leaves a reader who wants out with nothing on screen at all.
+// That is also why there is no breakdown-without-hint rung: it would only ever be reached at a width
+// where the rung above it already fits.
+//
+// The hint rungs are built only for a live run rather than being dropped later by headerLine. A rung
+// whose one distinguishing part its renderer discards is the rung below it spelled differently, so a
+// finished run would degrade through a step that changes nothing and the ladder read here would not
+// be the ladder that runs.
+func (m Model) headerLevels() []headerParts {
+	top := headerParts{identity: true, agents: true, stage: true, count: countFull}
+	levels := []headerParts{top}
+	if !m.done {
+		levels[0].hint = true
+		levels = append(levels, headerParts{identity: true, agents: true, stage: true, hint: true, count: countTotal})
+	}
+	return append(levels,
+		headerParts{identity: true, agents: true, stage: true, count: countTotal},
+		headerParts{agents: true, stage: true, count: countTotal},
+		headerParts{stage: true, count: countTotal},
+		headerParts{count: countTotal},
+		headerParts{count: countNone},
+	)
 }
 
 // how much of the findings count the header has room for.
@@ -82,8 +102,8 @@ const (
 
 // headerParts is one level of header detail.
 type headerParts struct {
-	identity, agents, stage bool
-	count                   int
+	identity, agents, stage, hint bool
+	count                         int
 }
 
 // headerLine builds the header at one level of detail.
@@ -108,12 +128,18 @@ func (m Model) headerLine(p headerParts) string {
 		}
 		head += m.style.muted.Render(" · ") + m.countStyle().Render(count)
 	}
+	if p.hint {
+		// the only key that ends a live run. q and esc are inert until the report is in, so a reader who
+		// tries them sees a frame that does not change and has nothing on screen telling him why
+		head += m.style.muted.Render(" · ctrl+c to quit")
+	}
 	return head + m.closing()
 }
 
 // closing is what the header says once the run is over: that it is over, and how to leave. A finished
 // review otherwise looks identical to a stalled one — every row reads "done" and nothing moves — and a
-// reader who does not already know the key has no way to find it.
+// reader who does not already know the key has no way to find it. While the run is still going the same
+// job belongs to the header's own hint, which is droppable where this notice is not.
 func (m Model) closing() string {
 	if !m.done {
 		return ""
