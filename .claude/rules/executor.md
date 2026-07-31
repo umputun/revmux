@@ -229,6 +229,15 @@ Codex is a peer executor, not a special case in the pipeline — but the executo
   Codex writes an `event_msg`/`agent_reasoning` record for the same step as well, so handling both reports
   every step twice. Only the first line of a summary is used: some versions append a whole paragraph after
   the bold title, and forwarding it reintroduces the flood the rollout is read to avoid.
+- **A shell tool call whose command cannot be recovered is dropped, not reported by name.**
+  `exec`, `exec_command` and `shell` carry the command in the payload, so the name on its own says only
+  that codex called a tool. Most calls yield a command — `arguments` carries `cmd`, or `cmdPattern`
+  matches it out of a `custom_tool_call`'s snippet — but codex composes some multi-command snippets as a
+  JS array with no `cmd` key at all, and those left a bare `exec` in the activity column for minutes.
+  Every other tool keeps the name fallback: `apply_patch` and `update_plan` name what the agent is doing.
+  Dropping is safe because liveness never rode on these events — the tail touches the idle timer whenever
+  the file advances, never from the sink, and a codex leader releases the stagger gate on its first raw
+  stdout write.
 - **Codex has no `--json-schema`.**
   The executor appends its own "return only JSON matching this shape" contract to the composed prompt,
   rendering `Request.Schema` inline. That field is set for **both** executors and carries the running

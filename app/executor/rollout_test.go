@@ -90,11 +90,6 @@ func TestCodex_rolloutLine(t *testing.T) {
 			line:     `{"type":"response_item","payload":{"type":"function_call","name":"apply_patch"}}`,
 			wantKind: EventProgress, wantText: "apply_patch",
 		},
-		{
-			name:     "unparseable arguments fall back too rather than dropping the call",
-			line:     `{"type":"response_item","payload":{"type":"function_call","name":"exec_command","arguments":"not json"}}`,
-			wantKind: EventProgress, wantText: "exec_command",
-		},
 	}
 
 	for _, tt := range tests {
@@ -112,6 +107,14 @@ func TestCodex_rolloutLine(t *testing.T) {
 			`{"type":"event_msg","payload":{"type":"token_count"}}`,
 			`{"type":"response_item","payload":{"type":"function_call"}}`, // no name
 			`{"type":"response_item","payload":{"type":"reasoning","summary":[{"text":"   "}]}}`,
+			// a shell tool's name reports nothing on its own, so a call whose command cannot be
+			// recovered is dropped rather than shown. The first is the shape that put a bare "exec"
+			// on screen for minutes: codex composes several commands as a JS array with no cmd key.
+			`{"type":"response_item","payload":{"type":"custom_tool_call","name":"exec","input":` +
+				`"const cmds = [\n  [\"index\", \"gh api 'repos/o/r/contents/a.ts' --jq '.content'\"],\n` +
+				`  [\"validate\", \"rg -n 'roots' src/session.ts\"],\n];"}}`,
+			`{"type":"response_item","payload":{"type":"function_call","name":"exec_command","arguments":"not json"}}`,
+			`{"type":"response_item","payload":{"type":"custom_tool_call","name":"shell"}}`,
 			// codex writes this alongside every response_item/reasoning; handling both reported each
 			// step twice, which is the duplicate this case exists to keep out
 			`{"type":"event_msg","payload":{"type":"agent_reasoning","text":"**Planning**"}}`,

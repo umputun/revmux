@@ -41,6 +41,17 @@ type rolloutPayload struct {
 // than JSON — codex writes `tools.exec_command({cmd:"..."})` there instead of arguments.
 var cmdPattern = regexp.MustCompile(`"?\bcmd"?\s*:\s*"((?:[^"\\]|\\.)*)"`)
 
+// execTools run a shell command and carry it in the payload, so the name alone reports nothing a reader
+// can act on. A call under one of these whose command cannot be recovered is dropped rather than shown:
+// codex composes some multi-command snippets as a JS array with no `cmd` key at all, and those put a bare
+// "exec" in the activity column for minutes at a time — worse than leaving the previous line standing,
+// which at least names something that happened. Every other tool keeps the name fallback, since
+// "apply_patch" or "update_plan" says what the agent is doing.
+//
+// Liveness does not ride on this. The rollout tail touches the idle timer whenever the file advances,
+// never from the sink, and a codex leader releases the stagger gate on its first raw stdout write.
+var execTools = map[string]struct{}{"exec": {}, "exec_command": {}, "shell": {}}
+
 // sessionID pulls the session id out of one stderr line, or "" when the line is not the banner.
 func (s *codexStderr) sessionID(line string) string {
 	if m := sessionIDPattern.FindStringSubmatch(line); m != nil {
@@ -211,6 +222,9 @@ func (c *Codex) rolloutLine(line []byte) *Event {
 		}
 		if cmd := c.rolloutCmd(p); cmd != "" {
 			return &Event{Kind: EventProgress, Text: cmd}
+		}
+		if _, shell := execTools[p.Name]; shell {
+			return nil
 		}
 		return &Event{Kind: EventProgress, Text: p.Name}
 	}
