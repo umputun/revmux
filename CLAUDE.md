@@ -240,7 +240,8 @@ Roster agent names carry the same rule, applied at load in `prompt.AgentSpec.che
 `Archive.Writer` takes, which are relative and must allow a separator because `agents/`, `stages/` and
 `prompts/` all need one.
 Names revmux **derives** rather than reads — a verify group's label — are sanitized instead, since their
-parts are directory names from the findings and there is nobody to return an error to.
+parts are directory names, or agent names under `--verify-group-by source`, taken from the findings and
+there is nobody to return an error to.
 
 **Context variables expand to paths, never to content.**
 `{{SCOPE}}` is the absolute path of `scope.md`, not the text inside it; the agent reads the file itself.
@@ -396,7 +397,8 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
 
 - A new CLI flag needs: the `options` struct tag and the README flag table.
   An INI-backed one also needs a commented-out entry in `app/defaults/config`, the template `revmux init` writes —
-  not `--dump-defaults`, which extracts the prompt tree and knows nothing about settings.
+  not `--dump-defaults`, which extracts the prompt tree and knows nothing about settings —
+  plus the runtime-knob list in `.claude/rules/config.md`, which names the set literally and goes stale silently.
   It is reported by `revmux config` automatically: `knobs` is built by reflection over the `options` struct.
   A flag whose `choice:` vocabulary another package matches on spells that word twice, since a struct tag
   cannot name a constant: `--verify-group-by`'s `source` is `choice:"source"` in `app/config.go` and
@@ -465,7 +467,7 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
   `ProfileNames()` so a new one is guarded without being listed, which is what a contract check has to do
   and what a literal list there silently stopped doing.
   It names two exemptions, and each is a profile whose bar is deliberately not the shared one: `final`
-  reports two severities rather than four, and `triage` rates how much a point bears on a decision rather
+  reports two severities rather than three, and `triage` rates how much a point bears on a decision rather
   than what goes wrong at runtime.
   Both are pinned by their own assertions instead, so an exemption removes a profile from the equality
   check and never from the test.

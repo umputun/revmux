@@ -384,7 +384,7 @@ while its lenses define the job independently of the runner.
 
 ```yaml
 ---
-description: all seven lenses across three claude agents plus an adversarial codex peer
+description: all eight lenses across three claude agents plus an adversarial codex peer
 model: claude/opus:high
 agents:
   - {name: bugs+impl,    lenses: [bugs, impl],            color: cyan}
@@ -729,7 +729,7 @@ $ revmux --stagger-delay=45s config
   "profiles": [
     {
       "name": "comprehensive",
-      "description": "all seven lenses across three claude agents plus an adversarial codex peer",
+      "description": "all eight lenses across three claude agents plus an adversarial codex peer",
       "runner": {"executor": "claude", "model": "opus", "effort": "high"},
       "roster": [
         {"name": "bugs+impl", "lenses": ["bugs", "impl"], "executor": "claude",
@@ -951,7 +951,9 @@ reviewed, runs the git commands, writes the round's `input/`, launches revmux, r
 opens a new round on the same task after fixes. Asked for a pull request, it fetches the head into a
 throwaway worktree, points `--workdir` at it while running from the main checkout — so the archive
 outlives the checkout and the branch's own `.revmux/` never loads — and removes both the worktree and
-the temp branch afterwards.
+the temp branch afterwards. Asked to triage a filed item instead of a change, it gathers the issue or
+discussion, its thread and the author's history into `context/`, runs the `triage` panel over them and
+puts the maintainer's six answers to him with the arguments behind each — `references/triage.md`.
 
 | harness | location | install |
 |---|---|---|

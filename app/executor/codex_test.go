@@ -526,13 +526,25 @@ func TestCodex_Run_rolloutKeepsTheWatchdogAlive(t *testing.T) {
 		`{"type":"response_item","payload":{"type":"reasoning","summary":[{"text":"**Analyzing the stagger gate**"}]}}`+"\n"),
 		0o600))
 
+	// the process is held open until the rollout's own touch has landed, and that is what makes the
+	// count readable: Run withdraws the touch as soon as the process exits, so a child that finishes
+	// first leaves the tail calling a withdrawn closure and the assertion sampling a run it lost a race
+	// to. The deadline bounds the case where the touch never comes at all.
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	var resets atomic.Int64
 	clk := &mocks.ClockMock{
 		NowFunc: func() time.Time { return time.Unix(0, 0).UTC() },
 		AfterFuncFunc: func(time.Duration, func()) executor.Timer {
 			return &mocks.TimerMock{
-				StopFunc:  func() bool { return true },
-				ResetFunc: func(time.Duration) bool { resets.Add(1); return true },
+				StopFunc: func() bool { return true },
+				ResetFunc: func(time.Duration) bool {
+					if resets.Add(1) > 1 {
+						cancel()
+					}
+					return true
+				},
 			}
 		},
 	}
@@ -551,9 +563,8 @@ func TestCodex_Run_rolloutKeepsTheWatchdogAlive(t *testing.T) {
 		}
 	}}
 
-	c := executor.NewCodex(fakeRunner("emit", out, errPath), executor.Opts{IdleTimeout: time.Minute, Clock: clk})
-	_, err := c.Run(context.Background(), executor.Request{Prompt: "x"}, sink)
-	require.NoError(t, err)
+	c := executor.NewCodex(fakeRunner("stall", out, errPath), executor.Opts{IdleTimeout: time.Minute, Clock: clk})
+	_, err := c.Run(ctx, executor.Request{Prompt: "x"}, sink)
 
 	select {
 	case <-seen:
@@ -563,6 +574,7 @@ func TestCodex_Run_rolloutKeepsTheWatchdogAlive(t *testing.T) {
 	assert.Greater(t, resets.Load(), int64(1),
 		"the one stderr line is the only reset the pipes can account for, so a rollout record must add its own — "+
 			"without it codex is killed at the idle timeout while it is reasoning")
+	assert.ErrorIs(t, err, context.Canceled, "the run ended because the rollout touched, not because the deadline expired")
 }
 
 func TestCodex_Run_rolloutLivenessIsNotTheDisplayFilter(t *testing.T) {

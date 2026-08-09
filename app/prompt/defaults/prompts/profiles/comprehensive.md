@@ -1,5 +1,5 @@
 ---
-description: all seven lenses across three claude agents plus an adversarial codex peer
+description: all eight lenses across three claude agents plus an adversarial codex peer
 model: claude/opus:high
 agents:
   - {name: bugs+impl,    lenses: [bugs, impl],            color: cyan}

@@ -102,7 +102,7 @@ type Config struct {
 	StaggerDelay  time.Duration
 	MaxParallel   int
 	VerifyGroups  int
-	VerifyGroupBy string
+	VerifyGroupBy string // "dir", the default, or "source" to key verifier groups by the agent that raised the finding
 }
 
 // Pipeline runs one review. Run is a thin stage orchestrator: the stages own their own logic so no

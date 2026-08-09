@@ -207,8 +207,8 @@ func TestDefaults_TriageRoster(t *testing.T) {
 
 	assert.Contains(t, p.Description, "--no-synthesis",
 		"a bare --profile triage runs the drop rule over arguments that are single-source by construction")
-	body := p.Body
-	assert.Contains(t, body, "Leave the file field empty when the\n  point is not about a line of code",
+	body := strings.Join(strings.Fields(p.Body), " ")
+	assert.Contains(t, body, "Leave the file field empty when the point is not about a line of code",
 		"the finder schema requires file and describes it as a path, so the profile is the counterweight")
 }
 
@@ -274,6 +274,30 @@ func TestDefaults_SeverityContract(t *testing.T) {
 	assert.Contains(t, triageText, "**critical** — decisive on its own")
 	assert.NotContains(t, triageText, "Severity is what goes wrong when the code runs",
 		"a panel arguing about a filed item has no code running to go wrong")
+}
+
+func TestDefaults_EveryLensIsComposedBySomeProfile(t *testing.T) {
+	set, err := Load(LoadOpts{})
+	require.NoError(t, err)
+
+	// derived from the shipped set rather than listed: a lens no roster names never runs, and the only
+	// thing that would otherwise notice is a reviewer wondering why its findings stopped arriving
+	composed := map[string]struct{}{}
+	for _, name := range set.ProfileNames() {
+		p, profileErr := set.Profile(name)
+		require.NoError(t, profileErr)
+		specs, rosterErr := p.Roster(nil, set.LensNames())
+		require.NoError(t, rosterErr)
+		for _, spec := range specs {
+			for _, lens := range spec.Lenses {
+				composed[lens] = struct{}{}
+			}
+		}
+	}
+
+	for _, l := range set.Lenses() {
+		assert.Contains(t, composed, l.Name, "lens %s is in no shipped profile's roster, so nothing ever runs it", l.Name)
+	}
 }
 
 func TestDefaults_LensesAreSelfContained(t *testing.T) {

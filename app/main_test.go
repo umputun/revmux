@@ -1179,6 +1179,8 @@ func (r *runHarness) newRunner(spec pipeline.RunnerSpec) pipeline.Runner {
 			if strings.Contains(req.Prompt, synthesisMarker) {
 				return r.synth, nil
 			}
+			// gated on the fixture being set: the cases predating it leave it zero and must keep
+			// getting the finder result for verify, or every one of them changes behavior
 			if len(r.verify.StructuredOutput) > 0 && strings.Contains(req.Prompt, verifyMarker) {
 				return r.verify, nil
 			}

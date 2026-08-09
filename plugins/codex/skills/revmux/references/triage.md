@@ -132,9 +132,10 @@ counts read as a defect report.
 
 Each argument gets its title, the body's reasoning, and what it cites — a comment and its author, a
 comparable item and how it was answered, a file and line where the point is about code. An argument that
-cites nothing is a hunch and should be presented as one. `open_questions` are what the panel could not
-settle and go in their own short section; `immaterial` is what verification judged does not bear on the
-decision, reported separately and kept out of the counts.
+cites nothing is a hunch and should be presented as one. `open_questions` is always empty here — only
+synthesis fills it, and every triage run passes `--no-synthesis`, so a point the panel could not settle
+arrives as a low-confidence argument instead. `immaterial` is what verification judged does not bear on
+the decision, reported separately and kept out of the counts.
 
 Cross-source corroboration means much less than it does in a code review: four agents given four
 different parts of one argument are not expected to overlap, so `sources` holding two names is a

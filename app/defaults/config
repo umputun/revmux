@@ -22,7 +22,7 @@
 # cap on the number of verifier groups
 # verify-groups = 6
 
-# key verifier groups by directory or by the agent that raised the finding
+# key verifier groups by directory or by the agent that raised the finding: dir | source
 # verify-group-by = dir
 
 # root directory holding task directories

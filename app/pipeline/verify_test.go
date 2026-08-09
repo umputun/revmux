@@ -129,6 +129,17 @@ func TestVerifier_groupBySource(t *testing.T) {
 		require.Len(t, groups, 1)
 		assert.Equal(t, []string{"."}, groups[0].dirs)
 	})
+
+	t.Run("a synthesized finding lands in its first source's bucket", func(t *testing.T) {
+		v := &verifier{cfg: src}
+		merged := finding.Finding{ID: "thesis-1", Sources: []string{"thesis", "antithesis"}}
+		groups := v.groupByDir(slices.Concat([]finding.Finding{merged}, agentFindings("antithesis", 1)))
+		require.Len(t, groups, 2)
+		assert.Equal(t, []string{"antithesis"}, groups[0].dirs)
+		assert.Len(t, groups[0].findings, 1, "a merged finding is judged once, not once per source that raised it")
+		assert.Equal(t, []string{"thesis"}, groups[1].dirs)
+		assert.Equal(t, []string{"thesis-1"}, []string{groups[1].findings[0].ID})
+	})
 }
 
 func TestVerifier_promptName(t *testing.T) {
@@ -689,6 +700,27 @@ func TestVerifier_prompt_materiality(t *testing.T) {
 	assert.Contains(t, text, "materiality test")
 	assert.Contains(t, text, `"id": "bugs-1"`)
 	assert.NotContains(t, text, "{{", "every variable resolved")
+}
+
+func TestVerifier_prompt_locationless(t *testing.T) {
+	h := newHarness(t)
+	stage, err := h.cfg.Set.Stage(stageVerify)
+	require.NoError(t, err)
+
+	v := h.verifier(func(Event) {})
+	v.cfg.VerifyGroupBy = groupBySource
+	group := v.groupByDir(agentFindings("thesis", 2))[0]
+	text, err := stage.Compose(prompt.ComposeOpts{Vars: v.vars(group)})
+	require.NoError(t, err)
+
+	// a triage panel's arguments cite a thread rather than a line, so the carve-out for them has to
+	// survive composition — without it the verifier applies a blast-radius test to a claim with no fix
+	assert.Contains(t, text, "When a finding names no file")
+	assert.Contains(t, text, "pre_existing does not apply")
+	assert.Contains(t, text, "answers the first two questions only")
+	assert.Contains(t, text, "the missing location is its defect",
+		"a code review's finding that lost its location must not be read as a claim citing no code")
+	assert.Contains(t, text, `"file": ""`, "the group the carve-out is written for reaches the model with no location")
 }
 
 // verifyMarker is a line only the verify prompt carries, so the harness runner can tell the stage

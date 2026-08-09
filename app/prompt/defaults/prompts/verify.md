@@ -41,9 +41,14 @@ a reason to reject. Where the code contradicts the finding, say so and reject it
 ## When a finding names no file
 
 A review can be judging a filed item — an issue, a defect report, a proposal — rather than a change,
-and most of what is raised about one cites no line of code. A finding whose `file` is empty is that
-kind of claim, not a finding that lost its location, and everything in this section applies to it
-alone. A finding that names a file is judged exactly as above.
+and most of what is raised about one cites no line of code. Where `{{SCOPE}}` describes such an item,
+a finding whose `file` is empty is that kind of claim rather than a finding that lost its location,
+and everything in this section applies to it alone.
+
+A finding that names a file is judged exactly as above, and so is one that names none while
+`{{SCOPE}}` describes a change and the command that diffs it. Nothing in this section reaches that
+finding: the missing location is its defect, not its shape. Find what it points at and refine it with
+the location, or reject it when the code supports none.
 
 Judge it against what it does cite: the comment in the thread and who wrote it, the comparable item
 and how it was answered, the rule in the project's own documents. Read that the way you would open a
@@ -92,7 +97,7 @@ Answer three questions:
 A finding that survives all three is confirmed or refined. Style preferences, hypothetical futures and
 restatements of the code as written are immaterial by definition.
 
-**A finding that names no file answers the first two questions only** — read as whether the claim
+**A finding the section above covers answers the first two questions only** — read as whether the claim
 holds and whether its holding bears on the decision. Skip the third: there is no fix, so its blast
 radius has nothing to measure, and applying it anyway dismisses every such finding for a cost that
 does not exist. One that can hold and matters when it does is confirmed or refined.

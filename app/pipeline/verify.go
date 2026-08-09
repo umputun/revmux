@@ -20,11 +20,12 @@ import (
 )
 
 // thinGroup is the size below which a directory does not earn its own verifier and is merged with
-// the other thin ones. One finding is not worth a process of its own.
+// the other thin ones. One finding is not worth a process of its own. Source mode never consults it:
+// what justifies the merge is directory locality, which a per-agent bucket does not have.
 const thinGroup = 2
 
-// labelDirs caps how many directory names a merged group spells out before the rest are counted,
-// since the label becomes a filename under prompts/stages/.
+// labelDirs caps how many keys a merged group spells out before the rest are counted, since the label
+// becomes a filename under prompts/stages/.
 const labelDirs = 3
 
 // labelUnsafe is everything a group label may not carry. Separators collapse to a dash rather than
@@ -320,7 +321,7 @@ func (v *verifier) groupByDir(findings []finding.Finding) []verifyGroup {
 		byKey[key] = append(byKey[key], f)
 	}
 
-	merge := v.cfg.VerifyGroupBy != groupBySource
+	merge := !v.bySource()
 	groups, thin := []verifyGroup{}, verifyGroup{}
 	for _, key := range slices.Sorted(maps.Keys(byKey)) {
 		g := verifyGroup{dirs: []string{key}, findings: byKey[key]}
@@ -337,7 +338,7 @@ func (v *verifier) groupByDir(findings []finding.Finding) []verifyGroup {
 }
 
 // capped merges the smallest groups together until the count fits the configured limit, taking whole
-// directories rather than splitting one.
+// groups rather than splitting one.
 func (v *verifier) capped(groups []verifyGroup) []verifyGroup {
 	limit := v.cfg.VerifyGroups
 	if limit <= 0 || len(groups) <= limit {
@@ -356,12 +357,18 @@ func (v *verifier) capped(groups []verifyGroup) []verifyGroup {
 	return out
 }
 
-// key is the bucket one finding falls in: the agent that raised it in source mode, its directory
+// bySource reports whether verification buckets by the agent that raised a finding rather than by its
+// directory. Both the thin merge and the bucket key turn on it, and reading it two different ways is
+// what would let a third mode inherit one and not the other.
+func (v *verifier) bySource() bool { return v.cfg.VerifyGroupBy == groupBySource }
+
+// key is the bucket one finding falls in: the first agent that raised it in source mode, its directory
 // otherwise. A panel's arguments are judged one panelist at a time, so one verifier never holds a case
-// and the case answering it. In directory mode a file-level finding carries no line and a
-// repository-root file has no directory, and both land in the same root bucket.
+// and the case answering it. A synthesized finding carries several sources and lands in the first one's
+// bucket. In directory mode a file-level finding carries no line and a repository-root file has no
+// directory, and both land in the same root bucket.
 func (v *verifier) key(f finding.Finding) string {
-	if v.cfg.VerifyGroupBy == groupBySource {
+	if v.bySource() {
 		if len(f.Sources) == 0 {
 			return "."
 		}
@@ -471,8 +478,8 @@ func (g verifyGroup) label() string {
 	return strings.Join(parts, "+") + suffix
 }
 
-func (g verifyGroup) slug(dir string) string {
-	out := strings.Trim(labelUnsafe.ReplaceAllString(dir, "-"), "-.")
+func (g verifyGroup) slug(key string) string {
+	out := strings.Trim(labelUnsafe.ReplaceAllString(key, "-"), "-.")
 	if out == "" {
 		return "root"
 	}
@@ -480,7 +487,7 @@ func (g verifyGroup) slug(dir string) string {
 }
 
 // agent is what a reader sees: a verify group named for what it covers. The descriptive label stays on
-// the archived prompt, and the group's own started event lists every directory it covers.
+// the archived prompt, and the group's own started event lists every key it covers.
 func (g verifyGroup) agent() string {
 	return stageVerify + " " + g.shown
 }
