@@ -448,8 +448,16 @@ would wait on a gate nothing opens.
 
 ### Task 8: [Final] Update documentation
 
-- [ ] update README.md and CLAUDE.md for anything that drifted during implementation
-- [ ] move this plan to `docs/plans/completed/`
+- [x] update README.md and CLAUDE.md for anything that drifted during implementation
+- [x] move this plan to `docs/plans/completed/`
+
+➕ Two sites had drifted. `.claude/rules/prompts.md` still said verify "fans out per directory", which the
+new `source` mode falsifies — it fans out per group. And the flag's `choice:"source"` vocabulary is spelled
+a second time in `app/pipeline` as `groupBySource`, since a struct tag cannot name a constant; a rename on
+either side compiles and passes and leaves the mode reachable by a value that silently behaves as `dir`, so
+it is now a keep-in-sync bullet. Everything else Task 6 had already covered: the profile and lens tables,
+the prompt-tree diagram, the flag table, the seven-profile and thirteen-lens counts, and the two contract
+exemptions.
 
 ## Post-Completion
 

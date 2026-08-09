@@ -398,6 +398,10 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
   An INI-backed one also needs a commented-out entry in `app/defaults/config`, the template `revmux init` writes —
   not `--dump-defaults`, which extracts the prompt tree and knows nothing about settings.
   It is reported by `revmux config` automatically: `knobs` is built by reflection over the `options` struct.
+  A flag whose `choice:` vocabulary another package matches on spells that word twice, since a struct tag
+  cannot name a constant: `--verify-group-by`'s `source` is `choice:"source"` in `app/config.go` and
+  `groupBySource` in `app/pipeline/verify.go`. Renaming one side compiles and passes, and leaves the mode
+  reachable by a flag value that silently behaves as the default.
 - A new roster key needs: the `agentYAML` field it parses into, the `AgentSpec` field it resolves to,
   front-matter validation, and the profile examples in README and `.claude/rules/prompts.md`.
 - A new **profile-level** key needs the same four, in `profileYAML` and on `Profile`, plus the README

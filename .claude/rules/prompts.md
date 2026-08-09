@@ -174,7 +174,7 @@ package refuses everywhere else.
 
 **A profile does not colour a stage.** Both renderers resolve a name the roster does not carry through the
 package-level `prompt.DerivedSpec`, a pure function of the name, and that purity is what keeps them from
-disagreeing about a colour neither chose. Verify is not one process either — it fans out per directory into
+disagreeing about a colour neither chose. Verify is not one process either — it fans out per group into
 rows the profile never names — so one authored colour has no well-defined set of rows to paint.
 
 `--lenses bugs,impl` overrides a profile's roster while keeping its body.
