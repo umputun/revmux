@@ -23,8 +23,9 @@ Each item below is a **path**, not the text it names.
 
 ## For each finding
 
-Open the file at the line named and read enough around it to judge. Then return exactly one verdict,
-quoting the finding's `id` unchanged:
+Open the file at the line named and read enough around it to judge — or, when the finding names no
+file, read what it does cite; see below. Then return exactly one verdict, quoting the finding's `id`
+unchanged:
 
 - **confirmed** — the problem is real as described.
 - **refined** — the problem is real but the description, location, severity or confidence is wrong.
@@ -36,6 +37,27 @@ quoting the finding's `id` unchanged:
 
 Judge the finding, not the reviewer. A confident description is not evidence, and a hedged one is not
 a reason to reject. Where the code contradicts the finding, say so and reject it.
+
+## When a finding names no file
+
+A review can be judging a filed item — an issue, a defect report, a proposal — rather than a change,
+and most of what is raised about one cites no line of code. A finding whose `file` is empty is that
+kind of claim, not a finding that lost its location, and everything in this section applies to it
+alone. A finding that names a file is judged exactly as above.
+
+Judge it against what it does cite: the comment in the thread and who wrote it, the comparable item
+and how it was answered, the rule in the project's own documents. Read that the way you would open a
+file for a finding that names a line, and check it — a claim about how something was decided before
+is as checkable as a claim about a function. A claim citing nothing at all is what rejection is for.
+
+Two verdicts read differently here:
+
+- **pre_existing does not apply.** It marks a defect the change under review did not introduce, and
+  there is no change for anything to pre-date. Never send a claim about existing code there because
+  the code was already that way — that it already is is usually the claim's whole point.
+- **immaterial** means the point does not bear on the decision being asked for, not that a defect is
+  not worth fixing. An accurate point that leaves the answer where it was is immaterial; one that
+  would change it is not, however small the thing it names.
 
 ## The materiality test
 
@@ -69,5 +91,10 @@ Answer three questions:
 
 A finding that survives all three is confirmed or refined. Style preferences, hypothetical futures and
 restatements of the code as written are immaterial by definition.
+
+**A finding that names no file answers the first two questions only** — read as whether the claim
+holds and whether its holding bears on the decision. Skip the third: there is no fix, so its blast
+radius has nothing to measure, and applying it anyway dismisses every such finding for a cost that
+does not exist. One that can hold and matters when it does is confirmed or refined.
 
 Return one entry per finding you were given, and no entry for a finding you were not given.

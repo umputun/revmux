@@ -341,18 +341,18 @@ in the unexported `groupBySource`, because a struct tag cannot name a constant.
 **Files:**
 - Modify: `app/prompt/defaults/prompts/verify.md`
 
-- [ ] add a scoped section for a finding with no file: `pre_existing` does not apply, since there is no
+- [x] add a scoped section for a finding with no file: `pre_existing` does not apply, since there is no
       change under review for anything to pre-date; `immaterial` means the point does not bear on the
       decision rather than that a defect is not worth fixing; skip the materiality test's third question,
       the fix's blast radius, when there is no fix; and check the cited issue, pull request or prior
       decision instead of opening a file
-- [ ] keep it scoped to location-less findings so code review is untouched — this file is shared by every
+- [x] keep it scoped to location-less findings so code review is untouched — this file is shared by every
       profile and cannot be overridden per profile
-- [ ] **this is the task that decides whether triage returns arguments or returns `findings: []` with
+- [x] **this is the task that decides whether triage returns arguments or returns `findings: []` with
       exit 0.** Without it, a verifier following the shipped text routes every grounded claim about
       existing code to `pre_existing` and every unactionable argument to `immaterial`, and
       `verifier.run` moves both out of `Findings`
-- [ ] no Go change; the gate is the mocked end-to-end in Task 7 asserting arguments survive verification
+- [x] no Go change; the gate is the mocked end-to-end in Task 7 asserting arguments survive verification
 
 ### Task 5: The skill flow, in both trees
 
