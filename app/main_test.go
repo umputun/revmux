@@ -443,6 +443,46 @@ func TestRun_review(t *testing.T) {
 	}
 }
 
+func TestRun_triagePanel(t *testing.T) {
+	// a panel's argument cites no code, so it carries no file. Under --verify-group-by source each
+	// panelist's case is judged on its own, and the verdicts have to leave the arguments in Findings:
+	// pre_existing and immaterial both route them out of the report and out of the exit code.
+	r := newRunOpts(t, options{
+		// no stagger: the mock runner emits no activity and the fake clock fires no timer, so the
+		// three followers would wait on a gate nothing opens
+		Task: "pr-1", Run: "round-1", TasksDir: taskRoot(t), Profile: "triage",
+		MaxParallel: 4, VerifyGroups: 6, NoSynthesis: true, VerifyGroupBy: "source",
+	})
+	r.result = executor.Result{StructuredOutput: json.RawMessage(
+		`{"findings":[{"severity":"major","confidence":80,"title":"the capability already exists",` +
+			`"body":"the thread asks for what --lenses already does"}]}`)}
+	r.verify = executor.Result{StructuredOutput: json.RawMessage(
+		`{"verdicts":[{"id":"facts-1","verdict":"confirmed"},{"id":"thesis-1","verdict":"confirmed"},` +
+			`{"id":"antithesis-1","verdict":"confirmed"},{"id":"cost-1","verdict":"confirmed"}]}`)}
+
+	assert.Equal(t, 1, run(r.opts()))
+
+	var rep finding.Report
+	require.NoError(t, json.Unmarshal([]byte(r.stdout.String()), &rep))
+	require.Len(t, rep.Findings, 4, "a location-less argument survives verification like any other finding")
+	assert.Empty(t, rep.Immaterial, "immaterial reads as a point that does not bear on the decision")
+	assert.Empty(t, rep.PreExisting, "there is no change under review for an argument to pre-date")
+
+	sources := make([]string, 0, len(rep.Findings))
+	for _, f := range rep.Findings {
+		sources = append(sources, f.Sources...)
+		assert.Empty(t, f.File, "the panel cites the thread, not a path")
+		assert.Equal(t, finding.Confirmed, f.Verdict)
+	}
+	slices.Sort(sources)
+	assert.Equal(t, []string{"antithesis", "cost", "facts", "thesis"}, sources, "attribution survives with synthesis off")
+
+	stderr := r.stderr.String()
+	for _, agent := range []string{"verify facts", "verify thesis", "verify antithesis", "verify cost"} {
+		assert.Contains(t, stderr, agent, "one verifier per panelist, so no one holds a case and its rebuttal")
+	}
+}
+
 func TestRun_promptsCarryPathsNotContents(t *testing.T) {
 	// the tasks root is outside the tree under review, which is where the never-embed rule is easiest
 	// to break: nothing about these paths is relative to the repo, so a composer tempted to inline
@@ -1077,6 +1117,7 @@ type runHarness struct {
 	stderr *strings.Builder
 	result executor.Result
 	synth  executor.Result
+	verify executor.Result
 	runErr error
 	runs   atomic.Int64
 
@@ -1085,8 +1126,12 @@ type runHarness struct {
 }
 
 // synthesisMarker is a line only the synthesis prompt carries, so the harness answers that stage
-// with its own fixture rather than handing it a finder-shaped one.
-const synthesisMarker = "merging a review panel"
+// with its own fixture rather than handing it a finder-shaped one. verifyMarker does the same for the
+// verify stage, which answers with verdicts rather than findings.
+const (
+	synthesisMarker = "merging a review panel"
+	verifyMarker    = "You are verifying findings another reviewer produced"
+)
 
 // attempts is how many processes the run launched, which is what proves a failing source was retried
 // exactly once rather than not at all or forever.
@@ -1133,6 +1178,9 @@ func (r *runHarness) newRunner(spec pipeline.RunnerSpec) pipeline.Runner {
 			}
 			if strings.Contains(req.Prompt, synthesisMarker) {
 				return r.synth, nil
+			}
+			if len(r.verify.StructuredOutput) > 0 && strings.Contains(req.Prompt, verifyMarker) {
+				return r.verify, nil
 			}
 			return r.result, r.runErr
 		},

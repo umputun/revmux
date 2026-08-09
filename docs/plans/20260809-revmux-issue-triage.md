@@ -424,18 +424,27 @@ carried — thirteen lenses now, and nothing derives that number.
 Every criterion here is deterministic and local. Anything needing a real model or a real filed item is in
 Post-Completion.
 
-- [ ] **code review is unchanged**: in dir mode an all-located findings set groups exactly as today, and
+- [x] **code review is unchanged**: in dir mode an all-located findings set groups exactly as today, and
       the existing `groupByDir` subtests pass with fixtures that carry sources
-- [ ] in source mode, four agents with one argument each produce four verifier groups
-- [ ] a mocked end-to-end in `app/main_test.go` under `triage` with `--no-synthesis` and
+- [x] in source mode, four agents with one argument each produce four verifier groups
+- [x] a mocked end-to-end in `app/main_test.go` under `triage` with `--no-synthesis` and
       `--verify-group-by source`: the arguments reach stdout with `sources` intact, **and survive
       verification rather than landing in `pre_existing` or `immaterial`** — the Task 4 gate
-- [ ] a mocked run asserting a second round sees the first through prior-round injection
-- [ ] `--verify-group-by` rejects an unknown value at load and appears in `revmux config`
-- [ ] `revmux config` reports the triage profile and the five lenses with their descriptions
-- [ ] `preflight.sh triage` reports both binaries needed
-- [ ] `diff -rq` of both skill trees comes back empty
-- [ ] run `make test` and `make lint`; coverage meets the project standard of 80%
+- [x] a mocked run asserting a second round sees the first through prior-round injection
+- [x] `--verify-group-by` rejects an unknown value at load and appears in `revmux config`
+- [x] `revmux config` reports the triage profile and the five lenses with their descriptions
+- [x] `preflight.sh triage` reports both binaries needed
+- [x] `diff -rq` of both skill trees comes back empty
+- [x] run `make test` and `make lint`; coverage meets the project standard of 80%
+
+➕ Only the triage end-to-end was missing; every other criterion was already pinned by a test the earlier
+tasks wrote or that predates them — prior-round injection by `TestRun_history`, the flag's vocabulary by
+`TestParseArgs`, the catalog by `TestRun_config`. The new `TestRun_triagePanel` needed one harness change:
+the mock runner answered every stage with the finder fixture, so verify degraded its group and no test
+could assert what a verdict does to a location-less argument. It now answers the verify prompt from its
+own `verify` fixture when one is set, which leaves every existing case unchanged. The panel runs with no
+stagger, since the fake clock fires no timer and the mock emits no activity, so three of the four agents
+would wait on a gate nothing opens.
 
 ### Task 8: [Final] Update documentation
 
