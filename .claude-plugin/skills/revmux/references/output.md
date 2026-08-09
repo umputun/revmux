@@ -121,6 +121,28 @@ still hold it.
 
 Do not paraphrase a body down to its title — the body carries the trigger and consequence.
 
+## A triage report reads differently
+
+Under `--profile triage` the same JSON carries a panel's arguments about a filed item rather than defects
+in a diff. Four things change in how it is read, and `references/triage.md` is the procedure around them.
+
+- **`severity` means weight on the decision**, not damage. `critical` is decisive on its own, `major`
+  bears strongly, `minor` is worth knowing and does not move the answer. A point can be entirely true and
+  still be `minor`.
+- **`file` is usually empty**, and that is correct: most of what a panel reports cites a comment in the
+  thread, a comparable item or a stated rule rather than a line of code. An argument citing nothing at
+  all is a hunch, whatever its confidence says.
+- **Never branch on the exit code.** `1` means findings were reported and `0` means none survived, but a
+  triage run reaches `0` by routes a code review does not. Read `findings` and report what is in it.
+- **Group by agent, not by severity.** Use the `sources` name — `facts`, `thesis`, `antithesis`, `cost`.
+  Cross-source corroboration means little here: four agents given four different parts of one argument
+  are not expected to overlap.
+
+**A triage run needs `--no-synthesis`, and its absence is silent.** Every argument a panel raises is
+single-source by construction, so the drop rule eats the minor-weight ones wholesale and the confidence
+boost fires where two agents *told to disagree* happen to agree. The report that comes back still looks
+like a report. This holds on a second round as much as the first.
+
 ## The run archive
 
 Every artifact lands in the round directory — the `round_dir` `revmux new` reported — beside the

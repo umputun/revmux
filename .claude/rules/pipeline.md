@@ -13,7 +13,8 @@ Do not turn this into a generic DAG engine — that was considered and rejected 
 
 - **find** — the profile's roster, all agents in parallel, launched staggered. Each returns structured findings.
 - **synthesize** — one model call. Merges, dedups, boosts confidence, splits open questions and pre-existing issues.
-- **verify** — parallel agents grouped by directory. Each confirms, rejects, refines, or reclassifies its own group.
+- **verify** — parallel agents grouped by directory, or by the agent that raised the finding under
+  `--verify-group-by source`. Each confirms, rejects, refines, or reclassifies its own group.
 
 `--no-synthesis` passes findings through with their `sources` and `lenses` attribution intact.
 `--no-verify` marks every finding unverified rather than silently claiming it was checked.

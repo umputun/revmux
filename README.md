@@ -134,6 +134,8 @@ configuration.
 3. **verify** — parallel agents grouped by directory, thin directories merged and the group count capped.
    Each verifier sees only its own group, so it cannot anchor on a neighbouring finding. Every finding comes
    back with a verdict: confirmed, refined, rejected, immaterial or pre-existing.
+   `--verify-group-by source` keys the groups by the agent that raised the finding and skips the thin
+   merge instead, so a panel of one-argument agents does not collapse into a single verifier.
 
 `--no-synthesis` passes findings through with their attribution intact. `--no-verify` marks every finding
 `unverified` rather than silently claiming it was checked.
@@ -270,7 +272,7 @@ came back.
 │   │   └── codex.md
 │   └── stages/               separate from agents/ so an agent named `verify` cannot collide
 │       ├── synthesis.md
-│       ├── verify-app-executor.md      one per directory group
+│       ├── verify-app-executor.md      one per group, directories by default
 │       └── verify-app-pipeline.md
 ├── stages/                   a skipped stage writes no snapshot, so --no-verify leaves 3- absent
 │   ├── 1-found.json          findings as the find stage left them

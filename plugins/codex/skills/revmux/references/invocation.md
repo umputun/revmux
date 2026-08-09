@@ -218,8 +218,13 @@ will not read, and an unwritable `./.revmux/` under `revmux init`.
 | `claude-only` | `bugs+impl`, `arch+quality`, `docs+tests`, `adversarial` — all on claude | codex is unavailable or unwanted |
 | `codex-only` | the same four splits on codex, synthesis and verify included — no claude anywhere | claude is unavailable or unwanted |
 | `grill-me` | `bugs+impl` and `architecture+quality`, each run once on claude and once on codex, every agent reading against the change | the user asked to be grilled; corroboration between two vendors on one lens pair is the point |
+| `triage` | `facts` (grounding + precedent), `thesis`, `antithesis` on claude, plus `cost` on codex | the subject is a filed item rather than a diff — an issue, a proposal, a discussion |
 
 `--profile <name>`. The default is `comprehensive` and is itself a config knob.
+
+`triage` is the one shipped profile that needs flags beside it: `--no-synthesis`, because every argument
+a panel produces is single-source and the drop rule eats them, and `--verify-group-by source`, so each
+panelist's case is verified apart from the case answering it. `references/triage.md` is the procedure.
 
 ## Lenses
 
@@ -233,6 +238,15 @@ will not read, and an unwritable `./.revmux/` under `revmux init`.
 | `tests` | whether tests exist where a defect can hide, actually exercise the code, and survive concurrency |
 | `comments` | the code's own stated rules — doc comments and inline notes the change was supposed to obey |
 | `adversarial` | attacks the change looking for what a sympathetic reader would accept |
+| `grounding` | whether what a filed item claims is true of the code as it stands today |
+| `precedent` | how comparable asks were decided here before, read off the maintainer's own closing words |
+| `thesis` | the strongest honest case that a filed item should be done or that its report is real |
+| `antithesis` | the strongest case against it, and whether something simpler reaches the same goal |
+| `cost` | what implementing it reaches into, and whether the work is proportionate to its value |
+
+The last five read a filed item rather than a diff and are what `triage` composes. They are still
+ordinary lenses — `--lenses grounding,cost` works — but under a code-review profile they have no item to
+read.
 
 `--lenses bugs,impl` replaces the profile's roster while keeping its body. Two things about it are
 easy to get wrong:
@@ -257,7 +271,9 @@ with each lens's own one-line description.
    confidence where distinct sources corroborate, splits out open questions and pre-existing issues,
    drops weak singletons.
 3. **verify** — parallel agents grouped by directory, each seeing only its own group so it cannot
-   anchor on a neighbour. Every finding comes back with a verdict.
+   anchor on a neighbour. Every finding comes back with a verdict. `--verify-group-by source` keys the
+   groups by the agent that raised the finding instead, and skips the merge that folds thin directories
+   together — a panel of one-argument agents reaches one verifier otherwise.
 
 `--no-synthesis` passes findings through with attribution intact — raw, duplicated across sources, no
 confidence boost. Useful when the question is "what did each source actually say".
@@ -526,7 +542,7 @@ revmux drives the model CLIs as subprocesses, so both must already be installed 
 
 - `claude` — every lens agent and both model stages run on it by default
 - `codex` — needed when a profile, a roster entry or a stage names it in its `model:`. `claude-only`
-  needs claude alone and `codex-only` needs codex alone; the other four shipped profiles need both.
+  needs claude alone and `codex-only` needs codex alone; the other five shipped profiles need both.
   `preflight.sh <profile>` answers it for the profile that will actually run
 
 `ANTHROPIC_API_KEY` is stripped from the child environment by default so `claude` uses interactive
@@ -565,6 +581,7 @@ These also read from the config file, under the same name as the flag:
 | `--stagger-delay=<d>` | `stagger-delay` | `30s` | how long to wait for the first agent before releasing the rest |
 | `--max-parallel=<n>` | `max-parallel` | `4` | how many agents run at once |
 | `--verify-groups=<n>` | `verify-groups` | `6` | cap on the number of verifier groups |
+| `--verify-group-by=<k>` | `verify-group-by` | `dir` | key verifier groups by directory or by the agent that raised the finding (`source`) |
 | `--tasks-dir=<dir>` | `tasks-dir` | `./.revmux/tasks` | root directory holding task directories |
 | `--auto-exit=<d>` | `auto-exit` | `0s` | close the TUI this long after the report arrives; `0` waits for the reader to quit with `q` or `ctrl+c` |
 | `--profile=<name>` | `profile` | `comprehensive` | profile naming the roster to run |

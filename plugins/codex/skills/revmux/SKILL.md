@@ -1,7 +1,7 @@
 ---
 name: revmux
-description: Run a supervised multi-agent code review by composing a task directory and driving the revmux CLI, then report or act on the findings it returns. revmux spawns and watches parallel claude and codex subprocesses with stall detection, retry, per-agent progress and a full run archive; this skill is the caller that writes the review context, launches it, reads the JSON back, and re-runs it after fixes. It also has a self mode that reads what past rounds produced and tells the user what the record says about the review itself — which stage is filtering, which lens rates hardest, whether rounds converge — then proposes one change to the local prompt text at a time, with the number behind it. It fetches a pull request into a throwaway worktree, reviews it there and cleans up after. Also answers questions about revmux itself — profiles, lenses, task directories, flags, the JSON shape, exit codes and the run archive. Activates on "revmux", "run revmux", "multi-agent review", "supervised review", "review with revmux", "revmux this branch", "revmux the last commit", "revmux pr 123", "revmux this PR", "review PR 123 with revmux", "run a revmux round", "re-review after fixes", "revmux it and show me", "revmux this, I want to watch", "run it visible", "show me the review", "revmux self", "self-improve revmux", "tune revmux", "revmux profiles", "revmux lenses", "what does revmux return", "revmux exit codes", "revmux task directory".
-argument-hint: 'optional: what to review ("pr 123", a ref, a path), plus "show me" / "focused" / "final" / "loop" / "lenses a,b"'
+description: Run a supervised multi-agent code review by composing a task directory and driving the revmux CLI, then report or act on the findings it returns. revmux spawns and watches parallel claude and codex subprocesses with stall detection, retry, per-agent progress and a full run archive; this skill is the caller that writes the review context, launches it, reads the JSON back, and re-runs it after fixes. It also triages a filed issue, proposal or discussion instead of a diff, running a four-way panel over it — grounding, the case for, the case against, and cost — and putting the maintainer's six answers to him with the arguments behind each. It also has a self mode that reads what past rounds produced and tells the user what the record says about the review itself — which stage is filtering, which lens rates hardest, whether rounds converge — then proposes one change to the local prompt text at a time, with the number behind it. It fetches a pull request into a throwaway worktree, reviews it there and cleans up after. Also answers questions about revmux itself — profiles, lenses, task directories, flags, the JSON shape, exit codes and the run archive. Activates on "revmux", "run revmux", "multi-agent review", "supervised review", "review with revmux", "revmux this branch", "revmux the last commit", "revmux pr 123", "revmux this PR", "review PR 123 with revmux", "run a revmux round", "re-review after fixes", "revmux it and show me", "revmux this, I want to watch", "run it visible", "show me the review", "triage this", "triage issue 123", "is this worth doing", "should we accept this", "should I close this", "revmux self", "self-improve revmux", "tune revmux", "revmux profiles", "revmux lenses", "what does revmux return", "revmux exit codes", "revmux task directory".
+argument-hint: 'optional: what to review ("pr 123", "issue 123", a ref, a path), plus "show me" / "focused" / "final" / "triage" / "loop" / "lenses a,b"'
 allowed-tools: [Bash, Read, Edit, Write, Grep, Glob]
 ---
 
@@ -56,6 +56,8 @@ Before applying fixes, write the plan inline as markdown and ask for explicit co
 - "multi-agent review", "supervised review", "parallel agent review"
 - "revmux this branch", "revmux the last commit", "revmux the uncommitted changes"
 - "revmux pr 123", "revmux this PR", a pull-request URL — the checkout half, `references/pr.md`
+- "triage this", "triage issue 123", "is this worth doing", "should we accept this", "should I close
+  this", an issue or discussion URL — the panel over a filed item, `references/triage.md`
 - "another revmux round", "re-review after fixes"
 - "show me", "I want to watch", "run it visible", "in an overlay" — the overlay form in Step 4, which
   puts the TUI on screen. Any of these with a review request means overlay; alone they are not a trigger
@@ -71,6 +73,7 @@ If asked **about** revmux rather than for a review, answer from the references a
 - `references/invocation.md` — flags, profiles, lenses, overlay backends, config precedence
 - `references/output.md` — JSON shape, verdicts, exit codes, run archive
 - `references/pr.md` — fetching a pull request into a worktree, `--workdir`, cleanup
+- `references/triage.md` — the panel over a filed item: what it fetches, its flags, the six answers
 - `references/loop.md` — the autonomous review-fix loop, entered from Step 6
 
 For anything about current configuration, run `revmux config` and read the answer. It reports what
@@ -139,6 +142,8 @@ git clone https://github.com/umputun/revmux.git && cd revmux && make install
 | "the last N commits" | `git diff HEAD~N` |
 | "since <ref>" | `git diff <ref>..HEAD` |
 | "pr 123", "this PR", a PR URL | `references/pr.md` — resolve, fetch into a worktree, review it there |
+| "issue 123", "triage this", an issue or discussion URL | `references/triage.md` — the panel over a filed item, not a diff |
+| a bare number, kind unnamed | probe pull request, then issue, then discussion — the first that resolves decides which of the two rows above applies |
 | a path | that subtree, as a diff plus a read list |
 
 Two commands here, and no more git than this:
@@ -164,6 +169,12 @@ binding — "take the scale as given rather than measuring it again".
 nothing out, so a PR has to be on disk before there is anything to review, and the checkout has to be
 removed afterwards. Read `references/pr.md` and follow it — it covers steps 1 through 4 for that case
 and hands back here at Step 5.
+
+**A filed item is not a change at all**, so there is no range to measure and nothing for Step 2's brief
+to read: it reads a diff and returns a shortstat, and a triage has neither. `references/triage.md`
+**replaces Step 2 entirely** — it fetches the item, its thread and the author's history into `context/`,
+writes the round, and hands back here at Step 5. A bare number goes through the probe in the table
+above first; a number that turns out to be a pull request is `pr.md`, whatever the user called it.
 
 Ask only when genuinely ambiguous — a feature branch with uncommitted work is the standard case. Put it
 as a numbered list, here and at the headless-versus-overlay choice in Step 4. **The question is always
@@ -287,6 +298,7 @@ scale numbers are what Step 4's one-line announcement is built from.
 | `claude-only` | the same four lens splits, all on claude | no codex available |
 | `codex-only` | the same four lens splits on codex, and synthesis and verify with them | no claude available |
 | `grill-me` | `bugs+impl` and `architecture+quality`, each once on claude and once on codex, all reading against the change | the user wants it torn apart |
+| `triage` | `facts` (grounding + precedent), `thesis`, `antithesis`, `cost` on codex | a filed item rather than a diff; needs `--no-synthesis --verify-group-by source`, `references/triage.md` |
 
 **A profile word is not a profile name.** Map whatever the user said onto the profiles `revmux config`
 reports, matching the name first and the `description` second. revmux rejects an unknown `--profile` at
@@ -301,6 +313,7 @@ fails the run.
 | claude only, no codex, skip codex | `claude-only` |
 | codex only, no claude, codex alone | `codex-only` |
 | grill me, tear it apart, be brutal, no mercy, adversarial | `grill-me` |
+| triage this, is this worth doing, should we accept this, should I close this | `triage`, and the subject is a filed item rather than a diff — `references/triage.md`, which owns the flags it needs |
 
 Examples, not the list. Match on intent — breadth wants `comprehensive`, speed wants `focused`, a merge
 gate wants `final` — and read the resolved catalog rather than this table, since a user with his own
