@@ -180,7 +180,8 @@ func TestDefaults_ComprehensiveRoster(t *testing.T) {
 	}
 	assert.ElementsMatch(t,
 		[]string{"bugs", "impl", "architecture", "quality", "docs", "tests", "comments", "adversarial"}, carried,
-		"the flagship profile carries every shipped lens exactly once")
+		"the flagship profile carries every code-review lens exactly once; the triage lenses belong to a "+
+			"review shape it does not run")
 }
 
 func TestDefaults_FinalReportsOnlyTheTopTwoSeverities(t *testing.T) {
@@ -242,8 +243,9 @@ func TestDefaults_LensesAreSelfContained(t *testing.T) {
 	set, err := Load(LoadOpts{})
 	require.NoError(t, err)
 	lenses := set.Lenses()
-	require.Len(t, lenses, 8,
-		"the shipped set is bugs, impl, architecture, quality, docs, tests, comments and adversarial")
+	require.Len(t, lenses, 13,
+		"the shipped set is bugs, impl, architecture, quality, docs, tests, comments and adversarial for code "+
+			"review, plus grounding, precedent, thesis, antithesis and cost for triage")
 
 	for _, l := range lenses {
 		body, err := set.lens(l.Name)

@@ -37,8 +37,9 @@ func TestLoad_EmbeddedDefaults(t *testing.T) {
 		assert.NotEmpty(t, st.Body, name)
 	}
 
-	assert.Equal(t, map[string]struct{}{"adversarial": {}, "architecture": {}, "bugs": {}, "comments": {},
-		"docs": {}, "impl": {}, "quality": {}, "tests": {}}, set.LensNames())
+	assert.Equal(t, map[string]struct{}{"adversarial": {}, "antithesis": {}, "architecture": {}, "bugs": {},
+		"comments": {}, "cost": {}, "docs": {}, "grounding": {}, "impl": {}, "precedent": {}, "quality": {},
+		"tests": {}, "thesis": {}}, set.LensNames())
 }
 
 func TestLoad_MissingDirsAreAbsentLayers(t *testing.T) {

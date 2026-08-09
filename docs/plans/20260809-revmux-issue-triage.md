@@ -235,29 +235,29 @@ findings with no location.
 - Modify: `app/prompt/prompt_test.go`
 - Modify: `app/prompt/defaults_test.go`
 
-- [ ] `grounding` — does the code do what the item claims, does the capability already exist, is it a
+- [x] `grounding` — does the code do what the item claims, does the capability already exist, is it a
       duplicate
-- [ ] `precedent` — how comparable asks were decided before, read off the maintainer's closing comment
+- [x] `precedent` — how comparable asks were decided before, read off the maintainer's closing comment
       rather than the open/closed state. It runs its own prior-art sweep. Answers supports, cuts against,
       or does not bear. **It must report an inability to search as a finding of its own** — an empty
       answer is indistinguishable from "no precedent exists", and `sourceResult.ok()` counts
       `{"findings": []}` as a successful source
-- [ ] `thesis` — the strongest honest case the item should be done or the report is real
-- [ ] `antithesis` — the strongest case against, including whether a simpler design reaches the same goal
+- [x] `thesis` — the strongest honest case the item should be done or the report is real
+- [x] `antithesis` — the strongest case against, including whether a simpler design reaches the same goal
       when the item proposes an approach
-- [ ] `cost` — what implementing it reaches into, and whether the work is proportionate to the value
-- [ ] **four authoring constraints the shipped-file tests enforce**: every body opens with
+- [x] `cost` — what implementing it reaches into, and whether the work is proportionate to the value
+- [x] **four authoring constraints the shipped-file tests enforce**: every body opens with
       `## Lens: <name>`; no `{{VAR}}` anywhere; none of the substrings `json`, `schema`, `claude`,
       `codex` — which constrains how `precedent` describes its sweep and is a trap for `cost` discussing
       what a change reaches into; and none of `prior round`, `previous round`, `earlier round`, `runs/`,
       `re-evaluate everything`, since `TestDefaults_NoShippedFileCarriesThePriorRoundBlock` iterates
       lenses too and `precedent` is the likeliest file in the repo to trip it
-- [ ] each carries a `description:` one-liner
-- [ ] update both lens inventories: the literal name set in `prompt_test.go`, and in `defaults_test.go`
+- [x] each carries a `description:` one-liner
+- [x] update both lens inventories: the literal name set in `prompt_test.go`, and in `defaults_test.go`
       the count **and** the message enumerating all eight shipped names
-- [ ] reword `TestDefaults_ComprehensiveRoster`'s "carries every shipped lens exactly once" message — the
+- [x] reword `TestDefaults_ComprehensiveRoster`'s "carries every shipped lens exactly once" message — the
       assertion still passes, but the message stops being true
-- [ ] run tests - must pass before next task
+- [x] run tests - must pass before next task
 
 ### Task 2: Write the triage profile
 
