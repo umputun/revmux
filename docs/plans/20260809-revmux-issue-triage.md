@@ -308,28 +308,33 @@ Exports (justification per item: who outside the package calls this?):
 - Modify: `app/pipeline/pipeline.go`, `app/pipeline/verify.go`, `app/pipeline/verify_test.go`
 - Modify: `app/config_test.go`
 
-- [ ] add `--verify-group-by` with values `dir` (default) and `source`, INI-backed like
+- [x] add `--verify-group-by` with values `dir` (default) and `source`, INI-backed like
       `--verify-groups`, with its commented-out entry in `app/defaults/config`; reject any other value at
       load
-- [ ] add `key`: `Sources[0]` in source mode, `path.Dir(File)` otherwise, and today's `"."` when a
+- [x] add `key`: `Sources[0]` in source mode, `path.Dir(File)` otherwise, and today's `"."` when a
       directory-mode finding has no file. Delete `dir`
-- [ ] **in source mode, skip the thin merge.** `thinGroup` is justified by directory locality; a
+- [x] **in source mode, skip the thin merge.** `thinGroup` is justified by directory locality; a
       one-argument agent bucket must survive as its own group, or four singleton buckets fold into one
       and the change achieves nothing
-- [ ] leave `capped`, `name` and `freeName` alone. Note in the task that `capped` merges the *smallest*
+- [x] leave `capped`, `name` and `freeName` alone. Note in the task that `capped` merges the *smallest*
       groups first, so a panel larger than `--verify-groups` can still put thesis and antithesis in front
       of one verifier — acceptable at four agents against a default of six
-- [ ] update the comments the change falsifies: `groupByDir`'s godoc, the `verifyGroup.dirs` field
+- [x] update the comments the change falsifies: `groupByDir`'s godoc, the `verifyGroup.dirs` field
       comment, `shortLabel`'s godoc, and `finding.StageRun`'s "verify fans out into one process per
       directory"
-- [ ] **do not rename `groupByDir` or `verifyGroup.dirs`** — both become imprecise and the blast radius
+- [x] **do not rename `groupByDir` or `verifyGroup.dirs`** — both become imprecise and the blast radius
       exceeds this change. Raise separately
-- [ ] write tests: in source mode four agents with one argument each produce **four** groups; a mixed set
+- [x] write tests: in source mode four agents with one argument each produce **four** groups; a mixed set
       of located and location-less findings groups by agent; the cap still applies; in dir mode
       everything groups exactly as today, including the existing root-bucket subtest — **and give that
       subtest's fixture a source**, since production findings always have one and it currently pins a
       state that cannot occur
-- [ ] run tests - must pass before next task
+- [x] run tests - must pass before next task
+
+➕ The flag's vocabulary is the go-flags `choice:"dir" choice:"source"` tag, so an unknown value is
+refused during parsing with no validation code of revmux's own — on the command line and in an INI layer
+alike, since `ParseAsDefaults` still routes through `Option.Set`. `app/pipeline` spells `source` once more
+in the unexported `groupBySource`, because a struct tag cannot name a constant.
 
 ### Task 4: Teach `verify.md` about claims that cite no code
 

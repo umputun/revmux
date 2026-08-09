@@ -202,7 +202,7 @@ func (o runOpts) pipelineConfig() (configuredReview, error) {
 		Task: o.opts.Task, Run: o.opts.Run, ScopePath: rc.Scope,
 		NoSynthesis: o.opts.NoSynthesis, NoVerify: o.opts.NoVerify,
 		StaggerDelay: o.opts.StaggerDelay, MaxParallel: o.opts.MaxParallel,
-		VerifyGroups: o.opts.VerifyGroups,
+		VerifyGroups: o.opts.VerifyGroups, VerifyGroupBy: o.opts.VerifyGroupBy,
 	}
 	return configuredReview{pipeline: cfg, archive: arc, context: rc}, nil
 }

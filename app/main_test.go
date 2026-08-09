@@ -341,6 +341,16 @@ func TestRun_review(t *testing.T) {
 		assert.Equal(t, "above the bar", rep.Findings[0].Title)
 	})
 
+	t.Run("the verify grouping mode reaches the pipeline", func(t *testing.T) {
+		o := base(t)
+		o.VerifyGroupBy = "source"
+		r := newRunOpts(t, o)
+
+		review, err := r.opts().pipelineConfig()
+		require.NoError(t, err)
+		assert.Equal(t, "source", review.pipeline.VerifyGroupBy)
+	})
+
 	// run derives this context from an interrupt, and children are started with Setsid, so the terminal
 	// never signals them. Cancellation is the only thing that reaps them, and it has to reach the agent
 	// rather than stopping at the pipeline.

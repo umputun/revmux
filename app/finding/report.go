@@ -67,7 +67,7 @@ type Stats struct {
 // StageRun is one pipeline stage: how long it took and which runner it was resolved to. A profile can
 // override that runner, so nothing else in a finished round says which binary synthesized it. The fields
 // carry the requested triple, never the model that answered — verify fans out into one process per
-// directory. The find stage leaves all three empty; its runners are the per-agent rows.
+// group. The find stage leaves all three empty; its runners are the per-agent rows.
 type StageRun struct {
 	Name       string `json:"name"`
 	DurationMS int64  `json:"duration_ms"`

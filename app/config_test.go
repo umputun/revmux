@@ -35,6 +35,7 @@ func TestParseArgs_defaults(t *testing.T) {
 	assert.Equal(t, 30*time.Second, o.StaggerDelay)
 	assert.Equal(t, 4, o.MaxParallel)
 	assert.Equal(t, 6, o.VerifyGroups)
+	assert.Equal(t, "dir", o.VerifyGroupBy, "a code review groups by directory unless the caller says otherwise")
 	assert.Equal(t, "./.revmux/tasks", o.TasksDir)
 	assert.Equal(t, "comprehensive", o.Profile)
 	assert.Equal(t, 0, o.MinConfidence)
@@ -140,14 +141,15 @@ func TestParseArgs_knobOriginsNameTheWinningLayer(t *testing.T) {
 	require.NoError(t, err)
 
 	want := map[string]string{
-		"idle-timeout":  originFlag,
-		"profile":       originProject,
-		"max-parallel":  originProject,
-		"verify-groups": originUser,
-		"hard-timeout":  originDefault,
-		"stagger-delay": originDefault,
-		"tasks-dir":     originDefault,
-		"auto-exit":     originDefault,
+		"idle-timeout":    originFlag,
+		"profile":         originProject,
+		"max-parallel":    originProject,
+		"verify-groups":   originUser,
+		"hard-timeout":    originDefault,
+		"stagger-delay":   originDefault,
+		"tasks-dir":       originDefault,
+		"auto-exit":       originDefault,
+		"verify-group-by": originDefault,
 	}
 	assert.Equal(t, want, o.knobOrigins)
 	assert.Len(t, o.knobOrigins, len(knobNames()), "every knob reports an origin")
@@ -241,6 +243,40 @@ func TestParseArgs_badConfigValue(t *testing.T) {
 	})
 }
 
+func TestParseArgs_verifyGroupBy(t *testing.T) {
+	dir := isolate(t)
+	user := filepath.Join(dir, "user")
+
+	t.Run("source is accepted", func(t *testing.T) {
+		o, err := parseArgs([]string{"--task", "pr-1", "--config-dir", user, "--verify-group-by", "source"})
+		require.NoError(t, err)
+		assert.Equal(t, "source", o.VerifyGroupBy)
+		assert.Equal(t, originFlag, o.knobOrigins["verify-group-by"])
+	})
+
+	t.Run("an unknown value is rejected on the command line", func(t *testing.T) {
+		_, err := parseArgs([]string{"--task", "pr-1", "--config-dir", user, "--verify-group-by", "agent"})
+		require.Error(t, err, "an unknown mode must not silently fall back to grouping by directory")
+		assert.Contains(t, err.Error(), "agent")
+		assert.Contains(t, err.Error(), "dir")
+	})
+
+	t.Run("an unknown value is rejected in a config file", func(t *testing.T) {
+		writeConfig(t, user, "verify-group-by = agent\n")
+		_, err := parseArgs([]string{"--task", "pr-1", "--config-dir", user})
+		require.Error(t, err, "the INI layer parses as defaults, which must still validate the choice")
+		assert.Contains(t, err.Error(), "agent")
+	})
+
+	t.Run("a config file supplies it like any other knob", func(t *testing.T) {
+		writeConfig(t, user, "verify-group-by = source\n")
+		o, err := parseArgs([]string{"--task", "pr-1", "--config-dir", user})
+		require.NoError(t, err)
+		assert.Equal(t, "source", o.VerifyGroupBy)
+		assert.Equal(t, originUser, o.knobOrigins["verify-group-by"])
+	})
+}
+
 func TestDefaultConfig_holdsEveryKnobCommentedOut(t *testing.T) {
 	body := string(defaultConfig)
 	fields := map[string]reflect.StructField{}
@@ -269,7 +305,7 @@ func TestKnobNames_iniNameMatchesLongName(t *testing.T) {
 		assert.NotEmpty(t, f.Tag.Get("default"), "field %s: a knob with no default resolves to a zero value", f.Name)
 	}
 	assert.Equal(t, []string{"idle-timeout", "hard-timeout", "stagger-delay", "max-parallel",
-		"verify-groups", "tasks-dir", "auto-exit", "profile"}, knobNames())
+		"verify-groups", "verify-group-by", "tasks-dir", "auto-exit", "profile"}, knobNames())
 }
 
 func TestResolveContext_shapes(t *testing.T) {
