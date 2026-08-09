@@ -65,8 +65,8 @@ func TestDefaults_EveryProfileResolvesItsRoster(t *testing.T) {
 	set, err := Load(LoadOpts{})
 	require.NoError(t, err)
 	known := set.LensNames()
-	require.Len(t, set.ProfileNames(), 6,
-		"the shipped set is comprehensive, focused, final, claude-only, codex-only and grill-me")
+	require.Len(t, set.ProfileNames(), 7,
+		"the shipped set is comprehensive, focused, final, claude-only, codex-only, grill-me and triage")
 
 	for _, name := range set.ProfileNames() {
 		p, err := set.Profile(name)
@@ -184,6 +184,34 @@ func TestDefaults_ComprehensiveRoster(t *testing.T) {
 			"review shape it does not run")
 }
 
+func TestDefaults_TriageRoster(t *testing.T) {
+	set, err := Load(LoadOpts{})
+	require.NoError(t, err)
+	p, err := set.Profile("triage")
+	require.NoError(t, err)
+
+	specs, err := p.Roster(nil, set.LensNames())
+	require.NoError(t, err)
+	require.Len(t, specs, 4)
+
+	assert.Equal(t, AgentSpec{Name: "facts", Lenses: []string{"grounding", "precedent"}, Executor: "claude",
+		Model: "opus", Effort: "high", Color: "6", ColorName: "cyan"}, specs[0])
+	assert.Equal(t, AgentSpec{Name: "thesis", Lenses: []string{"thesis"}, Executor: "claude",
+		Model: "opus", Effort: "high", Color: "2", ColorName: "green"}, specs[1])
+	assert.Equal(t, AgentSpec{Name: "antithesis", Lenses: []string{"antithesis"}, Executor: "claude",
+		Model: "opus", Effort: "high", Color: "5", ColorName: "magenta"}, specs[2])
+	assert.Equal(t, AgentSpec{Name: "cost", Lenses: []string{"cost"}, Executor: "codex",
+		Model: "gpt-5.6-sol", Effort: "high", Color: "3", ColorName: "yellow"}, specs[3],
+		"cost takes the codex slot because it only reads code: a sandbox with no network cannot empty it, "+
+			"and losing codex costs one input rather than the panel's opposition")
+
+	assert.Contains(t, p.Description, "--no-synthesis",
+		"a bare --profile triage runs the drop rule over arguments that are single-source by construction")
+	body := p.Body
+	assert.Contains(t, body, "Leave the file field empty when the\n  point is not about a line of code",
+		"the finder schema requires file and describes it as a path, so the profile is the counterweight")
+}
+
 func TestDefaults_FinalReportsOnlyTheTopTwoSeverities(t *testing.T) {
 	set, err := Load(LoadOpts{})
 	require.NoError(t, err)
@@ -206,11 +234,12 @@ func TestDefaults_SeverityContract(t *testing.T) {
 	require.NoError(t, err)
 
 	// derived from the shipped set rather than listed, so a new full profile is guarded without being
-	// named here. final is the one deliberate variant and is asserted separately below.
+	// named here. final reports two severities and triage rates decision weight rather than runtime
+	// damage; both are asserted separately below.
 	var expected string
 	compared := 0
 	for _, name := range set.ProfileNames() {
-		if name == "final" {
+		if name == "final" || name == "triage" {
 			continue
 		}
 		p, profileErr := set.Profile(name)
@@ -237,6 +266,14 @@ func TestDefaults_SeverityContract(t *testing.T) {
 	finalText := strings.Join(strings.Fields(final.Body), " ")
 	assert.Contains(t, finalText, "Severity is what goes wrong when the code runs")
 	assert.Contains(t, finalText, "document a machine or an agent executes against as a contract")
+
+	triage, err := set.Profile("triage")
+	require.NoError(t, err)
+	triageText := strings.Join(strings.Fields(triage.Body), " ")
+	assert.Contains(t, triageText, "Severity is how much a point bears on the decision")
+	assert.Contains(t, triageText, "**critical** — decisive on its own")
+	assert.NotContains(t, triageText, "Severity is what goes wrong when the code runs",
+		"a panel arguing about a filed item has no code running to go wrong")
 }
 
 func TestDefaults_LensesAreSelfContained(t *testing.T) {
@@ -339,12 +376,17 @@ func TestDefaults_WhatNotToReportContract(t *testing.T) {
 	require.NoError(t, err)
 
 	var expected string
+	compared := 0
 	for _, name := range set.ProfileNames() {
+		if name == "triage" {
+			continue // it suppresses arguments about a filed item, not findings about a diff
+		}
 		p, profileErr := set.Profile(name)
 		require.NoError(t, profileErr)
 		start := strings.Index(p.Body, "## What not to report")
 		require.NotEqual(t, -1, start, "profile %s has no what-not-to-report section", name)
 		section := strings.TrimSpace(p.Body[start:])
+		compared++
 		if expected == "" {
 			expected = section
 			continue
@@ -352,7 +394,19 @@ func TestDefaults_WhatNotToReportContract(t *testing.T) {
 		assert.Equal(t, expected, section,
 			"profile %s suppresses a different set than the others do", name)
 	}
+	require.Greater(t, compared, 1, "a contract over one profile compares nothing")
 	assert.Contains(t, expected, "a defect on a line this change did not touch")
 	assert.Contains(t, expected, "anything a linter, compiler or type checker catches")
 	assert.Contains(t, expected, "Pre-existing problems are the one exception")
+
+	triage, err := set.Profile("triage")
+	require.NoError(t, err)
+	start := strings.Index(triage.Body, "## What not to report")
+	require.NotEqual(t, -1, start, "triage has no what-not-to-report section")
+	section := strings.TrimSpace(triage.Body[start:])
+	assert.Contains(t, section, "a restatement of the item")
+	assert.Contains(t, section, "the case another panelist is making")
+	assert.Contains(t, section, "a cost, a duplicate or a risk you did not actually check")
+	assert.NotContains(t, section, "linter",
+		"a triage panel is not told to defer to tools that ran before a review it is not doing")
 }

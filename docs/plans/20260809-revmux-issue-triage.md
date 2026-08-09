@@ -266,26 +266,26 @@ findings with no location.
 - Modify: `app/prompt/defaults_test.go`, `app/prompt/prompt_test.go`
 - Modify: `app/initcmd_test.go`, `app/main_test.go`
 
-- [ ] roster: `facts` (grounding + precedent), `thesis`, `antithesis`, `cost` on codex, with colours
-- [ ] body: the shared read-only rules and context-paths block, then a bar under the **literal heading
+- [x] roster: `facts` (grounding + precedent), `thesis`, `antithesis`, `cost` on codex, with colours
+- [x] body: the shared read-only rules and context-paths block, then a bar under the **literal heading
       `## Severity bar`** — the contract test indexes on that string — where critical is decisive on its
       own, major bears strongly, minor is worth knowing but does not move the answer
-- [ ] its own `## What not to report`, since the shipped one is about diffs
-- [ ] **its own `## Reporting`**, which every shipped profile has and which triage must contradict:
+- [x] its own `## What not to report`, since the shipped one is about diffs
+- [x] **its own `## Reporting`**, which every shipped profile has and which triage must contradict:
       `comprehensive` says "Point at a specific file and line. A finding with no location cannot be
       verified". Triage's says what a location-less argument carries instead — the thread, the prior
       decision, the comparable item — and **instructs leaving `file` empty when the point cites no code**,
       as the counterweight to the finder schema requiring `file` and describing it as a path
-- [ ] the `description:` names the panel and says the profile wants `--no-synthesis`. **Nothing about
+- [x] the `description:` names the panel and says the profile wants `--no-synthesis`. **Nothing about
       `--max-parallel`**: the default is 4 and the roster is four agents, so nothing queues
-- [ ] exempt triage in `TestDefaults_SeverityContract` as `final` already is, asserting triage's own bar
+- [x] exempt triage in `TestDefaults_SeverityContract` as `final` already is, asserting triage's own bar
       separately so it stays pinned
-- [ ] exempt triage in `TestDefaults_WhatNotToReportContract`, which exempts nothing today — assert its
+- [x] exempt triage in `TestDefaults_WhatNotToReportContract`, which exempts nothing today — assert its
       block separately, **do not weaken the equality check for the others**, and add the
       `require.Greater(compared, 1)` guard the severity contract has and this one lacks
-- [ ] update the four literal profile inventories: `prompt_test.go` (two sites), `initcmd_test.go`,
+- [x] update the four literal profile inventories: `prompt_test.go` (two sites), `initcmd_test.go`,
       `main_test.go`, and the count in `defaults_test.go`
-- [ ] run tests - must pass before next task
+- [x] run tests - must pass before next task
 
 ### Task 3: Add `--verify-group-by` and group by source
 
