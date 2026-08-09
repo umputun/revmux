@@ -405,7 +405,7 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
   One that changes what a stage resolves to needs `revmux config` as a fifth site: `profileInfo.Stages`
   reports the resolution rather than the override, so a key it does not carry is invisible to the caller
   choosing the profile.
-- A change to the `model:` grammar is `app/prompt/runner.go` plus every authored file that uses it: six
+- A change to the `model:` grammar is `app/prompt/runner.go` plus every authored file that uses it: seven
   shipped profiles, both stage files, the README front-matter section, `.claude/rules/prompts.md`, and the
   fixtures in `app/prompt` and `app/pipeline` tests. The parsed form reaches `AgentSpec`, `Stage` and
   `RunnerSpec` as three separate fields, so nothing downstream of the parser changes — which is what keeps
@@ -431,6 +431,16 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
   "five subcommands" sentence plus the section in README, the project-structure list in this file, and the
   subcommand sections in **both** skill trees.
 - A new lens file needs an entry in at least one shipped profile, or nothing will ever run it.
+  Then the lens table in README, the layout block in `.claude/rules/prompts.md`, the lens table in
+  `references/invocation.md` in **both** skill trees, and three literal inventories in the tests: the name
+  set in `prompt_test.go`, and in `defaults_test.go` both the count and the message enumerating every
+  shipped lens by name.
+  There are thirteen — eight reading a change, five reading a filed item — and nothing derives that number,
+  so each site goes stale silently.
+  The body is constrained by the shipped-file contracts: it opens with `## Lens: <name>`, carries a
+  `description:` one-liner and no `{{VAR}}`, names no executor or output format, and mentions no prior
+  round. `TestDefaults_NoShippedFileCarriesThePriorRoundBlock` iterates lenses as well as profiles, which
+  is what any lens describing how a project decided something before will trip.
 - A new **profile** needs: the file under `app/prompt/defaults/prompts/profiles/`, the shipped-profile
   table in README and the CLI-requirements bullet above it, the prompt-tree diagram in README, and the
   layout block in `.claude/rules/prompts.md`.
@@ -450,22 +460,38 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
   be literal. `TestDefaults_SeverityContract` is **not** — it derives the full profiles from
   `ProfileNames()` so a new one is guarded without being listed, which is what a contract check has to do
   and what a literal list there silently stopped doing.
+  It names two exemptions, and each is a profile whose bar is deliberately not the shared one: `final`
+  reports two severities rather than four, and `triage` rates how much a point bears on a decision rather
+  than what goes wrong at runtime.
+  Both are pinned by their own assertions instead, so an exemption removes a profile from the equality
+  check and never from the test.
+  **An exemption is for a bar that is meant to differ, never for one that has drifted** — a third name
+  added to that list to make a failing run pass is the mechanism the derived-from-`ProfileNames()` design
+  exists to prevent.
 - **The severity bar is duplicated in every profile body** and nothing composes it from one place:
   `comprehensive`, `codex-only`, `claude-only`, `focused` and `grill-me` carry a byte-identical
-  `## Severity bar` section, and `final` carries a two-severity variant of the same text.
-  A change to what a severity means is six edits, and the five identical copies must stay identical —
+  `## Severity bar` section, `final` carries a two-severity variant of the same text, and `triage` carries
+  a bar that is not a variant of it at all — its severities rate how much a point bears on the decision,
+  because it reads a filed item and there is no runtime for anything to go wrong at.
+  A change to what a severity means is seven edits, and the five identical copies must stay identical —
   two profiles disagreeing about what `major` is means the same defect gates one review shape and not
   another, which reads as the model being inconsistent rather than the prompts being out of step.
+  A code-review wording change stops at the five: propagating it into `triage` is what the separate bar
+  exists to prevent.
   `.claude/rules/prompts.md` calls the body "the shared preamble and severity bar"; shared across the
   agents of one run, not across profiles.
-  **`## What not to report` is the second such block**, byte-identical in all six, and it is the one a
-  finder consults before writing anything down — so a rule added to one profile and not the others makes
-  the same finding reportable under one review shape and suppressed under another.
+  **`## What not to report` is the second such block**, byte-identical in six of the seven, and it is the
+  one a finder consults before writing anything down — so a rule added to one profile and not the others
+  makes the same finding reportable under one review shape and suppressed under another.
+  `triage` is the exception and carries its own, since the shipped copy is written about diffs and defers
+  to the linters and tests a review runs after; a panel reading an issue is doing neither.
+  `TestDefaults_WhatNotToReportContract` exempts it by name and asserts its block separately, exactly as
+  the severity contract does — the equality check over the other six is not weakened to accommodate it.
   **`grill-me`'s `## Stance` section is the third**, and it duplicates a *lens* rather than another
   profile: roughly half of `lenses/adversarial.md` is copied into it verbatim, including the "Work the
   seams" bullets and the two paragraphs on titling the mechanism.
   The copy exists because that profile puts the adversarial stance on all four agents, where it is
-  preamble rather than a lens — but the five other profiles still compose `adversarial.md` itself, so an
+  preamble rather than a lens — but the five profiles that name `adversarial` compose that file itself, so an
   edit there leaves `grill-me` stale and the two shapes then instruct agents differently about severity
   inflation in the profile whose whole premise is pushing against that bar.
   What is deliberately **not** copied stays not copied: `adversarial.md` tells its agent not to repeat

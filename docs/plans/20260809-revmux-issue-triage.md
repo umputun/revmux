@@ -401,17 +401,23 @@ new capability calls for. Change it if a different number was wanted.
 - Modify: `README.md`, `CLAUDE.md`
 - Modify: `.claude/rules/prompts.md`, `.claude/rules/pipeline.md`
 
-- [ ] README: the shipped-profile table and the CLI-requirements bullet above it, the five new lens rows,
+- [x] README: the shipped-profile table and the CLI-requirements bullet above it, the five new lens rows,
       the prompt-tree diagram, and the flag table gaining `--verify-group-by`
-- [ ] `.claude/rules/prompts.md`: the layout block gains triage and the five lenses
-- [ ] `.claude/rules/pipeline.md`: the verify-grouping rule gains source mode and says why the thin merge
+- [x] `.claude/rules/prompts.md`: the layout block gains triage and the five lenses
+- [x] `.claude/rules/pipeline.md`: the verify-grouping rule gains source mode and says why the thin merge
       is skipped there — the never-hand-one-verifier-everything rule is what it exists to preserve
-- [ ] `CLAUDE.md`, four amendments: the severity-bar rule counts six profiles today and becomes seven,
+- [x] `CLAUDE.md`, four amendments: the severity-bar rule counts six profiles today and becomes seven,
       triage's deliberately different; the `## What not to report` invariant gains triage's copy and its
       new exemption; **the sentence praising `TestDefaults_SeverityContract` for deriving from
       `ProfileNames()` rather than listing profiles** now has two named exemptions, `final` and `triage`,
       and must say why each is one; and the profile and lens counts in the keep-in-sync bullets
-- [ ] re-read every table and diagram for column alignment
+- [x] re-read every table and diagram for column alignment
+
+➕ Two corrections made while re-reading: the README prompt-tree diagram omitted `comments.md`, and the
+`revmux config` sample payload quoted `comprehensive`'s description as "all six lenses" where the file says
+seven. Both now match what ships. The `model:`-grammar bullet's profile count went six → seven with the
+severity-bar one, and the new-lens keep-in-sync bullet gained the sites and authoring contracts it never
+carried — thirteen lenses now, and nothing derives that number.
 
 ### Task 7: Verify acceptance criteria
 

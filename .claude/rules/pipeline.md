@@ -296,3 +296,16 @@ Serial verification is also the review's bottleneck — N parallel verifiers fin
 Grouping by directory rather than per-finding is deliberate: directory approximates code locality,
 so one verifier reads that area once and judges several findings against it.
 Per-finding would re-read the same file N times for N findings in it.
+
+**`--verify-group-by source` keys by the agent that raised the finding instead, and skips the thin merge.**
+It is a flag rather than an inference off an empty `File`, so a code review is untouched by construction:
+`find.parse` stamps `Sources` on every finding, so a source key is always available and a directory-mode
+run never reaches this branch.
+The thin merge does not carry over, because what justifies it is directory locality — one verifier reading
+an area once — and a per-agent bucket has no locality to amortize.
+Merging there would defeat the mode outright: a panel of four agents holding one argument each is four
+buckets under `thinGroup = 2`, and every one of them folds into a single group.
+That is the never-hand-one-verifier-everything rule above, reached the long way — one verifier would hold a
+case and the case answering it, and anchor on whichever it read first.
+`capped` still applies as a resource limit, and it merges the *smallest* groups first, so a panel larger
+than `--verify-groups` can still put two opposed agents in front of one verifier.

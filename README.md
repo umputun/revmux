@@ -70,7 +70,7 @@ Override the location with `BINDIR` when `/usr/local/bin` is not writable — `m
 revmux drives the model CLIs as subprocesses, so whichever ones your profile names must already be
 installed and authenticated. Which those are is a property of the profile, not a fixed pair:
 
-- `comprehensive`, `focused`, `final`, `grill-me` — both, a claude roster plus codex
+- `comprehensive`, `focused`, `final`, `grill-me`, `triage` — both, a claude roster plus codex
 - `claude-only` — claude alone
 - `codex-only` — codex alone
 
@@ -350,12 +350,14 @@ so an invocation that stays outside never picks up the reviewed repository's own
 │   │   ├── final.md
 │   │   ├── claude-only.md
 │   │   ├── codex-only.md
-│   │   └── grill-me.md
+│   │   ├── grill-me.md
+│   │   └── triage.md
 │   ├── synthesis.md
 │   └── verify.md
 └── lenses/
     ├── bugs.md  impl.md  architecture.md
-    └── quality.md  docs.md  tests.md  adversarial.md
+    ├── quality.md  docs.md  tests.md  comments.md  adversarial.md
+    └── grounding.md  precedent.md  thesis.md  antithesis.md  cost.md
 ```
 
 `--config-dir` relocates the user layer. [`revmux init`](#revmux-init), and `--init` which is the same thing
@@ -449,6 +451,14 @@ Shipped profiles:
 | `claude-only` | the same four lens splits on claude, no codex peer — for a machine with no codex |
 | `codex-only` | the same four lens splits on codex, and synthesis and verify with them — no claude anywhere |
 | `grill-me` | `bugs+impl` and `architecture+quality`, each run once on claude and once on codex, every agent reading against the change |
+| `triage` | `facts`, `thesis`, `antithesis` on claude plus `cost` on codex — a panel over a filed item rather than a diff, and it wants `--no-synthesis` |
+
+`triage` reviews an issue, a proposal or a discussion instead of a change. Its severities rate how much a
+point bears on the decision rather than what goes wrong at runtime, and it returns arguments for a
+maintainer to weigh — revmux decides nothing. Run it with `--no-synthesis`: every argument on a four-way
+panel is single-source by construction, so the drop rule eats the minor ones and the confidence boost fires
+on agreement between agents told to disagree. `--verify-group-by source` keeps each panelist's case in
+front of its own verifier.
 
 ### Lenses
 
@@ -468,6 +478,14 @@ codex the same way. Lens text stays executor-agnostic: the output-contract diffe
 | `tests` | whether tests exist where a defect can hide, actually exercise the code, and survive concurrency |
 | `comments` | the code's own stated rules — doc comments and inline notes the change was supposed to obey |
 | `adversarial` | attacks the change looking for what a sympathetic reader would accept |
+| `grounding` | whether what a filed item claims is true of the code as it stands today |
+| `precedent` | how comparable asks were decided here before, and whether that bears on this one |
+| `thesis` | the strongest honest case that a filed item should be done or that its report is real |
+| `antithesis` | the strongest case against, and whether something simpler reaches the same goal |
+| `cost` | what implementing a filed item reaches into, and whether the work is proportionate |
+
+The last five read a filed item rather than a diff and are what the `triage` profile composes; the eight
+above them review a change.
 
 `--lenses bugs,impl` replaces a profile's roster while keeping its body. It produces **one** agent carrying
 every named lens, not one agent per lens: a caller asking for two lenses is asking for a viewpoint, not for
@@ -512,6 +530,7 @@ The runtime knobs below also read from the config file, under the same name as t
 | `--stagger-delay=<d>` | `stagger-delay` | `30s` | how long to wait for the first agent before releasing the rest |
 | `--max-parallel=<n>` | `max-parallel` | `4` | how many agents run at once |
 | `--verify-groups=<n>` | `verify-groups` | `6` | cap on the number of verifier groups |
+| `--verify-group-by=<k>` | `verify-group-by` | `dir` | key verifier groups by directory or by the agent that raised the finding |
 | `--tasks-dir=<dir>` | `tasks-dir` | `./.revmux/tasks` | root directory holding task directories |
 | `--auto-exit=<d>` | `auto-exit` | `0s` | close the terminal UI this long after the report arrives; 0 never closes it |
 | `--profile=<name>` | `profile` | `comprehensive` | profile naming the roster to run |
@@ -710,7 +729,7 @@ $ revmux --stagger-delay=45s config
   "profiles": [
     {
       "name": "comprehensive",
-      "description": "all six lenses across three claude agents plus an adversarial codex peer",
+      "description": "all seven lenses across three claude agents plus an adversarial codex peer",
       "runner": {"executor": "claude", "model": "opus", "effort": "high"},
       "roster": [
         {"name": "bugs+impl", "lenses": ["bugs", "impl"], "executor": "claude",

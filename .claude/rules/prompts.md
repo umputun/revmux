@@ -13,9 +13,15 @@ and get the same review, and change a timeout without touching a prompt.
 
 ```
 prompts/profiles/comprehensive.md   focused.md   final.md   claude-only.md   codex-only.md   grill-me.md
+prompts/profiles/triage.md
 prompts/synthesis.md   prompts/verify.md
 lenses/bugs.md  impl.md  architecture.md  quality.md  docs.md  tests.md  comments.md  adversarial.md
+lenses/grounding.md  precedent.md  thesis.md  antithesis.md  cost.md
 ```
+
+The second lens line reads a filed item rather than a diff, and `triage` is the profile composing it.
+Nothing else does: the two sets share the composer and nothing else, so a change to a code-review lens
+cannot reach the panel and a change to a panel lens cannot reach a review.
 
 Precedence, per file: `./.revmux/` > `~/.config/revmux/` > `go:embed` defaults.
 Per-**file** fallback, not per-directory — overriding one lens must not orphan the other six.
