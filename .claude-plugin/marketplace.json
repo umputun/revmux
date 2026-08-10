@@ -9,7 +9,7 @@
       "name": "revmux",
       "source": "./",
       "description": "Run a supervised multi-agent code review or triage a filed issue with parallel claude and codex subprocesses, and act on what comes back",
-      "version": "0.3.3",
+      "version": "0.4.0",
       "author": {
         "name": "umputun"
       }

@@ -65,8 +65,8 @@ func TestDefaults_EveryProfileResolvesItsRoster(t *testing.T) {
 	set, err := Load(LoadOpts{})
 	require.NoError(t, err)
 	known := set.LensNames()
-	require.Len(t, set.ProfileNames(), 7,
-		"the shipped set is comprehensive, focused, final, claude-only, codex-only, grill-me and triage")
+	require.Len(t, set.ProfileNames(), 8,
+		"the shipped set is comprehensive, focused, final, claude-only, codex-only, grill-me, triage and expert")
 
 	for _, name := range set.ProfileNames() {
 		p, err := set.Profile(name)
@@ -234,12 +234,13 @@ func TestDefaults_SeverityContract(t *testing.T) {
 	require.NoError(t, err)
 
 	// derived from the shipped set rather than listed, so a new full profile is guarded without being
-	// named here. final reports two severities and triage rates decision weight rather than runtime
-	// damage; both are asserted separately below.
+	// named here. final reports two severities, triage rates decision weight rather than runtime damage,
+	// and expert reviews a plan as well as a diff so it rates what goes wrong if the thing is built;
+	// all three are asserted separately below.
 	var expected string
 	compared := 0
 	for _, name := range set.ProfileNames() {
-		if name == "final" || name == "triage" {
+		if name == "final" || name == "triage" || name == "expert" {
 			continue
 		}
 		p, profileErr := set.Profile(name)
@@ -274,6 +275,15 @@ func TestDefaults_SeverityContract(t *testing.T) {
 	assert.Contains(t, triageText, "**critical** — decisive on its own")
 	assert.NotContains(t, triageText, "Severity is what goes wrong when the code runs",
 		"a panel arguing about a filed item has no code running to go wrong")
+
+	expert, err := set.Profile("expert")
+	require.NoError(t, err)
+	expertText := strings.Join(strings.Fields(expert.Body), " ")
+	assert.Contains(t, expertText, "Rate by what goes wrong if it is built and run as written")
+	assert.Contains(t, expertText, "the approach cannot work")
+	assert.Contains(t, expertText, "a plan under review is exactly such a document")
+	assert.NotContains(t, expertText, "Severity is what goes wrong when the code runs",
+		"a plan has no runtime, and expert reviews one as readily as a diff")
 }
 
 func TestDefaults_EveryLensIsComposedBySomeProfile(t *testing.T) {
@@ -402,8 +412,10 @@ func TestDefaults_WhatNotToReportContract(t *testing.T) {
 	var expected string
 	compared := 0
 	for _, name := range set.ProfileNames() {
-		if name == "triage" {
-			continue // it suppresses arguments about a filed item, not findings about a diff
+		if name == "triage" || name == "expert" {
+			// triage suppresses arguments about a filed item rather than findings about a diff, and
+			// expert reviews a plan too, where no linter ran and no line was touched
+			continue
 		}
 		p, profileErr := set.Profile(name)
 		require.NoError(t, profileErr)
@@ -433,4 +445,13 @@ func TestDefaults_WhatNotToReportContract(t *testing.T) {
 	assert.Contains(t, section, "a cost, a duplicate or a risk you did not actually check")
 	assert.NotContains(t, section, "linter",
 		"a triage panel is not told to defer to tools that ran before a review it is not doing")
+
+	expert, err := set.Profile("expert")
+	require.NoError(t, err)
+	start = strings.Index(expert.Body, "## What not to report")
+	require.NotEqual(t, -1, start, "expert has no what-not-to-report section")
+	section = strings.TrimSpace(expert.Body[start:])
+	assert.Contains(t, section, "reviewing a change: a defect on a line it did not touch")
+	assert.Contains(t, section, "reviewing a proposal: a detail it deliberately leaves to implementation")
+	assert.Contains(t, section, "Pre-existing problems are the one exception")
 }

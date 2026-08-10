@@ -70,7 +70,7 @@ Override the location with `BINDIR` when `/usr/local/bin` is not writable — `m
 revmux drives the model CLIs as subprocesses, so whichever ones your profile names must already be
 installed and authenticated. Which those are is a property of the profile, not a fixed pair:
 
-- `comprehensive`, `focused`, `final`, `grill-me`, `triage` — both, a claude roster plus codex
+- `comprehensive`, `focused`, `final`, `grill-me`, `triage`, `expert` — both, a claude roster plus codex
 - `claude-only` — claude alone
 - `codex-only` — codex alone
 
@@ -351,6 +351,7 @@ so an invocation that stays outside never picks up the reviewed repository's own
 │   │   ├── claude-only.md
 │   │   ├── codex-only.md
 │   │   ├── grill-me.md
+│   │   ├── expert.md
 │   │   └── triage.md
 │   ├── synthesis.md
 │   └── verify.md
@@ -452,6 +453,16 @@ Shipped profiles:
 | `codex-only` | the same four lens splits on codex, and synthesis and verify with them — no claude anywhere |
 | `grill-me` | `bugs+impl` and `architecture+quality`, each run once on claude and once on codex, every agent reading against the change |
 | `triage` | `facts`, `thesis`, `antithesis` on claude plus `cost` on codex — a panel over a filed item rather than a diff, and it wants `--no-synthesis` |
+| `expert` | two agents at the highest effort — codex `gpt-5.6-sol` and claude `fable` — each carrying all eight lenses, and both stages on fable |
+
+`expert` is for when the answer matters more than the wall clock, and it is expensive enough that it is
+worth asking for deliberately rather than reaching for by default — the shipped skill will not select it
+unless you say so. Both agents read everything rather than splitting the lenses between them, so where
+the two models independently agree, the cross-source boost measures genuine corroboration rather than two
+halves of one review. Its severity bar rates what goes wrong if the thing is built and run as written,
+and its what-not-to-report block distinguishes reviewing a change from reviewing a proposal, so a plan
+reads as naturally as a diff — any profile can be pointed at one, this is the one whose wording does not
+assume otherwise.
 
 `triage` reviews an issue, a proposal or a discussion instead of a change. Its severities rate how much a
 point bears on the decision rather than what goes wrong at runtime, and it returns arguments for a

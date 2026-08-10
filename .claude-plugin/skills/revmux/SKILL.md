@@ -269,7 +269,14 @@ scale numbers are what Step 4's one-line announcement is built from.
 | `claude-only` | the same four lens splits, all on claude | no codex available |
 | `codex-only` | the same four lens splits on codex, and synthesis and verify with them | no claude available |
 | `grill-me` | `bugs+impl` and `architecture+quality`, each once on claude and once on codex, all reading against the change | the user wants it torn apart |
+| `expert` | two agents at the highest effort, codex `gpt-5.6-sol` and claude `fable`, each carrying all eight lenses | a plan, or a change nobody wants to get wrong. Slow and expensive; pick it when he says so, not by default |
 | `triage` | `facts` (grounding + precedent), `thesis`, `antithesis`, `cost` on codex | a filed item rather than a diff; needs `--no-synthesis --verify-group-by source`, `references/triage.md` |
+
+**Never choose `expert` on your own.** It is two agents at `xhigh` each applying every lens, so it costs
+several times what `comprehensive` does, and no property of the subject justifies reaching for it — not a
+plan, not a large diff, not a risky one. Pick it only when the user asked for it in words, and say that
+is why. Every other profile reviews whatever it is pointed at, a plan included; `expert`'s severity bar
+is simply written so a proposal reads as naturally as a diff.
 
 **A profile word is not a profile name.** Map whatever the user said onto the profiles `revmux config`
 reports, matching the name first and the `description` second. revmux rejects an unknown `--profile` at
@@ -284,6 +291,7 @@ fails the run.
 | claude only, no codex, skip codex | `claude-only` |
 | codex only, no claude, codex alone | `codex-only` |
 | grill me, tear it apart, be brutal, no mercy, adversarial | `grill-me` |
+| expert, best models, highest effort, spare no expense, use sol and fable | `expert` — and only on words like these, never inferred from the subject |
 | triage this, is this worth doing, should we accept this, should I close this | `triage`, and the subject is a filed item rather than a diff — `references/triage.md`, which owns the flags it needs |
 
 Examples, not the list. Match on intent — breadth wants `comprehensive`, speed wants `focused`, a merge

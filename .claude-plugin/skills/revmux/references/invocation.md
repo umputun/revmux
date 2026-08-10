@@ -218,6 +218,7 @@ will not read, and an unwritable `./.revmux/` under `revmux init`.
 | `claude-only` | `bugs+impl`, `arch+quality`, `docs+tests`, `adversarial` — all on claude | codex is unavailable or unwanted |
 | `codex-only` | the same four splits on codex, synthesis and verify included — no claude anywhere | claude is unavailable or unwanted |
 | `grill-me` | `bugs+impl` and `architecture+quality`, each run once on claude and once on codex, every agent reading against the change | the user asked to be grilled; corroboration between two vendors on one lens pair is the point |
+| `expert` | two agents at the highest effort — codex `gpt-5.6-sol:xhigh` and claude `fable:xhigh` — each carrying all eight lenses, both stages on fable | a plan, or a change nobody wants to get wrong. Both agents read everything, so agreement between them is real corroboration rather than two halves of one review |
 | `triage` | `facts` (grounding + precedent), `thesis`, `antithesis` on claude, plus `cost` on codex | the subject is a filed item rather than a diff — an issue, a proposal, a discussion |
 
 `--profile <name>`. The default is `comprehensive` and is itself a config knob.
@@ -225,6 +226,16 @@ will not read, and an unwritable `./.revmux/` under `revmux init`.
 `triage` is the one shipped profile that needs flags beside it: `--no-synthesis`, because every argument
 a panel produces is single-source and the drop rule eats them, and `--verify-group-by source`, so each
 panelist's case is verified apart from the case answering it. `references/triage.md` is the procedure.
+
+`expert` needs no extra flags, and **is never selected on the caller's own judgment**. Two agents at
+`xhigh` each applying every lens costs several times what `comprehensive` does, and nothing about the
+subject earns it — not a plan, not a large diff, not a risky one. It runs when the user asked for it in
+words, and not otherwise.
+
+What its body does differently is only calibration: the severity bar rates what goes wrong if the thing
+is built and run as written rather than what goes wrong at runtime, and the what-not-to-report block
+distinguishes reviewing a change from reviewing a proposal. Every profile reviews whatever `scope.md`
+points at, a plan included; `expert` is the one whose wording does not assume a diff.
 
 ## Lenses
 
@@ -542,7 +553,7 @@ revmux drives the model CLIs as subprocesses, so both must already be installed 
 
 - `claude` — every lens agent and both model stages run on it by default
 - `codex` — needed when a profile, a roster entry or a stage names it in its `model:`. `claude-only`
-  needs claude alone and `codex-only` needs codex alone; the other five shipped profiles need both.
+  needs claude alone and `codex-only` needs codex alone; the other six shipped profiles need both.
   `preflight.sh <profile>` answers it for the profile that will actually run
 
 `ANTHROPIC_API_KEY` is stripped from the child environment by default so `claude` uses interactive
