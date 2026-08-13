@@ -1,7 +1,17 @@
 # revmux
 
-revmux runs a structured multi-agent code review. It spawns and supervises `claude --print` and `codex exec`
+revmux runs a structured multi-agent review. It spawns and supervises `claude --print` and `codex exec`
 subprocesses, then returns findings on stdout as JSON or markdown.
+
+**It is normally launched by a coding agent rather than typed by you.** The [shipped skill](#agent-skills)
+works out what is under review, writes the context to disk, runs revmux and reads the report back. To that
+agent revmux is a black box with a stable contract, context in and a verified report out, which is why JSON
+is the default and `--markdown` is the opt-in for when a person is reading.
+
+**The subject does not have to be code.** A branch, a pull request, an implementation plan, a design document
+or a proposal all go in the same way. Triage is a job of its own: pointed at a filed issue or discussion, the
+`triage` profile runs a four-way panel over it, rating how much each point bears on the decision rather than
+what breaks at runtime, and returns the arguments for a maintainer to weigh instead of a verdict.
 
 revmux runs a review and returns findings, and does nothing else. It performs no scope detection, no git
 operations, no PR fetching and no source modification. All review context is written to disk by the caller
@@ -12,11 +22,12 @@ the **[reference](https://revmux.com/reference)**.
 
 ## Why
 
-**Control over the fan-out.** Agent fan-out driven from inside an AI coding session is unobservable and
-unrecoverable: agents go silent for minutes, sometimes never return, and the caller has no timeout, no kill,
-no retry and no progress display. A subprocess does not make the model faster. What it buys is control: a
-watchdog that notices a stall, a kill and retry the caller owns, a live view of every agent, per-agent token
-counts, and a run archive to debug a bad review afterwards.
+**Every agent is visible, and every stall is recoverable.** Each model runs as a subprocess revmux owns, so
+it can be watched, timed, killed and relaunched: a watchdog on each one, a live view of what it is doing and
+what it has spent, one automatic retry, and a run archive to debug a bad review afterwards. Fan-out driven
+from inside an AI coding session has none of that, and agents that go silent for minutes cannot be recovered
+from there. A subprocess does not make the model faster; it makes the run something the caller can hold on
+to.
 
 **One review standard rather than one per session.** A review assembled ad hoc varies with the prompt, the
 context left in the session, and whatever the model decided to look at that time. Here the roster, the
@@ -40,11 +51,22 @@ instruction to judge them independently rather than confirm them.
 
 ## Install
 
+Homebrew, on macOS:
+
 ```
-go install github.com/umputun/revmux/app@latest
+brew install umputun/apps/revmux
 ```
 
-The binary is installed as `app`; rename it to `revmux`, or build from a clone instead:
+Prebuilt binaries for macOS and Linux, on amd64 and arm64, are attached to every
+[release](https://github.com/umputun/revmux/releases), along with `.deb` and `.rpm` packages:
+
+```
+dpkg -i revmux_<version>_linux_amd64.deb
+rpm -i revmux_<version>_linux_amd64.rpm
+```
+
+With a Go toolchain, `go install github.com/umputun/revmux/app@latest` builds it from source, installed as
+`app`, so rename it to `revmux`. Or build from a clone:
 
 ```
 git clone https://github.com/umputun/revmux.git && cd revmux
@@ -119,8 +141,8 @@ the same synthesis and verification. Ordering the two would mean the second revi
 findings and anchors on them, which is exactly what the cross-source confidence boost assumes did not happen.
 
 **A source is a process.** The confidence boost counts distinct processes, never lenses. An agent carrying
-two lenses that flags the same issue under both is still one source: it cannot corroborate itself. Go stamps
-the attribution after parsing; no schema exposes it to the model.
+two lenses that flags the same issue under both is still one source: it cannot corroborate itself. revmux
+stamps the attribution itself once the output is parsed; no schema exposes it to the model.
 
 **Degrade, never abort.** A stalled or crashed agent is killed, retried once, and on a second failure marked
 degraded while the run continues. The report banner names the missing agent, and synthesis is told the real
@@ -211,13 +233,41 @@ codex mix inside one review.
 | `expert` | two agents at the highest effort, each carrying all eight code lenses |
 | `triage` | a four-way panel over a filed item rather than a diff |
 
-Prompt text resolves per file across three layers: `./.revmux/`, then `~/.config/revmux/`, then the
-`go:embed` defaults. `revmux init` materializes whatever resolved into `./.revmux/` so there is something
-local to edit, and `--dump-defaults <dir>` extracts the embedded tree for a diff.
+**The eight are starting points, not the menu.** A profile is a file under `prompts/profiles/`, so dropping
+`.revmux/prompts/profiles/release.md` into a project makes `--profile release` work with no registration step
+anywhere. Its roster can be as wide as you are willing to pay for, each entry carries whatever lenses the job
+needs, and any entry can leave the profile's model for its own. Lenses resolve the same way, so a roster
+naming `payments` picks up `.revmux/lenses/payments.md`, written by whoever knows what goes wrong in that
+code.
 
-**`.revmux/` is code.** A checked-in lens becomes the instructions a headless agent with a shell executes, so
-running revmux inside a repository trusts it the same way `.claude/` or a `Makefile` there does. Review it
-before reviewing a branch you did not write.
+```yaml
+---
+description: pre-release pass over the payment path
+model: claude/opus:high
+agents:
+  - {name: money,     lenses: [bugs, impl, payments],   color: red}
+  - {name: contracts, lenses: [architecture, docs],     color: cyan}
+  - {name: peer,      lenses: [adversarial], model: codex/gpt-5.6-sol:xhigh}
+  - {name: second,    lenses: [bugs],        model: codex/gpt-5.6-sol:high}
+stages:
+  synthesis: claude/opus:high
+  verify:    claude/sonnet:low
+---
+```
+
+Prompt text resolves per file across three layers: `./.revmux/`, then `~/.config/revmux/`, then the
+defaults built into the binary. `revmux init` materializes whatever resolved into `./.revmux/` so there is
+something local to edit, and `--dump-defaults <dir>` extracts the embedded tree for a diff.
+
+**Checked in, `.revmux/` is the project's review standard.** What a project cares about, its conventions,
+what counts as major, the mistakes it keeps repeating, usually lives in a maintainer's head and reaches
+contributors one review comment at a time. Committed, it is versioned and diffable like the rest of the code:
+a contributor who clones the repository gets the review a maintainer would have run, a finding traces back to
+the lens text that raised it, and a review that missed something is fixed by editing a file, once.
+
+**`.revmux/` is also code.** A checked-in lens becomes the instructions a headless agent with a shell
+executes, so running revmux inside a repository trusts it the same way `.claude/` or a `Makefile` there does.
+Review it before reviewing a branch you did not write.
 
 The [profiles](https://revmux.com/docs#profiles) and [lenses](https://revmux.com/docs#lenses) sections cover
 the roster keys, the model grammar and what each of the thirteen lenses looks for.
@@ -254,7 +304,7 @@ when the tty cannot be opened, the same events render as timestamped lines on st
 ## Agent skills
 
 revmux is built to be driven by a caller model, and this repository ships that caller as a skill for two
-harnesses. The skill does the half revmux deliberately does not: it resolves what is being reviewed, runs the
+harnesses. Ask for a review in words and the skill does the rest: it resolves what is being reviewed, runs the
 git commands, writes the round's `input/`, launches revmux, reads the JSON back, and opens a new round on the
 same task after fixes.
 

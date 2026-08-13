@@ -6,7 +6,7 @@
     <title>revmux documentation — task rounds, profiles, lenses, the run archive</title>
     <meta
       name="description"
-      content="The revmux user guide: installing it, composing a task round, the three review stages, profiles and lenses, configuration layers, the JSON report, exit codes, the terminal UI and every subcommand."
+      content="The revmux user guide: how the shipped skill drives it, composing a task round for a change, a plan or a filed item, the three review stages, profiles and lenses, configuration layers, the JSON report, exit codes, the terminal UI and every subcommand."
     />
     <meta name="author" content="umputun" />
     <link rel="canonical" href="https://revmux.com/docs" />
@@ -96,6 +96,7 @@
         <a href="#prior-rounds">prior rounds</a>
         <b>configuration</b>
         <a href="#configuration">two precedence chains</a>
+        <a href="#blueprint">a committed standard</a>
         <a href="#profiles">profiles</a>
         <a href="#lenses">lenses</a>
         <a href="#composition">prompt composition</a>
@@ -127,9 +128,9 @@
           <p class="eyebrow">documentation</p>
           <h1>revmux</h1>
           <p class="lede">
-            A supervised multi-agent code review. revmux spawns <code>claude --print</code> and
-            <code>codex exec</code> subprocesses, watches them, and returns findings on stdout as JSON or
-            markdown.
+            A supervised multi-agent review, normally launched by your coding agent rather than typed by you.
+            revmux spawns <code>claude --print</code> and <code>codex exec</code> subprocesses, watches them,
+            and returns findings on stdout as JSON or markdown.
           </p>
         </div>
 
@@ -141,10 +142,25 @@
           caller and passed in as a task round.
         </p>
         <p>
-          That split is deliberate. The agents themselves run diff commands inside the working directory you
+          That caller is normally a model. You ask your coding agent for a review, and the
+          <a href="#skills">shipped skill</a> does the rest: it works out what is under review, gathers the
+          context, writes the round, launches revmux, reads the report back and acts on it. To that agent
+          revmux is a black box with a stable contract, context in and a verified report out, which is why the
+          report is JSON by default and why every subcommand answers in JSON too. Running it by hand works
+          exactly the same way and is how the pages here describe it, but it is not the usual path.
+        </p>
+        <p>
+          <strong>The subject does not have to be code.</strong> A round is a scope description plus whatever
+          context you put beside it, so a branch, a pull request, a design document, an implementation plan, a
+          proposal or a filed issue all go in the same way. The eight code lenses read a change; the
+          <code>expert</code> profile rates what goes wrong if the thing is built and run as written, so it
+          reads a plan as readily as a diff; and <code>triage</code> runs a four-way panel over a filed item,
+          where the severities rate how much a point bears on the decision rather than what breaks at runtime.
+        </p>
+        <p>
+          The split is deliberate. The agents themselves run diff commands inside the working directory you
           point them at, and revmux only substitutes a path. Anything that would make revmux read a repository
-          belongs in the caller, which is shipped separately as
-          <a href="#skills">an agent skill for Claude Code and Codex</a>.
+          belongs in the caller.
         </p>
         <div class="note">
           <p>
@@ -155,6 +171,22 @@
         </div>
 
         <h2 id="install">Install <a class="anchor" href="#install">#</a></h2>
+        <p>Homebrew, on macOS:</p>
+        <pre class="code">brew install umputun/apps/revmux</pre>
+        <p>
+          It is a cask, so <code>brew install --cask umputun/apps/revmux</code> is the explicit spelling of the
+          same thing, and <code>brew upgrade</code> picks up later releases.
+        </p>
+        <h3>Binaries and packages</h3>
+        <p>
+          Every <a href="https://github.com/umputun/revmux/releases">release</a> carries prebuilt binaries for
+          macOS and Linux on amd64 and arm64, as <code>.tar.gz</code> archives plus <code>.deb</code> and
+          <code>.rpm</code> packages. This is the Linux path, since Homebrew casks are macOS only.
+        </p>
+        <pre class="code">dpkg -i revmux_&lt;version&gt;_linux_amd64.deb
+rpm -i revmux_&lt;version&gt;_linux_amd64.rpm</pre>
+        <h3>From source</h3>
+        <p>With a Go toolchain:</p>
         <pre class="code">go install github.com/umputun/revmux/app@latest</pre>
         <p>
           The binary is installed as <code>app</code>, so rename it to <code>revmux</code>, or build from a
@@ -296,8 +328,8 @@ revmux --task pr-123 --run 02-after-fix &gt; findings.json</pre>
           The wire format keeps the distinction in two fields that are never interchangeable.
           <code>sources</code> holds agent names such as <code>["bugs+impl", "codex"]</code> and is the only
           input to the boost. <code>lenses</code> holds the lens names that raised the finding and is
-          informational. Go stamps <code>sources</code> after parsing the model's output, and no schema exposes
-          the field, so an agent cannot name itself twice.
+          informational. revmux stamps <code>sources</code> itself once the model's output is parsed, and no
+          schema exposes the field, so an agent cannot name itself twice.
         </p>
 
         <h2 id="task-directory">Task directory <a class="anchor" href="#task-directory">#</a></h2>
@@ -409,9 +441,26 @@ Reviewing the token exchange path after the provider swap.</pre>
         </p>
         <p>
           <strong>Prompt and lens files</strong> resolve from <code>./.revmux/</code>, then
-          <code>~/.config/revmux/</code>, then the <code>go:embed</code> defaults, <strong>per file</strong>.
+          <code>~/.config/revmux/</code>, then the defaults built into the binary, <strong>per file</strong>.
           Overriding one lens does not orphan the other six, and deleting an override falls back to the embedded
           copy rather than disabling the lens. To actually drop a lens, remove it from the profile roster.
+        </p>
+
+        <h3 id="blueprint">The project layer is a review standard you can commit</h3>
+        <p>
+          What a project actually cares about, its conventions, what counts as major, the mistakes it keeps
+          repeating, usually lives in a maintainer's head and reaches contributors one review comment at a
+          time. <code>revmux init</code> writes it to disk instead: the config template plus every prompt file
+          as it currently resolved, ready to edit.
+        </p>
+        <p>
+          Checked into <code>.revmux/</code>, that tree is the project's review, versioned and diffable like
+          the rest of the code. Everyone who clones the repository runs it, so a contributor gets the review a
+          maintainer would have run before the maintainer opens the pull request. A finding traces back to the
+          lens text that raised it rather than to a prompt nobody kept. A review that missed something is fixed
+          by editing a file, once, and every later round has the fix. What belongs there is anything a reviewer
+          would otherwise have to be told: a lens for a subsystem with its own failure modes, a severity bar
+          that says what major means here, a profile shaped like the review this project actually runs.
         </p>
         <div class="note warn">
           <p>
@@ -572,6 +621,37 @@ codex:high               codex's default model at high effort</pre>
           lenses, so where the two models independently agree the cross-source boost measures genuine
           corroboration rather than two halves of one review. Its severity bar rates what goes wrong if the
           thing is built and run as written, so a plan reads as naturally as a diff.
+        </p>
+        <h3>Writing your own</h3>
+        <p>
+          The eight are starting points, not the menu. A profile is a file under
+          <code>prompts/profiles/</code> in any of the three layers, so dropping
+          <code>.revmux/prompts/profiles/release.md</code> into a project makes
+          <code>--profile release</code> work, with no registration step anywhere. The same is true of lenses:
+          a roster naming <code>payments</code> resolves <code>lenses/payments.md</code> through the same
+          chain, and a file only your project has resolves in your project.
+        </p>
+        <pre class="code">---
+description: pre-release pass over the payment path
+model: claude/opus:high
+agents:
+  - {name: money,     lenses: [bugs, impl, payments],   color: red}
+  - {name: contracts, lenses: [architecture, docs],     color: cyan}
+  - {name: peer,      lenses: [adversarial], model: codex/gpt-5.6-sol:xhigh}
+  - {name: second,    lenses: [bugs],        model: codex/gpt-5.6-sol:high}
+stages:
+  synthesis: claude/opus:high
+  verify:    claude/sonnet:low
+---
+
+Everything below the front matter is the preamble every agent in this roster
+receives, including what counts as critical, major and minor here.</pre>
+        <p>
+          Four sources, two vendors, four different jobs, and a synthesis model stronger than the verifier
+          after it. There is no fixed shape to a review: the roster is as wide as you are willing to pay for,
+          each entry carries as many lenses as the job needs, and any entry can leave the profile's model for
+          its own. Copy a shipped profile and edit it rather than starting from an empty file, since the body
+          carries the severity bar the findings are calibrated against.
         </p>
         <p>
           <code>triage</code> reviews an issue, a proposal or a discussion instead of a change. Its severities
@@ -811,8 +891,8 @@ codex:high               codex's default model at high effort</pre>
           <p>
             <b>A failed archive write fails the run.</b> A report emitted next to a half-written archive reads
             as complete, and the gap only surfaces later when someone tries to audit it. The one exception is a
-            per-agent tee under <code>agents/</code>, which degrades that one source instead: it is owned by that
-            agent's own goroutine and is the only artifact whose failure is attributable to a single source.
+            per-agent tee under <code>agents/</code>, which degrades that one source instead: it belongs to that
+            one agent and is the only artifact whose failure is attributable to a single source.
           </p>
         </div>
         <p>
@@ -1101,7 +1181,7 @@ codex:high               codex's default model at high effort</pre>
         <h2 id="skills">Agent skills <a class="anchor" href="#skills">#</a></h2>
         <p>
           revmux is built to be driven by a caller model, and the repository ships that caller as a skill for
-          two harnesses. The skill does the half revmux deliberately does not: it resolves what is being
+          two harnesses. Ask for a review in words and the skill does the rest: it resolves what is being
           reviewed, runs the git commands, writes the round's <code>input/</code>, launches revmux, reads the
           JSON back, and opens a new round on the same task after fixes.
         </p>
