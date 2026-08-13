@@ -3,22 +3,22 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>revmux — supervised multi-agent code review</title>
+    <title>revmux — supervised multi-agent review for code, plans and proposals</title>
     <meta
       name="description"
-      content="revmux runs a structured multi-agent code review. It spawns claude and codex as supervised subprocesses with stall detection, retry, a live view and a full run archive, then returns findings as JSON."
+      content="Your coding agent runs revmux through the shipped skill: it spawns claude and codex as supervised subprocesses with stall detection, retry and a full run archive, and returns verified findings on a branch, a pull request, a plan or a filed issue."
     />
     <meta
       name="keywords"
-      content="revmux, multi-agent code review, AI code review, claude code review, codex review, supervised subprocess review, code review CLI, review archive, review lenses"
+      content="revmux, multi-agent code review, AI code review, claude code review, codex review, AI plan review, design document review, proposal triage, supervised subprocess review, code review CLI, review archive, review lenses"
     />
     <meta name="author" content="umputun" />
     <link rel="canonical" href="https://revmux.com/" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="revmux — supervised multi-agent code review" />
+    <meta property="og:title" content="revmux — supervised multi-agent review for code, plans and proposals" />
     <meta
       property="og:description"
-      content="Spawns claude and codex as supervised subprocesses, watches every one of them, and returns findings as JSON with a full run archive behind them."
+      content="Launched by your coding agent, revmux spawns claude and codex as supervised subprocesses, cross-checks what they find, and returns one structured report with a full run archive behind it."
     />
     <meta property="og:url" content="https://revmux.com/" />
     <meta property="og:image" content="https://revmux.com/assets/revmux-og.png" />
@@ -27,10 +27,10 @@
     <meta property="og:site_name" content="revmux" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@umputun" />
-    <meta name="twitter:title" content="revmux — supervised multi-agent code review" />
+    <meta name="twitter:title" content="revmux — supervised multi-agent review for code, plans and proposals" />
     <meta
       name="twitter:description"
-      content="Spawns claude and codex as supervised subprocesses, watches every one of them, and returns findings as JSON with a full run archive behind them."
+      content="Launched by your coding agent, revmux spawns claude and codex as supervised subprocesses, cross-checks what they find, and returns one structured report with a full run archive behind it."
     />
     <meta name="twitter:image" content="https://revmux.com/assets/revmux-og.png" />
     <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
@@ -45,7 +45,7 @@
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
         "name": "revmux",
-        "description": "Command line tool that runs a structured multi-agent code review by spawning and supervising claude and codex subprocesses, then returning findings as JSON with a full run archive.",
+        "description": "Command line tool driven by a coding agent that runs a structured multi-agent review of a change, a plan or a filed item by spawning and supervising claude and codex subprocesses, then returning verified findings as JSON with a full run archive.",
         "url": "https://revmux.com",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "macOS, Linux",
@@ -79,6 +79,7 @@
           <a href="#rounds">rounds</a>
           <a href="#archive">archive</a>
           <a href="#profiles">profiles</a>
+          <a href="#blueprint">blueprint</a>
           <a href="/docs">docs</a>
           <a href="/reference">reference</a>
           <a class="ext" href="https://github.com/umputun/revmux">github</a>
@@ -94,6 +95,7 @@
             <a href="#rounds">rounds</a>
             <a href="#archive">archive</a>
             <a href="#profiles">profiles</a>
+            <a href="#blueprint">blueprint</a>
             <a href="#install">install</a>
             <a href="/docs">docs</a>
             <a href="/reference">reference</a>
@@ -109,11 +111,13 @@
         <div class="wrap hero-grid">
           <div>
             <p class="eyebrow">multi-agent review <span class="dot">·</span> supervised <span class="dot">·</span> auditable</p>
-            <h1>Four models.<br /><em>One review standard.</em></h1>
+            <h1>Many agents.<br /><em>One review standard.</em></h1>
             <p class="lede">
-              revmux spawns <code>claude</code> and <code>codex</code> as supervised subprocesses, watches every
-              one of them, and returns findings on stdout as JSON. The roster, the lenses and the severity bar
-              are files in your repository, so two runs ask the same questions of the code.
+              revmux is launched by your coding agent rather than typed by you. The
+              <a href="#skills">shipped skill</a> works out what is under review, writes the context to disk,
+              runs revmux and reads the report back. A
+              branch, a pull request, a design document or a filed issue all go in the same way, and come back
+              as one structured answer several supervised models have cross-checked.
             </p>
             <div class="hero-cta">
               <a class="btn primary" href="/docs">read the docs</a>
@@ -122,7 +126,7 @@
             <div class="hero-cta">
               <span class="copyline">
                 <span class="prompt">$</span>
-                <span id="install-cmd">go install github.com/umputun/revmux/app@latest</span>
+                <span id="install-cmd">brew install umputun/apps/revmux</span>
                 <button type="button" data-copy="install-cmd">copy</button>
               </span>
             </div>
@@ -189,11 +193,12 @@
           <div class="sec-head">
             <p class="sec-index">01 / control</p>
             <div>
-              <h2>Fan-out from inside a session is unobservable and unrecoverable</h2>
+              <h2>Every agent is visible, and every stall is recoverable</h2>
               <p class="sec-note">
-                Agents go quiet for minutes and sometimes never come back, and the caller has no timeout, no
-                kill, no retry and no progress. A subprocess does not make the model faster. What it buys is
-                control.
+                Each model runs as a subprocess revmux owns, so it can be watched, timed, killed and relaunched.
+                You see what every agent is doing and what it has spent, a stalled one is restarted without
+                your help, and the whole run is on disk afterwards. A subprocess does not make the model faster;
+                it makes the run something you can hold on to.
               </p>
             </div>
           </div>
@@ -201,12 +206,12 @@
           <div class="cards">
             <div class="card">
               <span class="eyebrow">watchdog</span>
-              <h3>Degrade, never abort</h3>
+              <h3>A stall is caught and relaunched</h3>
               <p>
-                An agent with nothing on its output for the idle timeout is killed and retried once. A second
-                failure marks it degraded and the run continues, with the missing source named in the report
-                banner and the real source count handed to synthesis. Only a run where every source degraded is
-                a tool error.
+                An agent with nothing on its output for the idle timeout is killed and retried once. If the
+                second attempt fails too, the run carries on without it: the report names the missing source
+                and synthesis is told the real count, so the other agents' work still reaches you. Only a run
+                where every source failed is an error.
               </p>
             </div>
             <div class="card">
@@ -430,9 +435,9 @@
               one source: it cannot corroborate itself.
             </p>
             <p class="quote-note">
-              The cross-source confidence boost counts distinct processes, never lenses and never tags. Go
-              stamps the attribution after parsing the model's output, and no schema exposes the field to the
-              model, so an agent cannot name itself twice. Codex runs as a peer alongside the lens agents rather
+              The cross-source confidence boost counts distinct processes, never lenses and never tags. revmux
+              stamps the attribution itself once the model's output is parsed, and no schema exposes the field
+              to the model, so an agent cannot name itself twice. Codex runs as a peer alongside the lens agents rather
               than as a second pass, because a reviewer who sees the first reviewer's findings anchors on them
               and the boost then measures nothing.
             </p>
@@ -448,9 +453,11 @@
             <div>
               <h2>Review context arrives as a task round</h2>
               <p class="sec-note">
-                revmux performs no scope detection, no git operations and no PR fetching, and it modifies no
-                source. The caller writes the round's <code>input/</code> and passes its name. Variables expand
-                to the paths of those files, never to their contents, so no prompt is bloated by a large scope.
+                The subject is whatever the scope describes: a branch, a pull request, an implementation plan,
+                a design document, or an issue somebody filed. revmux performs no scope detection, no git
+                operations and no PR fetching, and it modifies no source. The caller writes the round's
+                <code>input/</code> and passes its name. Variables expand to the paths of those files, never to
+                their contents, so no prompt is bloated by a large scope.
               </p>
             </div>
           </div>
@@ -563,15 +570,51 @@ EOF
           <div class="sec-head">
             <p class="sec-index">06 / profiles</p>
             <div>
-              <h2>A profile is a roster, a preamble and a severity bar</h2>
+              <h2>Any agents, any models, any lenses</h2>
               <p class="sec-note">
-                Executor and lens are orthogonal. Every roster entry composes lenses, and its
-                <code>model:</code> only selects which binary runs it, which model of that binary, and at what
-                effort. There is no codex-specific prompt file.
+                A profile is a file. Its front matter names the roster, and its body is the shared preamble and
+                the severity bar. Each entry picks the lenses it carries and, if it wants one, its own binary,
+                model and effort. Synthesis and verification choose separately. Nothing about the shape is
+                fixed, so a review is composed rather than selected from a menu.
               </p>
             </div>
           </div>
 
+          <div class="sec-body" style="margin-bottom: 46px">
+            <p class="col-note">
+              .revmux/prompts/<br />
+              profiles/<br />
+              release.md<br /><br />
+              <span class="c-dim">then --profile release</span>
+            </p>
+            <div>
+              <pre class="code">---
+description: pre-release pass over the payment path
+model: claude/opus:high
+agents:
+  - {name: money,     lenses: [bugs, impl, <b>payments</b>],    color: red}
+  - {name: contracts, lenses: [architecture, docs],      color: cyan}
+  - {name: peer,      lenses: [adversarial], model: <b>codex/gpt-5.6-sol:xhigh</b>}
+  - {name: second,    lenses: [bugs],        model: <b>codex/gpt-5.6-sol:high</b>}
+stages:
+  synthesis: claude/opus:high
+  verify:    claude/sonnet:low
+---
+
+Everything below the front matter is the preamble every agent in this
+roster receives, including what counts as critical, major and minor here.</pre>
+              <p class="small">
+                Four sources, two vendors, four different jobs, and a synthesis model stronger than the
+                verifier that follows it. <code>payments</code> is not a shipped lens: it is
+                <code>.revmux/lenses/payments.md</code>, written by whoever knows what goes wrong in that code.
+                A lens is a file of instructions and nothing else, so a project can have as many as it has
+                subjects worth a dedicated pass, and a profile can have as many agents as it is willing to pay
+                for.
+              </p>
+            </div>
+          </div>
+
+          <p class="eyebrow" style="margin-bottom: 16px">eight ship, as starting points rather than as the menu</p>
           <div class="scroll-x">
             <table class="tbl">
               <thead>
@@ -631,8 +674,8 @@ EOF
           <div class="sec-body" style="margin-top: 44px">
             <p class="col-note">
               thirteen lenses<br />
-              eight read a<br />
-              change, five<br />
+              ship: eight read<br />
+              a change, five<br />
               read a filed<br />
               item
             </p>
@@ -648,9 +691,58 @@ EOF
               <p>
                 Prompt text resolves per file across three layers: <code>./.revmux/</code>, then
                 <code>~/.config/revmux/</code>, then the embedded defaults. Overriding one lens does not orphan
-                the others, and a checked-in <code>.revmux/lenses/bugs.md</code> is how a project's own review
-                rules ship with the repository and reach everyone who clones it.
+                the others, and adding a file is how the set grows.
                 <a href="/reference#lenses">Every lens and key</a> is in the reference.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== BLUEPRINT ===================== -->
+      <section id="blueprint">
+        <div class="wrap">
+          <div class="sec-head">
+            <p class="sec-index">07 / the blueprint</p>
+            <div>
+              <h2>The review standard lives in the repository</h2>
+              <p class="sec-note">
+                What a project actually cares about, its conventions, what counts as major, the mistakes it
+                keeps repeating, usually lives in a maintainer's head and reaches contributors one review
+                comment at a time. <code>revmux init</code> writes it to disk instead.
+              </p>
+            </div>
+          </div>
+
+          <div class="sec-body">
+            <p class="col-note">
+              commit it, and<br />
+              every clone<br />
+              reviews by the<br />
+              same rules
+            </p>
+            <div>
+              <pre class="code">$ revmux init          <span class="c-dim"># writes whatever currently resolved, ready to edit</span>
+
+<b>.revmux/</b>
+├── config                          runtime knobs, shipped commented out
+├── lenses/
+│   ├── bugs.md                     the shipped lens, now yours to edit
+│   └── <b>payments.md</b>                  a lens only this project needs
+└── prompts/
+    ├── profiles/<b>release.md</b>          the roster above
+    └── synthesis.md  verify.md</pre>
+              <p>
+                Checked in, that directory is the project's review, versioned and diffable like the rest of the
+                code. A contributor who clones the repository and runs revmux gets the review the maintainer
+                would have run, before the maintainer ever opens the pull request. A maintainer reading a
+                finding can see which lens text raised it rather than taking it on faith. A review that missed
+                something is fixed by editing a file, once, and every later review has it.
+              </p>
+              <p class="small">
+                It cuts both ways: that text becomes the instructions a headless agent with a shell executes,
+                so <code>.revmux/</code> is code and deserves the same look as a <code>Makefile</code> before
+                you run it on a branch you did not write. Running revmux from outside the tree never loads it.
               </p>
             </div>
           </div>
@@ -661,13 +753,14 @@ EOF
       <section id="output">
         <div class="wrap">
           <div class="sec-head">
-            <p class="sec-index">07 / output</p>
+            <p class="sec-index">08 / output</p>
             <div>
               <h2>Findings to stdout, everything else to the tty</h2>
               <p class="sec-note">
-                The report is JSON by default, markdown with <code>--markdown</code>. The terminal UI renders to
-                the tty and progress lines go to stderr, so <code>revmux &gt; findings.json</code> works with the
-                display running.
+                JSON is the default because the usual reader is the agent that launched the run, which decides
+                what to fix, what to argue with and what to put in front of you. <code>--markdown</code> is for
+                when a person is the one reading. The terminal UI renders to the tty and progress lines go to
+                stderr, so <code>revmux &gt; findings.json</code> works with the display running.
               </p>
             </div>
           </div>
@@ -722,13 +815,15 @@ EOF
       <section id="skills">
         <div class="wrap">
           <div class="sec-head">
-            <p class="sec-index">08 / the caller</p>
+            <p class="sec-index">09 / the caller</p>
             <div>
-              <h2>The half revmux deliberately does not do</h2>
+              <h2>Ask in words, and the skill does the rest</h2>
               <p class="sec-note">
-                revmux is driven by a caller model, and the repository ships that caller as a skill for two
-                harnesses. It resolves what is being reviewed, runs the git commands, writes the round's
+                To the agent, revmux is a black box: context in, a verified report out. The skill is what fills
+                that box. It resolves what is being reviewed, runs the git commands, writes the round's
                 <code>input/</code>, launches revmux, reads the JSON back, and opens a new round after fixes.
+                You never compose a command, and the review does not have to be code: a plan, a design
+                document, a proposal or a filed issue goes in the same way.
               </p>
             </div>
           </div>
@@ -754,14 +849,31 @@ EOF
             </div>
           </div>
 
-          <p class="small" style="max-width: 46em; margin-top: 26px">
-            Asked for a pull request, the skill fetches the head into a throwaway worktree, points
-            <code>--workdir</code> at it while running from the main checkout, and removes both afterwards.
-            Asked to triage a filed item, it gathers the issue, its thread and the author's history into
-            <code>context/</code>, runs the panel over them and puts the maintainer's answers to him with the
-            arguments behind each. An agent's shell has no tty, so <code>launch-revmux.sh</code> opens the run
-            with its TUI in a terminal overlay when you want to watch it.
-          </p>
+          <div class="sec-body" style="margin-top: 40px">
+            <p class="col-note">
+              review a change,<br />
+              or triage what<br />
+              somebody filed
+            </p>
+            <div>
+              <p>
+                <strong>Triage is the other job.</strong> Point the skill at an issue, a proposal or a
+                discussion and it gathers the item, its thread and the author's history into
+                <code>context/</code>, then runs a four-way panel over them: is the claim true of the code as
+                it stands, how were comparable asks decided here before, the strongest honest case for, the
+                strongest case against, and what the work would reach into. The severities rate how much a
+                point bears on the decision rather than what breaks at runtime, and what comes back is
+                arguments for a maintainer to weigh. revmux decides nothing, and neither does the skill: it
+                puts the six questions to you with the case behind each.
+              </p>
+              <p class="small">
+                Asked for a pull request instead, the skill fetches the head into a throwaway worktree, points
+                <code>--workdir</code> at it while running from the main checkout, and removes both afterwards.
+                An agent's shell has no tty, so <code>launch-revmux.sh</code> opens the run with its TUI in a
+                terminal overlay when you want to watch it happen.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -769,9 +881,9 @@ EOF
       <section id="install">
         <div class="wrap">
           <div class="sec-head">
-            <p class="sec-index">09 / install</p>
+            <p class="sec-index">10 / install</p>
             <div>
-              <h2>Go toolchain, and the CLIs your profile names</h2>
+              <h2>Brew it, or take a binary</h2>
               <p class="sec-note">
                 revmux drives the model CLIs as subprocesses, so whichever ones the profile names must already
                 be installed and authenticated. The shipped <code>preflight.sh</code> answers that for any
@@ -788,17 +900,16 @@ EOF
               its own
             </p>
             <div>
-              <pre class="code"><b>go install github.com/umputun/revmux/app@latest</b>   <span class="c-dim"># installs as `app`, rename it</span>
+              <pre class="code"><b>brew install umputun/apps/revmux</b>   <span class="c-dim"># macOS</span>
 
-<span class="c-dim"># or from a clone</span>
-git clone https://github.com/umputun/revmux.git &amp;&amp; cd revmux
-<b>make build</b>      <span class="c-dim"># .bin/revmux</span>
-<b>make install</b>    <span class="c-dim"># symlinks it into /usr/local/bin</span></pre>
+<span class="c-dim"># linux, from a release: .tar.gz, .deb and .rpm for amd64 and arm64</span>
+dpkg -i revmux_&lt;version&gt;_linux_amd64.deb
+
+<span class="c-dim"># or with a go toolchain, installed as `app`</span>
+go install github.com/umputun/revmux/app@latest</pre>
               <p class="small">
-                <code>ANTHROPIC_API_KEY</code> is stripped from the child environment by default so
-                <code>claude</code> uses interactive subscription auth. Pass
-                <code>--preserve-anthropic-api-key</code> when you authenticate by key.
-                <a href="/docs#install">Full install notes</a>.
+                <a href="/docs#install">Full install notes</a>, including building from a clone and how
+                authentication is passed to the model CLIs.
               </p>
             </div>
           </div>
