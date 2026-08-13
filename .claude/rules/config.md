@@ -69,7 +69,7 @@ See `.claude/rules/prompts.md`. Do not add a roster or a model to the INI file.
 Minimal and atomic. State what the flag does, nothing more.
 
 Never write "at startup", "on startup", "(mirrors the X toggle)", or a cross-reference to a runtime key binding
-in a struct tag, the README table, or godoc.
+in a struct tag, the flag tables on the site, or godoc.
 The description says what the flag does; runtime toggles are discovered from the key bindings, not from flag help.
 
 In documentation use the `--flag=value` form for long flags that take a value, not `--flag value`.

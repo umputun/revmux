@@ -12,8 +12,11 @@ a live view of every agent, per-agent token counts, and a run archive to debug a
 **Status: the initial build is complete.**
 The layout and rules below describe what is on disk; the build sequence that produced it is
 `docs/plans/completed/20260726-revmux-initial-build.md`.
-`README.md` is the user-facing description of the same thing — a change to a flag, a roster key, an exit
-code or the JSON shape belongs in both.
+`site/docs.html` and `site/reference.html` are the user-facing description of the same thing, and `README.md`
+is the synopsis: what revmux is, why, install, a quick start, and one compact table per subject with the site
+carrying the full one.
+A change to a flag, a roster key, an exit code or the JSON shape belongs in the site and in the README only
+where the README states it.
 
 ## Working norms
 
@@ -87,6 +90,9 @@ The codex text names no tool: which backend is live there is chosen by model met
 only its final summary" — and a hardcoded `collaboration.spawn_agent` would be wrong for half the models.
 Anything **not** rooted in such a capability is drift rather than divergence, and the review procedure —
 what gates, which profile a re-review picks, how a finding is presented — is the same text in both.
+
+`site/` is `revmux.com`: three hand-written HTML pages, one stylesheet, self-hosted fonts and images, and no
+build step. See the Website section below.
 
 ## Hard rules
 
@@ -399,7 +405,9 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
 
 ## Keep-in-sync conventions
 
-- A new CLI flag needs: the `options` struct tag and the README flag table.
+- A new CLI flag needs: the `options` struct tag and the flag table in `site/reference.html`.
+  A runtime knob needs the knob table in `site/docs.html` as well, which is the same set with the reasons
+  attached, and the README only where the README already states the thing being changed.
   An INI-backed one also needs a commented-out entry in `app/defaults/config`, the template `revmux init` writes —
   not `--dump-defaults`, which extracts the prompt tree and knows nothing about settings —
   plus the runtime-knob list in `.claude/rules/config.md`, which names the set literally and goes stale silently.
@@ -409,14 +417,15 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
   `groupBySource` in `app/pipeline/verify.go`. Renaming one side compiles and passes, and leaves the mode
   reachable by a flag value that silently behaves as the default.
 - A new roster key needs: the `agentYAML` field it parses into, the `AgentSpec` field it resolves to,
-  front-matter validation, and the profile examples in README and `.claude/rules/prompts.md`.
-- A new **profile-level** key needs the same four, in `profileYAML` and on `Profile`, plus the README
-  front-matter key table, which enumerates where each key is accepted and goes stale silently.
+  front-matter validation, and the profile examples in `site/docs.html` and `.claude/rules/prompts.md`.
+- A new **profile-level** key needs the same four, in `profileYAML` and on `Profile`, plus the front-matter
+  key table in `site/reference.html`, which enumerates where each key is accepted and goes stale silently.
   One that changes what a stage resolves to needs `revmux config` as a fifth site: `profileInfo.Stages`
   reports the resolution rather than the override, so a key it does not carry is invisible to the caller
   choosing the profile.
 - A change to the `model:` grammar is `app/prompt/runner.go` plus every authored file that uses it: eight
-  shipped profiles, both stage files, the README front-matter section, `.claude/rules/prompts.md`, and the
+  shipped profiles, both stage files, the model-string sections of `site/docs.html` and
+  `site/reference.html`, `.claude/rules/prompts.md`, and the
   fixtures in `app/prompt` and `app/pipeline` tests. The parsed form reaches `AgentSpec`, `Stage` and
   `RunnerSpec` as three separate fields, so nothing downstream of the parser changes — which is what keeps
   `revmux config`, `manifest.json` and `finding.SourceStat` out of that list.
@@ -436,23 +445,29 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
   so renaming that field in `app/artifacts.go` compiles and passes and leaves every task reporting no
   `last_run` — which reads as a corpus of reviews that never completed.
 - A new subcommand needs: the `options` field with its `command:` tag, the `show*` selection field, the
-  back-pointer in `parseArgs`, and the case in `run()`. Then five places enumerate the set literally and go
+  back-pointer in `parseArgs`, and the case in `run()`. Then seven places enumerate the set literally and go
   stale silently — the stdout carve-out above, the same list in `.claude/rules/config.md`, the
-  "five subcommands" sentence plus the section in README, the project-structure list in this file, and the
-  subcommand sections in **both** skill trees.
+  "all five print JSON" sentence plus the table in README, the subcommand table in `site/reference.html`,
+  the per-command sections and their sidebar entries in `site/docs.html`, the project-structure list in this
+  file, and the subcommand sections in **both** skill trees.
 - A new lens file needs an entry in at least one shipped profile, or nothing will ever run it.
-  Then the lens table in README, the layout block in `.claude/rules/prompts.md`, the lens table in
+  Then the lens table in `site/docs.html`, the two split by what they read in `site/reference.html`, the
+  lens names the landing page's profiles section spells out in prose, the layout block in
+  `.claude/rules/prompts.md`, the lens table in
   `references/invocation.md` in **both** skill trees, and three literal inventories in the tests: the name
   set in `prompt_test.go`, and in `defaults_test.go` both the count and the message enumerating every
   shipped lens by name.
   There are thirteen — eight reading a change, five reading a filed item — and nothing derives that number,
-  so each site goes stale silently.
+  so each site goes stale silently. `site/llms.txt` states the split rather than the names, and stays as it
+  is unless the balance changes.
   The body is constrained by the shipped-file contracts: it opens with `## Lens: <name>`, carries a
   `description:` one-liner and no `{{VAR}}`, names no executor or output format, and mentions no prior
   round. `TestDefaults_NoShippedFileCarriesThePriorRoundBlock` iterates lenses as well as profiles, which
   is what any lens describing how a project decided something before will trip.
 - A new **profile** needs: the file under `app/prompt/defaults/prompts/profiles/`, the shipped-profile
-  table in README and the CLI-requirements bullet above it, the prompt-tree diagram in README, and the
+  table in README and the install paragraph naming which binaries each profile needs, the three profile
+  tables on the site — `site/index.html`, `site/docs.html`, and `site/reference.html`, whose table carries
+  the binaries as a column of its own — plus the prompt-tree diagram in `site/docs.html` and the
   layout block in `.claude/rules/prompts.md`.
   Then four sites in **each** skill tree, two per file: `SKILL.md`'s profile table and its "the user
   says" mapping, and `references/invocation.md`'s profile table and the executor count in its
@@ -515,14 +530,15 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
   `app/pipeline` and `package main` join every path from — the run's own artifacts included, so a stage
   snapshot is named once and read back by that name.
   No layout name is spelled anywhere else. What does not follow them
-  is everything that *describes* the shape: `task.Paths` and its JSON field names, the two trees in README,
-  the one in this file, and both skill trees.
-- A new `task.md` front-matter key needs: the `Meta` field with both a `yaml` and a `json` tag, the
-  commented-out line in `app/task`'s scaffolded template, and the README description of the file.
+  is everything that *describes* the shape: `task.Paths` and its JSON field names, the round tree in README,
+  the two in this file, the round and archive trees on all three site pages, and both skill trees.
+- A new `task.md` front-matter key needs: the `Meta` field with both a `yaml` and a `json` tag, and the
+  commented-out line in `app/task`'s scaffolded template.
   `revmux config` reports it for free, since `taskInfo` embeds `Meta` rather than copying its fields.
-  Six files enumerate the keys literally and do not, and they split by what they are enumerating.
-  Describing `task.md` itself: the README (its description of the file **and** the `paths.tasks` sample
-  payload in the `revmux config` section), `.claude/rules/prompts.md`, `references/task-dir.md` — in its
+  Seven files enumerate the keys literally and do not, and they split by what they are enumerating.
+  Describing `task.md` itself: `site/docs.html` (its `task.md` section **and** the `paths.tasks` sample
+  payload in the `revmux config` section), the `task.md` key table in `site/reference.html`,
+  `.claude/rules/prompts.md`, `references/task-dir.md` — in its
   `task.md` example and its "Each entry carries" line — and the `SKILL.md` step that writes it.
   Describing what a `paths.tasks` entry carries: `references/invocation.md`, and `SKILL.md`'s own
   "Entries carry" line, which is a second place inside a file the write step already put on the list.
@@ -536,7 +552,8 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
   A **new** reference file additionally needs the `references/` line in `plugins/codex/README.md`, which
   enumerates them by name and goes stale silently — the `SKILL.md` pointer to it is what an agent
   follows, so nothing fails when that listing drops one.
-  A **new script** needs the same listing, the script list in README's skill section, and a line under
+  A **new script** needs the same listing, the script sentence in README's skill section, the script list in
+  `site/docs.html`, and a line under
   `plugins/codex/README.md`'s requirements when it needs anything the other scripts do not.
   **A script exists so the knowledge in it is not re-derived per session.** `analyze-corpus.py` is the
   case that made the rule: the readings it encodes were each got wrong by hand first, and ad-hoc `jq`
@@ -547,16 +564,50 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
   agent executes what it says without checking. A skill describing a flag that no longer behaves that way
   is worse than one that omits it: the caller acts on it confidently and has to recover afterwards.
   Treat `.claude-plugin/skills/` and `plugins/codex/` as consumers of `app/config.go`, `app/finding/`
-  and `app/archive/` the way `README.md` is.
+  and `app/archive/` the way `README.md` and `site/` are.
 - A new prompt input — a variable, an injected block, a per-agent knob — needs a matching record in
   `manifest.json` or the archived prompt, or a reflection agent cannot tell what shaped the review.
 - Changing any of the three stage schemas means changing the embedded JSON under `app/finding/`
   (`finder-schema.json`, `synthesis-schema.json`, `verify-schema.json` — `schema.go` only embeds them),
-  the `Report.JSON` shape, the README output section, and every recorded executor fixture carrying a
-  `structured_output`.
+  the `Report.JSON` shape, the report sample in README, the three on the site — the landing page's, the one
+  in `site/docs.html` and the field table in `site/reference.html` — and every recorded executor fixture
+  carrying a `structured_output`.
   `finder-schema.json` is the harder one: `app/executor/testdata/finder-schema.json` is the copy the live
   capture was recorded under and is authoritative, so both files move together or the executor tests assert
   a shape the CLI never emitted.
+
+## Website
+
+`revmux.com` is the static `site/` directory on Cloudflare Pages: no build step, no framework, no
+repository deploy config, and canonical URLs omit `.html` because Pages redirects with 308.
+Three pages carry the whole thing.
+`site/index.html` is what revmux is and why, `site/docs.html` is the canonical user guide, and
+`site/reference.html` is every flag, key, field, verdict and exit code with no explanation attached.
+`site/llms.txt` is the crawler-oriented summary and discovery index.
+
+**The site is documentation of this binary, so a change to the binary updates it in the same commit** —
+the same rule the skill trees carry, and for the same reason.
+The keep-in-sync bullets above name which page holds what; the short version is that anything a reader could
+act on lives in `docs.html`, anything they would look up lives in `reference.html`, and the landing page
+repeats only what it needs to make the case.
+The README is the synopsis and keeps a compact table where the site keeps the full one, so a table that
+exists in both is edited in both.
+
+Assets are self-hosted and there is nothing to build.
+`style.css` holds the whole design system as CSS custom properties: graphite ground, warm paper ink, amber
+signal, and the severity palette (`--crimson`, `--amber`, `--slate`) doubling as the accent set, so a color
+used anywhere on the site comes from a token rather than a literal.
+Fonts are latin-subset woff2 of Newsreader and IBM Plex Mono, preloaded in every page head.
+`assets/favicon.svg` is the source for both PNG favicons and `assets/revmux-og.svg` for the 1200x630 social
+card; both are rasterized with `rsvg-convert`, and editing the SVG without re-rendering the PNG leaves the
+two disagreeing.
+Screenshots are WebP at 1600px wide, converted with `magick <src> -resize 1600x -quality 82`, and they carry
+explicit `width`/`height` so the page does not shift as they load.
+
+The only JavaScript is the copy-to-clipboard handler at the foot of `index.html`.
+The docs and reference drawers, the mobile nav and the hero animation are CSS alone, so a page with scripts
+disabled still works.
+Every animation is disabled under `prefers-reduced-motion`.
 
 ## Subsystem notes (path-scoped rules)
 
