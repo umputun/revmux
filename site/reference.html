@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>revmux reference — flags, front matter, JSON fields, exit codes</title>
+    <meta
+      name="description"
+      content="Every revmux flag and config key, the front-matter vocabulary, the model string grammar, all thirteen lenses, the prompt variables, the report JSON fields, verdicts, exit codes and the run archive layout."
+    />
+    <meta name="author" content="umputun" />
+    <link rel="canonical" href="https://revmux.com/reference" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="revmux reference" />
+    <meta
+      property="og:description"
+      content="Every flag and config key, the front-matter vocabulary, the model string grammar, all thirteen lenses, the report JSON fields, verdicts and exit codes."
+    />
+    <meta property="og:url" content="https://revmux.com/reference" />
+    <meta property="og:image" content="https://revmux.com/assets/revmux-og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="revmux" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@umputun" />
+    <meta name="twitter:title" content="revmux reference" />
+    <meta
+      name="twitter:description"
+      content="Every flag and config key, the front-matter vocabulary, the model string grammar, all thirteen lenses, the report JSON fields, verdicts and exit codes."
+    />
+    <meta name="twitter:image" content="https://revmux.com/assets/revmux-og.png" />
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/favicon-180.png" />
+    <meta name="theme-color" content="#0d0e10" />
+    <link rel="preload" href="/assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/assets/fonts/plex-mono-400-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="nav">
+      <div class="nav-bar">
+        <a class="brand" href="/">
+          <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <rect width="32" height="32" rx="7" fill="#16181c" stroke="#e0a134" stroke-opacity=".5" />
+            <path
+              d="M7 16h3M22 16h3M10 16c2 0 2-6 4-6M10 16c2 0 2 6 4 6M22 16c-2 0-2-6-4-6M22 16c-2 0-2 6-4 6"
+              stroke="#e0a134"
+              stroke-width="1.6"
+              stroke-linecap="round"
+            />
+            <circle cx="16" cy="10" r="1.7" fill="#e9e5dd" />
+            <circle cx="16" cy="22" r="1.7" fill="#e9e5dd" />
+          </svg>
+          <span>revmux</span>
+        </a>
+        <nav class="nav-links">
+          <a href="/">home</a>
+          <a href="/docs">docs</a>
+          <a class="on" href="/reference">reference</a>
+          <a class="ext" href="https://github.com/umputun/revmux">github</a>
+        </nav>
+        <details class="nav-mobile">
+          <summary aria-label="menu">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <path d="M2 5h14M2 9h14M2 13h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            </svg>
+          </summary>
+          <nav>
+            <a href="/">home</a>
+            <a href="/docs">docs</a>
+            <a href="/reference">reference</a>
+            <a href="https://github.com/umputun/revmux">github</a>
+          </nav>
+        </details>
+      </div>
+    </header>
+
+    <input type="checkbox" id="doc-drawer" class="doc-drawer-toggle" />
+    <label class="doc-drawer-overlay" for="doc-drawer" aria-hidden="true"></label>
+
+    <div class="doc-wrap">
+      <aside class="doc-nav" aria-label="reference contents">
+        <b>command line</b>
+        <a href="#flags">flags</a>
+        <a href="#knobs">config keys</a>
+        <a href="#subcommands">subcommands</a>
+        <a href="#env">environment</a>
+        <b>prompt files</b>
+        <a href="#front-matter">front matter</a>
+        <a href="#model">model string</a>
+        <a href="#profiles">profiles</a>
+        <a href="#lenses">lenses</a>
+        <a href="#variables">variables</a>
+        <a href="#colors">colors</a>
+        <b>results</b>
+        <a href="#json">report JSON</a>
+        <a href="#verdicts">verdicts</a>
+        <a href="#exit-codes">exit codes</a>
+        <b>on disk</b>
+        <a href="#layout">task layout</a>
+        <a href="#archive">run archive</a>
+        <a href="#names">name rules</a>
+        <b>terminal</b>
+        <a href="#keys">TUI keys</a>
+      </aside>
+
+      <main class="doc">
+        <label class="doc-drawer-btn" for="doc-drawer">
+          <svg width="14" height="14" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+            <path d="M2 5h14M2 9h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+          </svg>
+          contents
+        </label>
+
+        <div class="doc-head">
+          <p class="eyebrow">reference</p>
+          <h1>Every flag, key and field</h1>
+          <p class="lede">
+            The terse version. <a href="/docs">The documentation</a> explains why each of these behaves the way
+            it does.
+          </p>
+        </div>
+
+        <h2 id="flags">Flags <a class="anchor" href="#flags">#</a></h2>
+        <div class="scroll-x">
+          <table class="tbl">
+            <thead>
+              <tr><th>flag</th><th>default</th><th>description</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>--task=&lt;id&gt;</td><td></td><td class="prose">name of the task directory holding the review context</td></tr>
+              <tr><td>--run=&lt;name&gt;</td><td></td><td class="prose">name for this round of the review</td></tr>
+              <tr><td>--lenses=&lt;a,b&gt;</td><td></td><td class="prose">lens set replacing the profile roster, as one agent</td></tr>
+              <tr><td>--workdir=&lt;dir&gt;</td><td>working directory</td><td class="prose">directory the review subprocesses run in</td></tr>
+              <tr><td>--min-confidence=&lt;n&gt;</td><td>0</td><td class="prose">drop findings below this confidence</td></tr>
+              <tr><td>--no-synthesis</td><td></td><td class="prose">skip the synthesis stage</td></tr>
+              <tr><td>--no-verify</td><td></td><td class="prose">skip the verification stage</td></tr>
+              <tr><td>--no-tui</td><td></td><td class="prose">disable the terminal UI</td></tr>
+              <tr><td>--markdown</td><td></td><td class="prose">write the report as markdown instead of JSON</td></tr>
+              <tr><td>--preserve-anthropic-api-key</td><td></td><td class="prose">pass <code>ANTHROPIC_API_KEY</code> to the model CLIs</td></tr>
+              <tr><td>--config-dir=&lt;dir&gt;</td><td>~/.config/revmux</td><td class="prose">directory holding the config file and the prompt tree</td></tr>
+              <tr><td>--init</td><td></td><td class="prose">materialize the resolved config and prompt tree into <code>./.revmux/</code></td></tr>
+              <tr><td>--dump-defaults=&lt;dir&gt;</td><td></td><td class="prose">extract the embedded prompt tree into a directory</td></tr>
+              <tr><td>--version</td><td></td><td class="prose">show version and exit</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="knobs">Config keys <a class="anchor" href="#knobs">#</a></h2>
+        <p>
+          These read from <code>./.revmux/config</code> and <code>~/.config/revmux/config</code> under the same
+          name as the flag, INI format. Command line wins, then project, then user, then the default, merged per
+          key.
+        </p>
+        <div class="scroll-x">
+          <table class="tbl">
+            <thead>
+              <tr><th>key</th><th>default</th><th>description</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>idle-timeout</td><td>2m</td><td class="prose">kill and retry an agent after this long with no output</td></tr>
+              <tr><td>hard-timeout</td><td>20m</td><td class="prose">kill an agent after this long, per attempt</td></tr>
+              <tr><td>stagger-delay</td><td>30s</td><td class="prose">how long to wait for the first agent before releasing the rest</td></tr>
+              <tr><td>max-parallel</td><td>4</td><td class="prose">how many agents run at once</td></tr>
+              <tr><td>verify-groups</td><td>6</td><td class="prose">cap on the number of verifier groups</td></tr>
+              <tr><td>verify-group-by</td><td>dir</td><td class="prose"><code>dir</code> or <code>source</code></td></tr>
+              <tr><td>tasks-dir</td><td>./.revmux/tasks</td><td class="prose">root directory holding task directories</td></tr>
+              <tr><td>auto-exit</td><td>0s</td><td class="prose">close the terminal UI this long after the report arrives; 0 never closes it</td></tr>
+              <tr><td>profile</td><td>comprehensive</td><td class="prose">profile naming the roster to run</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="small">
+          <code>--task</code> and <code>--run</code> are not config keys: a config file naming the round to write
+          would make the same command review different context in different directories.
+        </p>
+
+        <h2 id="subcommands">Subcommands <a class="anchor" href="#subcommands">#</a></h2>
+        <p>All print JSON on stdout and exit before any review starts. None of them ever exits <code>1</code>.</p>
+        <div class="scroll-x">
+          <table class="tbl">
+            <thead>
+              <tr><th>command</th><th>does</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>revmux config</td>
+                <td class="prose">
+                  reports the resolved configuration: knobs with their precedence layer, every profile with its
+                  roster and stage runners, every lens and stage description, the executor and effort
+                  vocabularies, and the task store
+                </td>
+              </tr>
+              <tr>
+                <td>revmux new</td>
+                <td class="prose">
+                  creates a task, a commented-out <code>task.md</code>, a round and its <code>input/</code>, and
+                  prints every path plus a <code>created</code> list. Never overwrites
+                </td>
+              </tr>
+              <tr>
+                <td>revmux init</td>
+                <td class="prose">
+                  materializes <code>./.revmux/</code> from what resolved, reporting each file's source layer.
+                  <code>--init</code> is the same thing behind a flag
+                </td>
+              </tr>
+              <tr>
+                <td>revmux stats</td>
+                <td class="prose">
+                  arithmetic over the archive: per agent, per lens, per stage and per task. Reads only, and
+                  accepts an optional <code>--task</code>
+                </td>
+              </tr>
+              <tr>
+                <td>revmux cleanup</td>
+                <td class="prose">
+                  removes one named task and everything under it. The only command that deletes anything
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="env">Environment <a class="anchor" href="#env">#</a></h2>
+        <div class="scroll-x">
+          <table class="tbl">
+            <thead>
+              <tr><th>variable</th><th>handling</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>ANTHROPIC_API_KEY</td>
+                <td class="prose">
+                  stripped from the child environment so <code>claude</code> uses interactive subscription auth.
+                  <code>--preserve-anthropic-api-key</code> passes it through
+                </td>
+              </tr>
+              <tr>
+                <td>CLAUDECODE</td>
+                <td class="prose">
+                  always stripped: a <code>claude</code> child refuses to start when it thinks it is a nested
+                  session
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="front-matter">Front matter <a class="anchor" href="#front-matter">#</a></h2>
+        <div class="scroll-x">
+          <table class="tbl">
+            <thead>
+              <tr><th>key</th><th>accepted in</th><th>value</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>description</td><td>profile, stage, lens</td><td class="prose">a one-liner, reported by <code>revmux config</code></td></tr>
+              <tr><td>model</td><td>profile, roster entry, stage, stage override</td><td class="prose"><code>&lt;binary&gt;[/&lt;model&gt;][:&lt;effort&gt;]</code></td></tr>
+              <tr><td>lenses</td><td>roster entry</td><td class="prose">names of lens files, at least one</td></tr>
+              <tr><td>color</td><td>roster entry</td><td class="prose">an ANSI-16 name or <code>#RRGGBB</code></td></tr>
+              <tr><td>stages</td><td>profile</td><td class="prose"><code>synthesis</code> and <code>verify</code>, each taking a model string</td></tr>
+              <tr><td>agents</td><td>profile</td><td class="prose">the roster, a list of entries</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>task.md</h4>
+        <div class="scroll-x">
+          <table class="tbl">
+            <thead>
+              <tr><th>key</th><th>value</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>description</td><td class="prose">what this task is about, echoed by <code>revmux config</code> and <code>revmux stats</code></td></tr>
+              <tr><td>url</td><td class="prose">the pull request, issue or page the task tracks</td></tr>
+              <tr><td>branch</td><td class="prose">the branch under review</td></tr>
+              <tr><td>base</td><td class="prose">what it is being compared against</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="small">
+          All four are optional and are stored and reported, never resolved. revmux runs no git command against
+          <code>branch</code> or <code>base</code> and fetches nothing from <code>url</code>.
+        </p>
+
+        <h2 id="model">Model string <a class="anchor" href="#model">#</a></h2>
+        <pre class="code">&lt;binary&gt;[/&lt;model&gt;][:&lt;effort&gt;]
+
+claude                   claude, its own default model and effort
+claude/opus:high         fully specified
+codex/gpt-5.6-sol        effort falls back to the profile's, then the binary's
+codex:high               codex's default model at high effort
+claude/                  <span class="c-crimson">refused: a second spelling of `claude`</span>
+claude/opus:hgih         <span class="c-crimson">refused: not an effort</span></pre>
+        <div class="scroll-x">
+          <table class="tbl">
+            <thead>
+              <tr><th>vocabulary</th><th>values</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>executors</td><td class="prose"><code>claude</code>, <code>codex</code></td></tr>
+              <tr><td>efforts</td><td class="prose"><code>low</code>, <code>medium</code>, <code>high</code>, <code>xhigh</code>, <code>max</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="small">
+          Parses on the first <code>/</code> and the last <code>:</code>. A stage resolves through its
+          <code>stages:</code> override, then the stage file's own <code>model:</code>, then the profile's. An
+          entry naming a different binary than the profile brings its own model rather than inheriting one
+          belonging to the other; effort carries across, since it belongs to neither model. Ask
+          <code>revmux config</code> for what a given invocation resolves to.
+        </p>
+
+        <h2 id="profiles">Profiles <a class="anchor" href="#profiles">#</a></h2>
+        <div class="scroll-x">
+          <table class="tbl">
+            <thead>
+              <tr><th>profile</th><th>needs</th><th>roster</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>comprehensive</td><td>both</td><td class="prose">three claude lens splits plus an adversarial codex peer. The default</td></tr>
+              <tr><td>focused</td><td>both</td><td class="prose">one <code>bugs</code> agent plus the codex peer</td></tr>
+              <tr><td>final</td><td>both</td><td class="prose"><code>bugs+impl</code> plus the codex peer, nothing below major reported</td></tr>
+              <tr><td>claude-only</td><td>claude</td><td class="prose">the four lens splits on claude alone</td></tr>
+              <tr><td>codex-only</td><td>codex</td><td class="prose">the four lens splits on codex, both stages with them</td></tr>
+              <tr><td>grill-me</td><td>both</td><td class="prose">two lens splits, each run once on claude and once on codex</td></tr>
+              <tr><td>expert</td><td>both</td><td class="prose">two agents at the highest effort, each carrying all eight code lenses</td></tr>
+              <tr><td>triage</td><td>both</td><td class="prose">a four-way panel over a filed item; wants <code>--no-synthesis</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="lenses">Lenses <a class="anchor" href="#lenses">#</a></h2>
+        <h4>reviewing a change</h4>
+        <div class="scroll-x">
+          <table class="tbl">
+            <thead>
+              <tr><th>lens</th><th>covers</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>bugs</td><td class="prose">correctness defects: logic and boundaries, nil and bounds, concurrency, resource lifetime, error handling</td></tr>
+              <tr><td>impl</td><td class="prose">goal fit: whether the change does what it set out to do, is wired up, and is proportionate</td></tr>
+              <tr><td>architecture</td><td class="prose">conventions and organization: the project's own rules, established patterns, dependency and interface shape</td></tr>
+              <tr><td>quality</td><td class="prose">style, over-engineering, error handling and accidental duplication in code that already works</td></tr>
+              <tr><td>docs</td><td class="prose">documentation accuracy: doc comments against the code, and the project docs the change leaves stale</td></tr>
+              <tr><td>tests</td><td class="prose">whether tests exist where a defect can hide, actually exercise the code, and survive concurrency</td></tr>
+              <tr><td>comments</td><td class="prose">the code's own stated rules: doc comments and inline notes the change was supposed to obey</td></tr>
+              <tr><td>adversarial</td><td class="prose">attacks the change looking for what a sympathetic reader would accept</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>reading a filed item</h4>
+        <div class="scroll-x">
+          <table class="tbl">
+            <thead>
+              <tr><th>lens</th><th>covers</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>grounding</td><td class="prose">whether what a filed item claims is true of the code as it stands today</td></tr>
+              <tr><td>precedent</td><td class="prose">how comparable asks were decided here before, and whether that bears on this one</td></tr>
+              <tr><td>thesis</td><td class="prose">the strongest honest case that a filed item should be done or that its report is real</td></tr>
+              <tr><td>antithesis</td><td class="prose">the strongest case against, and whether something simpler reaches the same goal</td></tr>
+              <tr><td>cost</td><td class="prose">what implementing a filed item reaches into, and whether the work is proportionate</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="variables">Prompt variables <a class="anchor" href="#variables">#</a></h2>
+        <p>
+          The vocabulary is closed. A prompt file naming anything else fails at load. Every context variable
+          expands to a <strong>path</strong>, never to the file's contents.
+        </p>
+        <div class="scroll-x">
+          <table class="tbl">
+            <thead>
+              <tr><th>variable</th><th>expands to</th><th>where</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>{{SCOPE}}</td><td class="prose">path of the round's <code>input/scope.md</code></td><td class="prose">any prompt</td></tr>
+              <tr><td>{{GOAL}}</td><td class="prose">path of <code>input/goal.md</code>, or <code>none provided</code></td><td class="prose">any prompt</td></tr>
+              <tr><td>{{PROFILE}}</td><td class="prose">path of <code>input/profile.md</code>, or <code>none provided</code></td><td class="prose">any prompt</td></tr>
+              <tr><td>{{CONTEXT}}</td><td class="prose">path of <code>input/context/</code>, or <code>none provided</code></td><td class="prose">any prompt</td></tr>
+              <tr><td>{{WORKDIR}}</td><td class="prose">the directory the subprocesses run in</td><td class="prose">any prompt</td></tr>
+              <tr><td>{{FINDINGS}}</td><td class="prose">the findings that stage receives</td><td class="prose">synthesis, verify</td></tr>
+              <tr><td>{{SOURCES}}</td><td class="prose">the true source roster, degrades included</td><td class="prose">synthesis only</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="small">
+          Prior rounds are appended to every composed prompt as a block rather than a variable, because a
+          variable would be opt-in per file and any prompt omitting it would silently lose the history.
+        </p>
+
+        <h2 id="colors">Colors <a class="anchor" href="#colors">#</a></h2>
+        <p>
+          A roster entry's <code>color</code> sets its prefix color in both the TUI and the plain renderer, and
+          is filled from a palette by roster position when omitted. Accepted values are the ANSI-16 names
+          (<code>red</code>, <code>bright-blue</code> and so on) or <code>#RRGGBB</code>. An unknown value is a
+          startup error.
+        </p>
+
+        <h2 id="json">Report JSON <a class="anchor" href="#json">#</a></h2>
+        <div class="scroll-x">
+          <table class="tbl">
+            <thead>
+              <tr><th>field</th><th>meaning</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>scope</td><td class="prose"><code>task</code>, <code>run</code> and <code>scope_path</code> for this round</td></tr>
+              <tr><td>sources.expected</td><td class="prose">how many sources the roster named</td></tr>
+              <tr><td>sources.reported</td><td class="prose">how many came back</td></tr>
+              <tr><td>sources.degraded</td><td class="prose">agent names that failed twice</td></tr>
+              <tr><td>sources.agents[]</td><td class="prose">per agent: lenses, executor, requested and actual model, effort, tokens, raised, degraded</td></tr>
+              <tr><td>findings[]</td><td class="prose">the report, filtered by <code>--min-confidence</code></td></tr>
+              <tr><td>findings[].file</td><td class="prose">path relative to the working directory</td></tr>
+              <tr><td>findings[].line</td><td class="prose">the anchor; 0 means a file-level finding</td></tr>
+              <tr><td>findings[].end_line</td><td class="prose">optional; 0 means a single line</td></tr>
+              <tr><td>findings[].severity</td><td class="prose">how bad it is, calibrated by the profile's severity bar</td></tr>
+              <tr><td>findings[].confidence</td><td class="prose">0 to 100, boosted where distinct sources corroborate</td></tr>
+              <tr><td>findings[].title, body, fix</td><td class="prose">what it is, why, and what to do about it</td></tr>
+              <tr><td>findings[].sources</td><td class="prose"><strong>agent names</strong>. The only input to the confidence boost</td></tr>
+              <tr><td>findings[].lenses</td><td class="prose">the lens names that raised it. Informational, never a vote count</td></tr>
+              <tr><td>findings[].verdict</td><td class="prose">the verify stage's answer, see below</td></tr>
+              <tr><td>open_questions[]</td><td class="prose">what a reviewer could not settle from the code</td></tr>
+              <tr><td>pre_existing[]</td><td class="prose">real, but not introduced by this change</td></tr>
+              <tr><td>immaterial[]</td><td class="prose">true and not worth acting on</td></tr>
+              <tr><td>stats</td><td class="prose">timings, total tokens, and per-stage duration with the runner each resolved to</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="small">
+          Empty lists are emitted as arrays rather than <code>null</code>. The three side arrays are not filtered
+          by <code>--min-confidence</code> and do not affect the exit code.
+        </p>
+
+        <h2 id="verdicts">Verdicts <a class="anchor" href="#verdicts">#</a></h2>
+        <div class="scroll-x">
+          <table class="tbl">
+            <thead>
+              <tr><th>verdict</th><th>means</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>confirmed</td><td class="prose">checked against the code and it stands</td></tr>
+              <tr><td>refined</td><td class="prose">real, with the severity, the location or the claim corrected</td></tr>
+              <tr><td>rejected</td><td class="prose">does not hold; dropped from the report</td></tr>
+              <tr><td>immaterial</td><td class="prose">true and not worth acting on; moved to <code>immaterial</code></td></tr>
+              <tr><td>pre_existing</td><td class="prose">real but not introduced here; moved to <code>pre_existing</code></td></tr>
+              <tr><td>unverified</td><td class="prose">the verify stage was skipped with <code>--no-verify</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="exit-codes">Exit codes <a class="anchor" href="#exit-codes">#</a></h2>
+        <div class="scroll-x">
+          <table class="tbl">
+            <thead>
+              <tr><th>code</th><th>meaning</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>0</td><td class="prose">no findings above <code>--min-confidence</code></td></tr>
+              <tr><td>1</td><td class="prose">findings above <code>--min-confidence</code>. A normal outcome</td></tr>
+              <tr>
+                <td>2</td>
+                <td class="prose">
+                  tool error: bad config, unreadable prompt tree, an omitted <code>--run</code>, a round with no
+                  <code>input/</code> or an empty <code>scope.md</code>, a round that already ran or is being
+                  written by another run, an unwritable artifact, every source degraded, or a delivered
+                  <code>SIGINT</code> or <code>SIGTERM</code>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="layout">Task layout <a class="anchor" href="#layout">#</a></h2>
+        <pre class="code">&lt;tasks-dir&gt;/&lt;task&gt;/
+├── task.md              optional front matter about the task
+└── &lt;run&gt;/               a round
+    └── input/           caller-written
+        ├── scope.md     required
+        ├── goal.md      optional
+        ├── profile.md   optional
+        └── context/     optional directory</pre>
+        <p class="small">
+          Take these paths from <code>revmux new</code> rather than joining them: the layout is revmux's own
+          detail, and a caller that reimplements it breaks silently when it changes.
+        </p>
+
+        <h2 id="archive">Run archive <a class="anchor" href="#archive">#</a></h2>
+        <pre class="code">&lt;tasks-dir&gt;/&lt;task&gt;/&lt;run&gt;/
+├── manifest.json      resolved roster, prompt provenance and hashes, requested vs actual model,
+│                      timings. Created empty as the run starts and filled in when it finishes,
+│                      so it doubles as the marker claiming the round
+├── prompts/agents/    the composed prompt each agent received, post-substitution
+├── prompts/stages/    synthesis and one file per verify group
+├── stages/            1-found.json, 2-synthesized.json, 3-verified.json
+├── events.jsonl       stalls, retries, degrades, stage transitions
+├── agents/            verbatim tees: &lt;agent&gt;.jsonl, &lt;agent&gt;.log, &lt;agent&gt;.retry.jsonl
+└── report.md, findings.json</pre>
+        <p class="small">
+          A failed archive write fails the run. The one exception is a per-agent tee under
+          <code>agents/</code>, which degrades that one source instead.
+        </p>
+
+        <h2 id="names">Name rules <a class="anchor" href="#names">#</a></h2>
+        <ul>
+          <li>No path separator, no <code>..</code>, not absolute, not starting with a dot.</li>
+          <li>Containment is re-checked on the resolved path, because a symlink defeats the lexical test.</li>
+          <li>A round may not be called <code>task.md</code>.</li>
+          <li>Roster agent names carry the same rule, applied when the profile loads.</li>
+          <li>
+            A task name for <code>revmux cleanup</code> must be one task directly under the tasks root: a path,
+            a <code>..</code>, a round name or a typo is an error and nothing is removed.
+          </li>
+        </ul>
+
+        <h2 id="keys">TUI keys <a class="anchor" href="#keys">#</a></h2>
+        <div class="scroll-x">
+          <table class="tbl">
+            <thead>
+              <tr><th>keys</th><th>action</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><kbd>tab</kbd> <kbd>shift+tab</kbd> <kbd>←</kbd> <kbd>→</kbd> <kbd>h</kbd> <kbd>l</kbd></td><td class="prose">switch pane</td></tr>
+              <tr><td><kbd>1</kbd>-<kbd>9</kbd>, then a letter</td><td class="prose">focus that pane directly</td></tr>
+              <tr><td><kbd>f</kbd></td><td class="prose">jump to the findings browser</td></tr>
+              <tr><td><kbd>i</kbd></td><td class="prose">show the startup input snapshot, or return</td></tr>
+              <tr><td><kbd>↑</kbd> <kbd>↓</kbd> <kbd>k</kbd> <kbd>j</kbd></td><td class="prose">scroll</td></tr>
+              <tr><td><kbd>pgup</kbd> <kbd>pgdn</kbd> <kbd>ctrl+b</kbd> <kbd>ctrl+f</kbd></td><td class="prose">page</td></tr>
+              <tr><td><kbd>home</kbd> <kbd>end</kbd> <kbd>g</kbd> <kbd>G</kbd></td><td class="prose">top, bottom</td></tr>
+              <tr><td><kbd>/</kbd></td><td class="prose">filter findings</td></tr>
+              <tr><td><kbd>esc</kbd></td><td class="prose">leave the input viewer or a filter; never quits</td></tr>
+              <tr><td><kbd>q</kbd></td><td class="prose">quit, once the report is in</td></tr>
+              <tr><td><kbd>ctrl+c</kbd></td><td class="prose">quit, at any point</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+
+    <footer>
+      <div class="wrap cols">
+        <div class="set">
+          <b>revmux</b>
+          <a href="/">home</a>
+          <a href="/docs">documentation</a>
+          <a href="https://github.com/umputun/revmux">source</a>
+          <a href="https://github.com/umputun/revmux/releases">releases</a>
+        </div>
+        <div class="set">
+          <b>license</b>
+          <span class="c-dim">MIT, © umputun</span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,856 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>revmux — supervised multi-agent code review</title>
+    <meta
+      name="description"
+      content="revmux runs a structured multi-agent code review. It spawns claude and codex as supervised subprocesses with stall detection, retry, a live view and a full run archive, then returns findings as JSON."
+    />
+    <meta
+      name="keywords"
+      content="revmux, multi-agent code review, AI code review, claude code review, codex review, supervised subprocess review, code review CLI, review archive, review lenses"
+    />
+    <meta name="author" content="umputun" />
+    <link rel="canonical" href="https://revmux.com/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="revmux — supervised multi-agent code review" />
+    <meta
+      property="og:description"
+      content="Spawns claude and codex as supervised subprocesses, watches every one of them, and returns findings as JSON with a full run archive behind them."
+    />
+    <meta property="og:url" content="https://revmux.com/" />
+    <meta property="og:image" content="https://revmux.com/assets/revmux-og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="revmux" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@umputun" />
+    <meta name="twitter:title" content="revmux — supervised multi-agent code review" />
+    <meta
+      name="twitter:description"
+      content="Spawns claude and codex as supervised subprocesses, watches every one of them, and returns findings as JSON with a full run archive behind them."
+    />
+    <meta name="twitter:image" content="https://revmux.com/assets/revmux-og.png" />
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/favicon-180.png" />
+    <meta name="theme-color" content="#0d0e10" />
+    <link rel="preload" href="/assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/assets/fonts/plex-mono-400-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/style.css" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "revmux",
+        "description": "Command line tool that runs a structured multi-agent code review by spawning and supervising claude and codex subprocesses, then returning findings as JSON with a full run archive.",
+        "url": "https://revmux.com",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "macOS, Linux",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "author": { "@type": "Person", "name": "Umputun", "url": "https://github.com/umputun" },
+        "codeRepository": "https://github.com/umputun/revmux",
+        "downloadUrl": "https://github.com/umputun/revmux/releases",
+        "license": "https://opensource.org/licenses/MIT"
+      }
+    </script>
+  </head>
+  <body id="top">
+    <header class="nav">
+      <div class="nav-bar">
+        <a class="brand" href="/">
+          <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <rect width="32" height="32" rx="7" fill="#16181c" stroke="#e0a134" stroke-opacity=".5" />
+            <path
+              d="M7 16h3M22 16h3M10 16c2 0 2-6 4-6M10 16c2 0 2 6 4 6M22 16c-2 0-2-6-4-6M22 16c-2 0-2 6-4 6"
+              stroke="#e0a134"
+              stroke-width="1.6"
+              stroke-linecap="round"
+            />
+            <circle cx="16" cy="10" r="1.7" fill="#e9e5dd" />
+            <circle cx="16" cy="22" r="1.7" fill="#e9e5dd" />
+          </svg>
+          <span>revmux</span>
+        </a>
+        <nav class="nav-links">
+          <a href="#run">the run</a>
+          <a href="#rounds">rounds</a>
+          <a href="#archive">archive</a>
+          <a href="#profiles">profiles</a>
+          <a href="/docs">docs</a>
+          <a href="/reference">reference</a>
+          <a class="ext" href="https://github.com/umputun/revmux">github</a>
+        </nav>
+        <details class="nav-mobile">
+          <summary aria-label="menu">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <path d="M2 5h14M2 9h14M2 13h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            </svg>
+          </summary>
+          <nav>
+            <a href="#run">the run</a>
+            <a href="#rounds">rounds</a>
+            <a href="#archive">archive</a>
+            <a href="#profiles">profiles</a>
+            <a href="#install">install</a>
+            <a href="/docs">docs</a>
+            <a href="/reference">reference</a>
+            <a href="https://github.com/umputun/revmux">github</a>
+          </nav>
+        </details>
+      </div>
+    </header>
+
+    <main>
+      <!-- ===================== HERO ===================== -->
+      <section class="hero grid-field">
+        <div class="wrap hero-grid">
+          <div>
+            <p class="eyebrow">multi-agent review <span class="dot">·</span> supervised <span class="dot">·</span> auditable</p>
+            <h1>Four models.<br /><em>One review standard.</em></h1>
+            <p class="lede">
+              revmux spawns <code>claude</code> and <code>codex</code> as supervised subprocesses, watches every
+              one of them, and returns findings on stdout as JSON. The roster, the lenses and the severity bar
+              are files in your repository, so two runs ask the same questions of the code.
+            </p>
+            <div class="hero-cta">
+              <a class="btn primary" href="/docs">read the docs</a>
+              <a class="btn" href="https://github.com/umputun/revmux">source</a>
+            </div>
+            <div class="hero-cta">
+              <span class="copyline">
+                <span class="prompt">$</span>
+                <span id="install-cmd">go install github.com/umputun/revmux/app@latest</span>
+                <button type="button" data-copy="install-cmd">copy</button>
+              </span>
+            </div>
+          </div>
+
+          <div class="term" aria-label="revmux terminal interface during a run">
+            <div class="term-bar">
+              <span class="lamp"></span>
+              <span>revmux · pr-123 / 02-after-fix</span>
+              <span class="right">comprehensive</span>
+            </div>
+            <div class="term-body">
+              <div class="rows">
+                <div class="row">
+                  <span class="name">bugs+impl</span>
+                  <span class="state run">running</span>
+                  <span
+                    >1m4<span class="roll"><span>0<br />1<br />2<br />3<br />4<br />5<br />6<br />7<br />8<br />9</span></span>s</span
+                  >
+                  <span class="act">reading app/pipeline/find.go</span>
+                </div>
+                <div class="row">
+                  <span class="name">arch+quality</span>
+                  <span class="state run">running</span>
+                  <span
+                    >1m3<span class="roll"><span>2<br />3<br />4<br />5<br />6<br />7<br />8<br />9<br />0<br />1</span></span>s</span
+                  >
+                  <span class="act">checking the roster resolution path</span>
+                </div>
+                <div class="row">
+                  <span class="name">docs+tests</span>
+                  <span class="state retry">retry</span>
+                  <span
+                    >0m1<span class="roll"><span>7<br />8<br />9<br />0<br />1<br />2<br />3<br />4<br />5<br />6</span></span>s</span
+                  >
+                  <span class="act">stalled 2m0s, relaunched</span>
+                </div>
+                <div class="row">
+                  <span class="name">codex</span>
+                  <span class="state done">done</span>
+                  <span>2m31s</span>
+                  <span class="act">6 findings, 48210 tokens</span>
+                </div>
+                <div class="row">
+                  <span class="name c-muted">synthesis</span>
+                  <span class="state wait">waiting</span>
+                  <span class="c-dim">--</span>
+                  <span class="act c-dim">4 sources expected</span>
+                </div>
+              </div>
+              <div class="runbar">
+                <span class="seg">find <i></i></span>
+                <span class="seg">synthesis <i></i></span>
+                <span class="seg">verify <i></i></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== CONTROL ===================== -->
+      <section id="control">
+        <div class="wrap">
+          <div class="sec-head">
+            <p class="sec-index">01 / control</p>
+            <div>
+              <h2>Fan-out from inside a session is unobservable and unrecoverable</h2>
+              <p class="sec-note">
+                Agents go quiet for minutes and sometimes never come back, and the caller has no timeout, no
+                kill, no retry and no progress. A subprocess does not make the model faster. What it buys is
+                control.
+              </p>
+            </div>
+          </div>
+
+          <div class="cards">
+            <div class="card">
+              <span class="eyebrow">watchdog</span>
+              <h3>Degrade, never abort</h3>
+              <p>
+                An agent with nothing on its output for the idle timeout is killed and retried once. A second
+                failure marks it degraded and the run continues, with the missing source named in the report
+                banner and the real source count handed to synthesis. Only a run where every source degraded is
+                a tool error.
+              </p>
+            </div>
+            <div class="card">
+              <span class="eyebrow">standard</span>
+              <h3>One review standard, not one per session</h3>
+              <p>
+                A review assembled ad hoc varies with the prompt and whatever context was left in the session.
+                Here the roster, the lenses, the severity bar and the three stages are files. A contributor gets
+                the review the maintainer would have run, and the maintainer can check which lens text produced
+                it.
+              </p>
+            </div>
+            <div class="card">
+              <span class="eyebrow">roster</span>
+              <h3>The right model for each role</h3>
+              <p>
+                A broad bug pass, an adversarial second opinion, synthesis and verification favour different
+                models, effort levels and costs. Every agent and both stages select a binary, a model and an
+                effort in one <code>model:</code> string, and the resolved runner for every process is recorded.
+              </p>
+            </div>
+            <div class="card">
+              <span class="eyebrow">archive</span>
+              <h3>Auditable by agents, not only by people</h3>
+              <p>
+                Each run keeps the composed prompt every agent received, the verbatim output it returned, the
+                findings after every stage and revmux's own decisions about stalls and retries. A person reads
+                the report. An agent can read the whole run and propose edits to the lens text behind it.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== THE RUN ===================== -->
+      <section id="run">
+        <div class="wrap">
+          <div class="sec-head">
+            <p class="sec-index">02 / the run</p>
+            <div>
+              <h2>Three fixed stages</h2>
+              <p class="sec-note">
+                Only the roster and the severity bar vary between review shapes. Everything else is
+                configuration.
+              </p>
+            </div>
+          </div>
+
+          <div class="sec-body">
+            <p class="col-note">
+              find<br />
+              synthesize<br />
+              verify<br /><br />
+              <span class="c-dim"
+                >--no-synthesis passes findings through with attribution intact. --no-verify marks every finding
+                unverified rather than claiming it was checked.</span
+              >
+            </p>
+            <div>
+              <svg class="diagram" viewBox="0 0 1000 262" role="img" aria-label="Pipeline: four parallel finders converge into synthesis, which fans out into grouped verifiers, which converge into one report">
+                <g class="wire">
+                  <path d="M176 26 C 250 26, 268 131, 336 131" />
+                  <path d="M176 88 C 250 88, 268 131, 336 131" />
+                  <path d="M176 150 C 250 150, 268 131, 336 131" />
+                  <path d="M176 212 C 250 212, 268 131, 336 131" />
+                </g>
+                <g class="wire hot">
+                  <path d="M512 131 C 580 131, 598 53, 672 53" />
+                  <path d="M512 131 L 672 131" />
+                  <path d="M512 131 C 580 131, 598 209, 672 209" />
+                </g>
+                <g class="wire">
+                  <path d="M848 53 C 908 53, 916 131, 962 131" />
+                  <path d="M848 131 L 962 131" />
+                  <path d="M848 209 C 908 209, 916 131, 962 131" />
+                </g>
+
+                <g>
+                  <rect class="box" x="0" y="4" width="176" height="44" rx="4" />
+                  <circle cx="16" cy="26" r="3.5" fill="#7d93a8" />
+                  <text class="nm" x="28" y="30">bugs+impl</text>
+                  <rect class="box" x="0" y="66" width="176" height="44" rx="4" />
+                  <circle cx="16" cy="88" r="3.5" fill="#b07fa8" />
+                  <text class="nm" x="28" y="92">arch+quality</text>
+                  <rect class="box" x="0" y="128" width="176" height="44" rx="4" />
+                  <circle cx="16" cy="150" r="3.5" fill="#7fb069" />
+                  <text class="nm" x="28" y="154">docs+tests</text>
+                  <rect class="box" x="0" y="190" width="176" height="44" rx="4" />
+                  <circle cx="16" cy="212" r="3.5" fill="#e0a134" />
+                  <text class="nm" x="28" y="216">codex</text>
+                </g>
+
+                <rect class="box" x="336" y="109" width="176" height="44" rx="4" />
+                <text class="nm" x="352" y="137">synthesis</text>
+
+                <g>
+                  <rect class="box" x="672" y="31" width="176" height="44" rx="4" />
+                  <text class="nm" x="688" y="59">verify app/ui</text>
+                  <rect class="box" x="672" y="109" width="176" height="44" rx="4" />
+                  <text class="nm" x="688" y="137">verify app/pipeline</text>
+                  <rect class="box" x="672" y="187" width="176" height="44" rx="4" />
+                  <text class="nm" x="688" y="215">verify app/task</text>
+                </g>
+
+                <circle cx="968" cy="131" r="6" fill="#e0a134" />
+
+                <text class="lbl" x="0" y="256">find, in parallel</text>
+                <text class="lbl" x="336" y="256">one call</text>
+                <text class="lbl" x="672" y="256">verify, by group</text>
+              </svg>
+
+              <div class="three" style="margin-top: 40px">
+                <div class="stage">
+                  <span class="num">stage 01</span>
+                  <h3>find</h3>
+                  <p>
+                    The profile's roster runs in parallel, each agent composing one or more lenses. Launch is
+                    staggered: agent one goes first and the rest are released once it produces its first output.
+                  </p>
+                </div>
+                <div class="stage b2">
+                  <span class="num">stage 02</span>
+                  <h3>synthesize</h3>
+                  <p>
+                    One model call merges every source, dedupes on <code>(file, line ±2)</code>, boosts
+                    confidence where distinct sources corroborate, splits out open questions and pre-existing
+                    issues, and drops weak singletons.
+                  </p>
+                </div>
+                <div class="stage b3">
+                  <span class="num">stage 03</span>
+                  <h3>verify</h3>
+                  <p>
+                    Parallel verifiers grouped by directory, each seeing only its own group so it cannot anchor
+                    on a neighbour. Every finding comes back confirmed, refined, rejected, immaterial or
+                    pre-existing.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== ON SCREEN ===================== -->
+      <section id="screen">
+        <div class="wrap">
+          <div class="sec-head">
+            <p class="sec-index">03 / on screen</p>
+            <div>
+              <h2>Watch it, or read the log</h2>
+              <p class="sec-note">
+                A status table with one row per supervised process, a combined chronological pane and a tab per
+                agent, then a findings browser when the report is in. Press <kbd>i</kbd> and the same panes show
+                the inputs the round was pointed at.
+              </p>
+            </div>
+          </div>
+
+          <div class="shots">
+            <figure class="shot wide">
+              <img
+                src="/assets/screenshot-run.webp"
+                width="1600"
+                height="1331"
+                loading="lazy"
+                decoding="async"
+                alt="The revmux terminal UI running four agents, shown as a floating overlay above a Claude Code session"
+              />
+              <figcaption>
+                <b>The review, live.</b> The shipped launcher opens the run with its TUI in a terminal overlay,
+                because an agent's shell has no tty. Here it floats above the
+                <a href="https://agterm.com">agterm</a> session that started it, so the session underneath keeps
+                working while the review runs.
+              </figcaption>
+            </figure>
+            <figure class="shot">
+              <img
+                src="/assets/screenshot-agent-tab.webp"
+                width="1600"
+                height="1312"
+                loading="lazy"
+                decoding="async"
+                alt="A per-agent tab showing the codex agent's own scrollback, with the findings count broken down by severity in the header"
+              />
+              <figcaption>
+                <b>Per agent, in full.</b> The header count is broken down by severity and colored by the worst
+                one in it. Each agent keeps its own tab, so when a finding looks wrong you can read what that
+                agent was doing when it raised it.
+              </figcaption>
+            </figure>
+            <figure class="shot">
+              <img
+                src="/assets/screenshot-inputs.webp"
+                width="1600"
+                height="1318"
+                loading="lazy"
+                decoding="async"
+                alt="The input snapshot view showing the round's scope.md rendered as a markdown document"
+              />
+              <figcaption>
+                <b>What it was asked.</b> The input snapshot renders this round's <code>scope.md</code>,
+                <code>goal.md</code>, <code>profile.md</code> and every context file as markdown documents, so
+                the context the agents were given is one keystroke away from the run they are doing.
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== SOURCE RULE ===================== -->
+      <section id="sources">
+        <div class="wrap sec-body">
+          <p class="col-note">
+            the counting<br />
+            rule
+          </p>
+          <div>
+            <p class="quote">
+              A source is a process. An agent carrying two lenses that flags the same issue under both is still
+              one source: it cannot corroborate itself.
+            </p>
+            <p class="quote-note">
+              The cross-source confidence boost counts distinct processes, never lenses and never tags. Go
+              stamps the attribution after parsing the model's output, and no schema exposes the field to the
+              model, so an agent cannot name itself twice. Codex runs as a peer alongside the lens agents rather
+              than as a second pass, because a reviewer who sees the first reviewer's findings anchors on them
+              and the boost then measures nothing.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== ROUNDS ===================== -->
+      <section id="rounds">
+        <div class="wrap">
+          <div class="sec-head">
+            <p class="sec-index">04 / context</p>
+            <div>
+              <h2>Review context arrives as a task round</h2>
+              <p class="sec-note">
+                revmux performs no scope detection, no git operations and no PR fetching, and it modifies no
+                source. The caller writes the round's <code>input/</code> and passes its name. Variables expand
+                to the paths of those files, never to their contents, so no prompt is bloated by a large scope.
+              </p>
+            </div>
+          </div>
+
+          <div class="sec-body">
+            <div>
+              <pre class="code">
+<b>.revmux/tasks/pr-123/</b>        a task: one subject, as many rounds as it takes
+├── task.md                 optional anchors: description, url, branch, base
+├── <b>01-initial/</b>             a round
+│   ├── input/              caller-written, the only channel context travels through
+│   │   ├── scope.md        {{SCOPE}}    required
+│   │   ├── goal.md         {{GOAL}}     optional
+│   │   ├── profile.md      {{PROFILE}}  optional, the project's own conventions
+│   │   └── context/        {{CONTEXT}}  optional, any number of files
+│   └── ...                 revmux-written artifacts
+└── <b>02-after-fix/</b>           the next round, with its own input/</pre
+              >
+              <p class="small">
+                Both names are caller-chosen and semantic. A round that has already run is an error rather than
+                an overwrite, because a round that went badly is exactly the one worth keeping. Prior rounds are
+                injected into every composed prompt with their own instruction to re-evaluate independently, so
+                round two knows what round one reported without being told to agree with it.
+              </p>
+            </div>
+            <p class="col-note" style="grid-row: 1; grid-column: 1">
+              revmux new<br />
+              prints every<br />
+              path you write<br />
+              to, so nothing<br />
+              joins one by<br />
+              hand
+            </p>
+          </div>
+
+          <div class="term" style="margin-top: 34px">
+            <div class="term-bar"><span class="lamp"></span><span>open a round and run it</span></div>
+            <div class="term-body">
+              <pre><span class="c-amber">$</span> scope=$(revmux new --task pr-123 --run 01-initial | jq -r .scope)
+<span class="c-amber">$</span> cat &gt; "$scope" &lt;&lt;'EOF'
+Review the changes on this branch against master.
+Diff command: git diff master...HEAD
+EOF
+<span class="c-amber">$</span> revmux --task pr-123 --run 01-initial &gt; findings.json
+
+<span class="c-muted">16:02:11</span> <span class="c-slate">bugs+impl</span>     started [bugs, impl]
+<span class="c-muted">16:04:02</span> <span class="c-green">docs+tests</span>    retrying: agent docs+tests stalled
+<span class="c-muted">16:05:12</span> <span class="c-slate">bugs+impl</span>     done, 6 findings
+<span class="c-muted">16:09:03</span>               <span class="c-paper">── complete ──</span>
+<span class="c-muted">16:09:03</span>               6m52s, sources 4/4, degraded none
+<span class="c-muted">16:09:03</span>               6 findings: 1 major, 5 minor</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== ARCHIVE ===================== -->
+      <section id="archive">
+        <div class="wrap">
+          <div class="sec-head">
+            <p class="sec-index">05 / the archive</p>
+            <div>
+              <h2>Enough to audit the review without re-running it</h2>
+              <p class="sec-note">
+                Every run writes its artifacts into its own round directory, beside the <code>input/</code> it
+                was pointed at. One round read in isolation shows both what was reviewed and what came back.
+                A failed archive write fails the run: a report next to a half-written archive reads as complete.
+              </p>
+            </div>
+          </div>
+
+          <div class="sec-body">
+            <p class="col-note">
+              which lens text<br />
+              raised this?<br /><br />
+              did synthesis<br />
+              drop something<br />
+              real?
+            </p>
+            <div>
+              <pre class="code">
+<b>.revmux/tasks/pr-123/02-after-fix/</b>
+├── input/              what this round was reviewed against
+├── manifest.json       roster, prompt provenance and hashes, requested vs actual model
+├── prompts/
+│   ├── agents/         the composed prompt each agent received, post-substitution
+│   └── stages/         synthesis.md, verify-app-pipeline.md, ...
+├── stages/             1-found.json, 2-synthesized.json, 3-verified.json
+├── events.jsonl        revmux's own decisions: stalls, retries, degrades, transitions
+├── agents/             verbatim tees, one file per attempt
+└── report.md, findings.json</pre
+              >
+              <p class="small">
+                <code>manifest.json</code> doubles as the marker claiming the round. It is created exclusively
+                as the run starts, which is both how an already-run round is detected and how a real round is
+                told from a directory somebody left behind. <a href="/docs#archive">Read the archive rules</a>,
+                or turn the corpus into numbers with
+                <a href="/docs#stats"><code>revmux stats</code></a
+                >: what each agent and each lens produced, and how many findings the pipeline dropped between
+                stages.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== PROFILES ===================== -->
+      <section id="profiles">
+        <div class="wrap">
+          <div class="sec-head">
+            <p class="sec-index">06 / profiles</p>
+            <div>
+              <h2>A profile is a roster, a preamble and a severity bar</h2>
+              <p class="sec-note">
+                Executor and lens are orthogonal. Every roster entry composes lenses, and its
+                <code>model:</code> only selects which binary runs it, which model of that binary, and at what
+                effort. There is no codex-specific prompt file.
+              </p>
+            </div>
+          </div>
+
+          <div class="scroll-x">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th>profile</th>
+                  <th>roster</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>comprehensive</td>
+                  <td class="prose">
+                    <code>bugs+impl</code>, <code>arch+quality</code>, <code>docs+tests</code> on claude, plus an
+                    adversarial codex peer. The default.
+                  </td>
+                </tr>
+                <tr>
+                  <td>focused</td>
+                  <td class="prose">one <code>bugs</code> agent plus the codex peer, for a small or time-boxed change</td>
+                </tr>
+                <tr>
+                  <td>final</td>
+                  <td class="prose"><code>bugs+impl</code> plus the codex peer, nothing below major reported</td>
+                </tr>
+                <tr>
+                  <td>claude-only</td>
+                  <td class="prose">the same four lens splits on claude, for a machine with no codex</td>
+                </tr>
+                <tr>
+                  <td>codex-only</td>
+                  <td class="prose">the same splits on codex, both stages with them, no claude anywhere</td>
+                </tr>
+                <tr>
+                  <td>grill-me</td>
+                  <td class="prose">
+                    two lens splits run once on claude and once on codex, every agent reading against the change
+                  </td>
+                </tr>
+                <tr>
+                  <td>expert</td>
+                  <td class="prose">
+                    two agents at the highest effort, each carrying all eight code lenses, both stages on fable.
+                    For when the answer matters more than the wall clock.
+                  </td>
+                </tr>
+                <tr>
+                  <td>triage</td>
+                  <td class="prose">
+                    a four-way panel over a filed item rather than a diff: grounding, the case for, the case
+                    against, and cost
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="sec-body" style="margin-top: 44px">
+            <p class="col-note">
+              thirteen lenses<br />
+              eight read a<br />
+              change, five<br />
+              read a filed<br />
+              item
+            </p>
+            <div>
+              <p>
+                A lens is a file of instructions and nothing else: no executor, no output format, no mention of
+                a prior round. <code>bugs</code> covers correctness, <code>impl</code> goal fit,
+                <code>architecture</code> conventions and organization, <code>quality</code> style and
+                over-engineering, <code>docs</code> and <code>comments</code> the documentation a change leaves
+                stale, <code>tests</code> whether a defect can hide, and <code>adversarial</code> attacks the
+                change looking for what a sympathetic reader would accept.
+              </p>
+              <p>
+                Prompt text resolves per file across three layers: <code>./.revmux/</code>, then
+                <code>~/.config/revmux/</code>, then the embedded defaults. Overriding one lens does not orphan
+                the others, and a checked-in <code>.revmux/lenses/bugs.md</code> is how a project's own review
+                rules ship with the repository and reach everyone who clones it.
+                <a href="/reference#lenses">Every lens and key</a> is in the reference.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== OUTPUT ===================== -->
+      <section id="output">
+        <div class="wrap">
+          <div class="sec-head">
+            <p class="sec-index">07 / output</p>
+            <div>
+              <h2>Findings to stdout, everything else to the tty</h2>
+              <p class="sec-note">
+                The report is JSON by default, markdown with <code>--markdown</code>. The terminal UI renders to
+                the tty and progress lines go to stderr, so <code>revmux &gt; findings.json</code> works with the
+                display running.
+              </p>
+            </div>
+          </div>
+
+          <div class="sec-body">
+            <div>
+              <pre class="code">{
+  <b>"scope"</b>: {"task": "pr-123", "run": "02-after-fix", "scope_path": "..."},
+  <b>"sources"</b>: {
+    "expected": 4, "reported": 3, "degraded": ["docs+tests"],
+    "agents": [{"name": "bugs+impl", "lenses": ["bugs", "impl"],
+                "executor": "claude", "requested_model": "opus",
+                "actual_model": "claude-opus-5", "effort": "high",
+                "tokens": 48210, "raised": 6, "degraded": false}]
+  },
+  <b>"findings"</b>: [
+    {"id": "f1", "file": "app/pipeline/find.go", "line": 88,
+     "severity": "major", "confidence": 90,
+     "title": "...", "body": "...", "fix": "...",
+     "sources": ["bugs+impl", "codex"], "lenses": ["bugs", "adversarial"],
+     "verdict": "confirmed"}
+  ],
+  <b>"open_questions"</b>: [], <b>"pre_existing"</b>: [], <b>"immaterial"</b>: [],
+  <b>"stats"</b>: {"duration_ms": 333000, "tokens": 184920, "stages": [...]}
+}</pre>
+            </div>
+            <div class="col-note" style="grid-row: 1; grid-column: 1">
+              <p style="font-family: inherit; margin-bottom: 14px">exit codes</p>
+              <p style="font-family: inherit; margin: 0"><span class="tag green">0</span> nothing found</p>
+              <p style="font-family: inherit; margin: 8px 0 0">
+                <span class="tag amber">1</span> findings above the confidence floor
+              </p>
+              <p style="font-family: inherit; margin: 8px 0 0">
+                <span class="tag crimson">2</span> tool error
+              </p>
+              <p style="font-family: inherit; margin: 14px 0 0" class="c-dim">
+                1 is a normal outcome. Callers script against these.
+              </p>
+            </div>
+          </div>
+
+          <p class="small" style="max-width: 46em; margin-top: 26px">
+            <code>sources</code> holds agent names and is the only input to the confidence boost.
+            <code>lenses</code> holds the lens names that raised the finding and is informational: it answers why
+            something was reported, never how many independently agreed. Empty lists are emitted as arrays, so a
+            caller can index into them without a nil check.
+          </p>
+        </div>
+      </section>
+
+      <!-- ===================== SKILLS ===================== -->
+      <section id="skills">
+        <div class="wrap">
+          <div class="sec-head">
+            <p class="sec-index">08 / the caller</p>
+            <div>
+              <h2>The half revmux deliberately does not do</h2>
+              <p class="sec-note">
+                revmux is driven by a caller model, and the repository ships that caller as a skill for two
+                harnesses. It resolves what is being reviewed, runs the git commands, writes the round's
+                <code>input/</code>, launches revmux, reads the JSON back, and opens a new round after fixes.
+              </p>
+            </div>
+          </div>
+
+          <div class="cards">
+            <div class="card">
+              <span class="eyebrow">claude code</span>
+              <h3>Plugin install</h3>
+              <p><code>/plugin marketplace add umputun/revmux</code></p>
+              <p><code>/plugin install revmux@revmux</code></p>
+              <p class="small" style="margin-top: 14px">
+                Then ask for a review in words: revmux this branch, revmux pr 123, re-review after fixes.
+              </p>
+            </div>
+            <div class="card">
+              <span class="eyebrow">codex cli</span>
+              <h3>Copy the skill</h3>
+              <p><code>cp -r plugins/codex/skills/revmux ~/.codex/skills/revmux</code></p>
+              <p class="small" style="margin-top: 14px">
+                Same reference material and the same scripts. Both trees carry <code>preflight.sh</code>,
+                <code>task-state.sh</code>, <code>launch-revmux.sh</code> and <code>analyze-corpus.py</code>.
+              </p>
+            </div>
+          </div>
+
+          <p class="small" style="max-width: 46em; margin-top: 26px">
+            Asked for a pull request, the skill fetches the head into a throwaway worktree, points
+            <code>--workdir</code> at it while running from the main checkout, and removes both afterwards.
+            Asked to triage a filed item, it gathers the issue, its thread and the author's history into
+            <code>context/</code>, runs the panel over them and puts the maintainer's answers to him with the
+            arguments behind each. An agent's shell has no tty, so <code>launch-revmux.sh</code> opens the run
+            with its TUI in a terminal overlay when you want to watch it.
+          </p>
+        </div>
+      </section>
+
+      <!-- ===================== INSTALL ===================== -->
+      <section id="install">
+        <div class="wrap">
+          <div class="sec-head">
+            <p class="sec-index">09 / install</p>
+            <div>
+              <h2>Go toolchain, and the CLIs your profile names</h2>
+              <p class="sec-note">
+                revmux drives the model CLIs as subprocesses, so whichever ones the profile names must already
+                be installed and authenticated. The shipped <code>preflight.sh</code> answers that for any
+                profile and any invocation.
+              </p>
+            </div>
+          </div>
+
+          <div class="sec-body">
+            <p class="col-note">
+              MIT<br />
+              no telemetry<br />
+              no network of<br />
+              its own
+            </p>
+            <div>
+              <pre class="code"><b>go install github.com/umputun/revmux/app@latest</b>   <span class="c-dim"># installs as `app`, rename it</span>
+
+<span class="c-dim"># or from a clone</span>
+git clone https://github.com/umputun/revmux.git &amp;&amp; cd revmux
+<b>make build</b>      <span class="c-dim"># .bin/revmux</span>
+<b>make install</b>    <span class="c-dim"># symlinks it into /usr/local/bin</span></pre>
+              <p class="small">
+                <code>ANTHROPIC_API_KEY</code> is stripped from the child environment by default so
+                <code>claude</code> uses interactive subscription auth. Pass
+                <code>--preserve-anthropic-api-key</code> when you authenticate by key.
+                <a href="/docs#install">Full install notes</a>.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap cols">
+        <div class="set">
+          <b>revmux</b>
+          <a href="/docs">documentation</a>
+          <a href="/reference">reference</a>
+          <a href="https://github.com/umputun/revmux">source</a>
+          <a href="https://github.com/umputun/revmux/releases">releases</a>
+        </div>
+        <div class="set">
+          <b>read next</b>
+          <a href="/docs#quick-start">quick start</a>
+          <a href="/docs#task-directory">task rounds</a>
+          <a href="/docs#profiles">profiles and lenses</a>
+          <a href="/docs#tui">terminal UI</a>
+        </div>
+        <div class="set">
+          <b>elsewhere</b>
+          <a href="https://agterm.com">agterm</a>
+          <a href="https://github.com/umputun">github.com/umputun</a>
+          <a href="https://radio-t.com">radio-t</a>
+        </div>
+        <div class="set">
+          <b>license</b>
+          <span class="c-dim">MIT, © umputun</span>
+          <span class="c-dim">built with claude and codex,</span>
+          <span class="c-dim">reviewed by revmux</span>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      document.querySelectorAll("[data-copy]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var el = document.getElementById(btn.dataset.copy);
+          if (!el || !navigator.clipboard) return;
+          navigator.clipboard.writeText(el.textContent.trim()).then(function () {
+            var was = btn.textContent;
+            btn.textContent = "copied";
+            setTimeout(function () {
+              btn.textContent = was;
+            }, 1400);
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

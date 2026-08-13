@@ -1,0 +1,1199 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>revmux documentation — task rounds, profiles, lenses, the run archive</title>
+    <meta
+      name="description"
+      content="The revmux user guide: installing it, composing a task round, the three review stages, profiles and lenses, configuration layers, the JSON report, exit codes, the terminal UI and every subcommand."
+    />
+    <meta name="author" content="umputun" />
+    <link rel="canonical" href="https://revmux.com/docs" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="revmux documentation" />
+    <meta
+      property="og:description"
+      content="The revmux user guide: task rounds, the three stages, profiles and lenses, configuration, the JSON report, the run archive and every subcommand."
+    />
+    <meta property="og:url" content="https://revmux.com/docs" />
+    <meta property="og:image" content="https://revmux.com/assets/revmux-og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="revmux" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@umputun" />
+    <meta name="twitter:title" content="revmux documentation" />
+    <meta
+      name="twitter:description"
+      content="Task rounds, the three stages, profiles and lenses, configuration, the JSON report, the run archive and every subcommand."
+    />
+    <meta name="twitter:image" content="https://revmux.com/assets/revmux-og.png" />
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/favicon-180.png" />
+    <meta name="theme-color" content="#0d0e10" />
+    <link rel="preload" href="/assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/assets/fonts/plex-mono-400-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="nav">
+      <div class="nav-bar">
+        <a class="brand" href="/">
+          <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <rect width="32" height="32" rx="7" fill="#16181c" stroke="#e0a134" stroke-opacity=".5" />
+            <path
+              d="M7 16h3M22 16h3M10 16c2 0 2-6 4-6M10 16c2 0 2 6 4 6M22 16c-2 0-2-6-4-6M22 16c-2 0-2 6-4 6"
+              stroke="#e0a134"
+              stroke-width="1.6"
+              stroke-linecap="round"
+            />
+            <circle cx="16" cy="10" r="1.7" fill="#e9e5dd" />
+            <circle cx="16" cy="22" r="1.7" fill="#e9e5dd" />
+          </svg>
+          <span>revmux</span>
+        </a>
+        <nav class="nav-links">
+          <a href="/">home</a>
+          <a class="on" href="/docs">docs</a>
+          <a href="/reference">reference</a>
+          <a class="ext" href="https://github.com/umputun/revmux">github</a>
+        </nav>
+        <details class="nav-mobile">
+          <summary aria-label="menu">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <path d="M2 5h14M2 9h14M2 13h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            </svg>
+          </summary>
+          <nav>
+            <a href="/">home</a>
+            <a href="/docs">docs</a>
+            <a href="/reference">reference</a>
+            <a href="https://github.com/umputun/revmux">github</a>
+          </nav>
+        </details>
+      </div>
+    </header>
+
+    <input type="checkbox" id="doc-drawer" class="doc-drawer-toggle" />
+    <label class="doc-drawer-overlay" for="doc-drawer" aria-hidden="true"></label>
+
+    <div class="doc-wrap">
+      <aside class="doc-nav" aria-label="documentation contents">
+        <b>start</b>
+        <a href="#overview">what revmux is</a>
+        <a href="#install">install</a>
+        <a href="#quick-start">quick start</a>
+        <b>the review</b>
+        <a href="#stages">three stages</a>
+        <a href="#supervision">supervision and degrade</a>
+        <a href="#sources">what counts as a source</a>
+        <b>context</b>
+        <a href="#task-directory">task directory</a>
+        <a href="#new">revmux new</a>
+        <a href="#task-md">task.md</a>
+        <a href="#prior-rounds">prior rounds</a>
+        <b>configuration</b>
+        <a href="#configuration">two precedence chains</a>
+        <a href="#profiles">profiles</a>
+        <a href="#lenses">lenses</a>
+        <a href="#composition">prompt composition</a>
+        <a href="#knobs">runtime knobs</a>
+        <b>results</b>
+        <a href="#output">the report</a>
+        <a href="#exit-codes">exit codes</a>
+        <a href="#archive">run archive</a>
+        <a href="#tui">terminal UI</a>
+        <b>subcommands</b>
+        <a href="#config">revmux config</a>
+        <a href="#init">revmux init</a>
+        <a href="#stats">revmux stats</a>
+        <a href="#cleanup">revmux cleanup</a>
+        <b>around it</b>
+        <a href="#skills">agent skills</a>
+        <a href="#development">development</a>
+      </aside>
+
+      <main class="doc">
+        <label class="doc-drawer-btn" for="doc-drawer">
+          <svg width="14" height="14" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+            <path d="M2 5h14M2 9h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+          </svg>
+          contents
+        </label>
+
+        <div class="doc-head">
+          <p class="eyebrow">documentation</p>
+          <h1>revmux</h1>
+          <p class="lede">
+            A supervised multi-agent code review. revmux spawns <code>claude --print</code> and
+            <code>codex exec</code> subprocesses, watches them, and returns findings on stdout as JSON or
+            markdown.
+          </p>
+        </div>
+
+        <h2 id="overview">What revmux is <a class="anchor" href="#overview">#</a></h2>
+        <p>
+          revmux runs a review and returns findings, and does nothing else. It performs no scope detection, no
+          git operations, no PR fetching and no source modification. It has zero VCS dependency: no git library,
+          no <code>git</code> subprocess, no repository walking. All review context is written to disk by the
+          caller and passed in as a task round.
+        </p>
+        <p>
+          That split is deliberate. The agents themselves run diff commands inside the working directory you
+          point them at, and revmux only substitutes a path. Anything that would make revmux read a repository
+          belongs in the caller, which is shipped separately as
+          <a href="#skills">an agent skill for Claude Code and Codex</a>.
+        </p>
+        <div class="note">
+          <p>
+            <b>What you get over an ad hoc fan-out.</b> A watchdog that notices a stall, a kill and retry you
+            own, a live view of every agent with per-agent token counts, and a run archive that survives the
+            session. The subprocess does not make the model faster; it makes the run recoverable and auditable.
+          </p>
+        </div>
+
+        <h2 id="install">Install <a class="anchor" href="#install">#</a></h2>
+        <pre class="code">go install github.com/umputun/revmux/app@latest</pre>
+        <p>
+          The binary is installed as <code>app</code>, so rename it to <code>revmux</code>, or build from a
+          clone instead:
+        </p>
+        <pre class="code">git clone https://github.com/umputun/revmux.git &amp;&amp; cd revmux
+make build        <span class="c-dim"># produces .bin/revmux</span>
+make install      <span class="c-dim"># and symlinks it to /usr/local/bin/revmux</span></pre>
+        <p>
+          <code>make install</code> links rather than copies, so a later <code>make build</code> is picked up
+          without reinstalling. Override the location with <code>BINDIR</code> when
+          <code>/usr/local/bin</code> is not writable, as in <code>make install BINDIR=~/bin</code>.
+          <code>make uninstall</code> removes the link.
+        </p>
+
+        <h3>Model CLIs</h3>
+        <p>
+          revmux drives the model CLIs as subprocesses, so whichever ones your profile names must already be
+          installed and authenticated. Which those are is a property of the profile, not a fixed pair:
+        </p>
+        <ul>
+          <li>
+            <code>comprehensive</code>, <code>focused</code>, <code>final</code>, <code>grill-me</code>,
+            <code>triage</code>, <code>expert</code>: both, a claude roster plus codex
+          </li>
+          <li><code>claude-only</code>: claude alone</li>
+          <li><code>codex-only</code>: codex alone</li>
+        </ul>
+        <p>
+          <code>preflight.sh</code> in the shipped skill answers it for any profile and any invocation,
+          <code>--lenses</code> included.
+        </p>
+        <p>
+          <code>ANTHROPIC_API_KEY</code> is stripped from the child environment by default so
+          <code>claude</code> uses interactive subscription auth. Pass
+          <code>--preserve-anthropic-api-key</code> if you authenticate by key. <code>CLAUDECODE</code> is
+          always stripped, since a <code>claude</code> child refuses to start when it thinks it is a nested
+          session.
+        </p>
+
+        <h2 id="quick-start">Quick start <a class="anchor" href="#quick-start">#</a></h2>
+        <p>
+          <code>revmux new</code> creates the round and prints every path you write to, so nothing constructs a
+          path by hand:
+        </p>
+        <pre class="code"><span class="c-amber">$</span> revmux new --task pr-123 --run 01-initial
+{
+  "task_dir":  "/abs/.revmux/tasks/pr-123",
+  "task_file": "/abs/.revmux/tasks/pr-123/task.md",
+  "round_dir": "/abs/.revmux/tasks/pr-123/01-initial",
+  "input_dir": "/abs/.revmux/tasks/pr-123/01-initial/input",
+  "scope":     "/abs/.revmux/tasks/pr-123/01-initial/input/scope.md",
+  "goal":      "/abs/.revmux/tasks/pr-123/01-initial/input/goal.md",
+  "profile":   "/abs/.revmux/tasks/pr-123/01-initial/input/profile.md",
+  "context":   "/abs/.revmux/tasks/pr-123/01-initial/input/context",
+  "created":   ["task_dir", "task_file", "round_dir", "input_dir"]
+}</pre>
+        <p>
+          Take the <code>scope</code> path out of that payload rather than joining it yourself, write the scope
+          into it, and run the review. The same call again is safe: a round already scaffolded is reported
+          rather than recreated.
+        </p>
+        <pre class="code">scope=$(revmux new --task pr-123 --run 01-initial | jq -r .scope)
+cat &gt; "$scope" &lt;&lt;'EOF'
+Review the changes on this branch against master.
+Diff command: git diff master...HEAD
+EOF
+
+revmux --task pr-123 --run 01-initial</pre>
+        <p>
+          That runs the <code>comprehensive</code> profile, shows a live TUI, and writes the report to stdout as
+          JSON. After fixing something, open a new round on the same task and revmux carries the earlier rounds
+          into every prompt:
+        </p>
+        <pre class="code">revmux new --task pr-123 --run 02-after-fix     <span class="c-dim"># then write its own input/scope.md</span>
+revmux --task pr-123 --run 02-after-fix &gt; findings.json</pre>
+
+        <h2 id="stages">Three stages <a class="anchor" href="#stages">#</a></h2>
+        <p>
+          Only the roster and the severity bar vary between review shapes, so everything else is configuration.
+        </p>
+        <ol>
+          <li>
+            <strong>find.</strong> The profile's roster runs in parallel: several <code>claude</code> agents,
+            each composing one or more lenses, plus a <code>codex</code> peer. Launch is staggered, agent one
+            first and the rest released once it produces its first output. Each agent returns structured
+            findings.
+          </li>
+          <li>
+            <strong>synthesize.</strong> One model call. It merges every source's findings, dedupes on
+            <code>(file, line ±2)</code>, boosts confidence where distinct sources corroborate, splits out open
+            questions and pre-existing issues, and drops weak singletons. It is told the true source roster as
+            data, including which agents degraded.
+          </li>
+          <li>
+            <strong>verify.</strong> Parallel agents grouped by directory, thin directories merged and the group
+            count capped. Each verifier sees only its own group, so it cannot anchor on a neighbouring finding.
+            Every finding comes back with a verdict: confirmed, refined, rejected, immaterial or pre-existing.
+          </li>
+        </ol>
+        <p>
+          <code>--verify-group-by source</code> keys the groups by the agent that raised the finding and skips
+          the thin merge instead, so a panel of one-argument agents does not collapse into a single verifier.
+          <code>--no-synthesis</code> passes findings through with their attribution intact, and
+          <code>--no-verify</code> marks every finding <code>unverified</code> rather than silently claiming it
+          was checked.
+        </p>
+        <div class="note">
+          <p>
+            <b>Codex is a peer source, not a second pass.</b> It runs alongside the lens agents and its findings
+            go through the same synthesis and verification. Ordering the two would mean the second reviewer sees
+            the first's findings and anchors on them, which is exactly what the cross-source confidence boost
+            assumes did not happen.
+          </p>
+        </div>
+
+        <h2 id="supervision">Supervision and degrade <a class="anchor" href="#supervision">#</a></h2>
+        <p>
+          An agent that produces no output for <code>--idle-timeout</code> (2m by default) is killed and retried
+          once. So is one that exceeds <code>--hard-timeout</code> (20m per attempt). On a second failure the
+          agent is marked degraded and the run continues: the report banner names the missing agent, and
+          synthesis is told the real source count rather than being left to assume a full roster. A run where
+          every source degraded is a tool error, not a clean empty report.
+        </p>
+        <p>
+          Agent processes are started in their own session, so the terminal never signals them directly. A
+          delivered <code>SIGINT</code> or <code>SIGTERM</code> cancels the run and revmux tears each process
+          group down itself, rather than leaving the model CLIs and everything they spawned running
+          unsupervised.
+        </p>
+
+        <h2 id="sources">What counts as a source <a class="anchor" href="#sources">#</a></h2>
+        <p>
+          A source is a process. The cross-source confidence boost counts distinct processes, never tags and
+          never lenses. An agent carrying two lenses that flags the same issue under both is still one source,
+          because it cannot corroborate itself.
+        </p>
+        <p>
+          The wire format keeps the distinction in two fields that are never interchangeable.
+          <code>sources</code> holds agent names such as <code>["bugs+impl", "codex"]</code> and is the only
+          input to the boost. <code>lenses</code> holds the lens names that raised the finding and is
+          informational. Go stamps <code>sources</code> after parsing the model's output, and no schema exposes
+          the field, so an agent cannot name itself twice.
+        </p>
+
+        <h2 id="task-directory">Task directory <a class="anchor" href="#task-directory">#</a></h2>
+        <p>
+          Review context reaches revmux only as a task round the caller has filled. <code>--task</code> names a
+          task under <code>--tasks-dir</code> (default <code>./.revmux/tasks</code>), and <code>--run</code>
+          names one round inside it. Both names are caller-chosen and semantic; revmux allocates neither.
+        </p>
+        <pre class="code">&lt;tasks-dir&gt;/pr-123/               a task: one subject, reviewed over as many rounds as it takes
+├── task.md                       optional; front matter identifying the task
+├── 01-initial/                   a round
+│   ├── input/                    caller-written; the only channel review context travels through
+│   │   ├── scope.md              {{SCOPE}}    required; missing or empty is a load-time error
+│   │   ├── goal.md               {{GOAL}}     optional
+│   │   ├── profile.md            {{PROFILE}}  optional, the project's own conventions
+│   │   └── context/              {{CONTEXT}}  optional: ticket text, design notes, spec excerpts
+│   └── ...                       revmux-written artifacts, see the run archive
+└── 02-after-fix/                 the next round, with its own input/</pre>
+        <p>
+          <strong>Context belongs to the round, not to the task.</strong> Round two reviews the fixes for what
+          round one found: a different scope, usually a different goal. Kept at task level they would be
+          overwritten by whoever composes the next round, taking the record of what the previous round reviewed
+          with them.
+        </p>
+        <p>
+          Variables expand to the <strong>paths</strong> of these files, never to their contents, and the agent
+          reads them itself. Prompt composition stats them and never opens one, so no prompt can be bloated by a
+          large scope. An absent optional file expands to <code>none provided</code>, which is not an error: the
+          run proceeds with generic severity calibration.
+        </p>
+        <p>
+          There are no <code>--goal</code>, <code>--goal-file</code>, <code>--profile-file</code> or
+          <code>--context-file</code> flags. One mechanism, no precedence rules, and nothing for revmux to
+          author.
+        </p>
+        <p>
+          <code>--run</code> has no default: the round holds your own context, so revmux cannot name one you
+          have not filled. A round that has already run is an error rather than an overwrite, because a round
+          that went badly is exactly the one worth keeping.
+        </p>
+        <p>
+          Neither name may contain a path separator or <code>..</code>, be absolute, or begin with a dot. A
+          round additionally may not be called <code>task.md</code>: that is the one entry the task directory
+          keeps beside its rounds, and a round named after it would be read as the task's own metadata.
+        </p>
+
+        <h3 id="new">revmux new</h3>
+        <p>
+          <code>revmux new --task &lt;id&gt; --run &lt;name&gt;</code> creates the task directory, a
+          commented-out <code>task.md</code>, the round and its <code>input/</code>, then prints every path you
+          write to as JSON along with a <code>created</code> list naming which of them this call made. It
+          creates the tasks root itself too, so a first run on a clean checkout materializes
+          <code>./.revmux/tasks/</code> as well. Everything else in revmux opens and never creates, so a typo'd
+          <code>--task</code> on a review is an error rather than an empty task nobody filled.
+        </p>
+        <p>
+          It never overwrites. An existing <code>task.md</code> is left alone, and a round that has already run
+          is refused. A round whose review was interrupted before it finished is not one that has run: it is
+          scaffolded and reviewed again under the same name, with the <code>input/</code> you wrote still in it,
+          provided that review had not already written artifacts into the round. If it had, <code>new</code>
+          refuses the name and says what is in there, so it never hands back a round the review itself would
+          reject.
+        </p>
+
+        <h3 id="task-md">task.md</h3>
+        <p>Optional, at task level, and about the task rather than about any one round:</p>
+        <pre class="code">---
+description: OAuth token exchange rework
+url: https://github.com/umputun/revmux/pull/123
+branch: feature/oauth
+base: 4ed3259
+---
+
+Reviewing the token exchange path after the provider swap.</pre>
+        <p>
+          Every key is optional, as is the body and the file itself. <code>revmux config</code> reports the
+          front matter under <code>paths.tasks</code>, which is how a caller matches an existing task instead of
+          guessing at an id. Opening <code>pr123</code> beside an existing <code>pr-123</code> silently forks
+          the history into two.
+        </p>
+        <div class="note warn">
+          <p>
+            <b>revmux stores and reports these; it never resolves one.</b> No git command runs against
+            <code>branch</code> or <code>base</code>, and nothing is fetched from <code>url</code>. They are
+            strings you wrote and strings you read back.
+          </p>
+        </div>
+
+        <h3 id="prior-rounds">Prior rounds</h3>
+        <p>
+          Prior rounds are injected into every composed prompt. revmux wrote them, so it hands them over rather
+          than making the caller copy them forward. The injected block is the task directory path plus a
+          generated one-line inventory per round: name, when it ran, finding counts by severity, and which
+          sources degraded. An agent can judge relevance without opening anything, and read a round in full when
+          that matters.
+        </p>
+        <p>
+          The block carries its own re-evaluate-independently instruction, and on a first round it is omitted
+          entirely. It is not a <code>{{VAR}}</code>, because a variable would be opt-in per file and any lens
+          or profile omitting it would silently lose the history.
+        </p>
+
+        <h2 id="configuration">Two precedence chains <a class="anchor" href="#configuration">#</a></h2>
+        <p>
+          <strong>Runtime knobs</strong> resolve from the command line, then <code>./.revmux/config</code>, then
+          <code>~/.config/revmux/config</code>, then the built-in default. Layers merge per key, so a project
+          config setting one knob leaves the rest alone. The project layer is auto-detected: no flag selects it,
+          and its absence simply drops it.
+        </p>
+        <p>
+          <strong>Prompt and lens files</strong> resolve from <code>./.revmux/</code>, then
+          <code>~/.config/revmux/</code>, then the <code>go:embed</code> defaults, <strong>per file</strong>.
+          Overriding one lens does not orphan the other six, and deleting an override falls back to the embedded
+          copy rather than disabling the lens. To actually drop a lens, remove it from the profile roster.
+        </p>
+        <div class="note warn">
+          <p>
+            <b><code>.revmux/</code> is code.</b> The project layer supplies prompt text as well as knobs, and
+            that text becomes the instructions a headless agent with a shell executes. Running revmux inside a
+            repository trusts it the same way <code>.claude/</code> or a <code>Makefile</code> there does. Review
+            it before reviewing a branch you did not write, or run revmux from outside the tree: the project
+            layer is read from the process working directory, never from <code>--workdir</code>.
+          </p>
+        </div>
+        <pre class="code">~/.config/revmux/
+├── config                    INI, runtime knobs only
+├── prompts/
+│   ├── profiles/
+│   │   ├── comprehensive.md  roster front matter + shared preamble + severity bar
+│   │   ├── focused.md  final.md  claude-only.md  codex-only.md
+│   │   └── grill-me.md  expert.md  triage.md
+│   ├── synthesis.md
+│   └── verify.md
+└── lenses/
+    ├── bugs.md  impl.md  architecture.md
+    ├── quality.md  docs.md  tests.md  comments.md  adversarial.md
+    └── grounding.md  precedent.md  thesis.md  antithesis.md  cost.md</pre>
+        <p>
+          <code>--config-dir</code> relocates the user layer. <a href="#init"><code>revmux init</code></a>
+          materializes <code>./.revmux/</code> from whatever resolved, and
+          <code>--dump-defaults &lt;dir&gt;</code> extracts the embedded prompt tree instead, which is how a
+          customized file is diffed against the shipped one. Neither overwrites a file you have customized, and
+          a normal run writes no config at all.
+        </p>
+        <p>
+          Paths resolve against the <strong>process working directory</strong>: the project config layer, and
+          <code>--tasks-dir</code>'s <code>./.revmux/tasks</code> default. <code>--workdir</code> is separate,
+          setting where the subprocesses run and what <code>{{WORKDIR}}</code> expands to. Reviewing a repository
+          from outside it means passing <code>--config-dir</code> and <code>--tasks-dir</code> as well.
+        </p>
+
+        <h2 id="profiles">Profiles <a class="anchor" href="#profiles">#</a></h2>
+        <p>
+          A profile is roster front matter plus a body that is the shared preamble and severity bar. The
+          top-level <code>model</code> is the review's runner; a roster entry or a stage naming its own overrides
+          it.
+        </p>
+        <pre class="code">---
+description: all eight lenses across three claude agents plus an adversarial codex peer
+model: claude/opus:high
+agents:
+  - {name: bugs+impl,    lenses: [bugs, impl],            color: cyan}
+  - {name: arch+quality, lenses: [architecture, quality], color: magenta}
+  - {name: docs+tests,   lenses: [docs, tests, comments], color: green}
+  - {name: codex, lenses: [adversarial], model: codex/gpt-5.6-sol:high, color: yellow}
+---</pre>
+        <p>
+          The top-level runner is inheritance, not a fixed review topology. This supports single-vendor profiles
+          when only one CLI is available, mixed peers for independent perspectives, a wide lower-effort finder
+          roster followed by a stronger synthesis model, or a high-effort verifier where false positives are
+          expensive. Each roster entry remains a distinct source regardless of which binary runs it, while its
+          lenses define the job independently of the runner.
+        </p>
+
+        <h3>The model string</h3>
+        <p>
+          One <code>model</code> string selects the binary, the model and the effort together. The binary leads
+          and is mandatory, either <code>claude</code> or <code>codex</code>, so a value validates itself and
+          revmux never has to guess which CLI runs <code>gpt-5.6-sol</code> from a catalog of model names that
+          would go stale.
+        </p>
+        <pre class="code">claude                   claude, its own default model and effort
+claude/opus:high         fully specified
+codex/gpt-5.6-sol        effort falls back to the profile's, then the binary's
+codex:high               codex's default model at high effort</pre>
+        <p>
+          The three travel together because they are not independent: <code>opus</code> means nothing to codex.
+          A file cannot state a pairing that will not run, and an entry naming a different binary than the
+          profile brings its own model rather than inheriting one belonging to the other. A trailing slash is
+          refused, since <code>claude/</code> is a second spelling of <code>claude</code>. It parses on the first
+          <code>/</code> so a model whose own name has one survives, and on the last <code>:</code>, whose
+          suffix must be a real effort: <code>:hgih</code> is a load error rather than a typo nobody sees.
+        </p>
+        <p>
+          A stage resolves through three layers in turn: its <code>stages:</code> override, the stage file's own
+          <code>model:</code>, then the profile's. The shipped <code>synthesis.md</code> and
+          <code>verify.md</code> name no runner of their own, so <code>codex-only</code> is one line and no
+          more. The optional <code>stages</code> block is for a deliberately mixed run, such as codex finders
+          and a claude synthesis:
+        </p>
+        <pre class="code">stages:
+  synthesis: claude/opus:high</pre>
+        <p>
+          Everything is validated at load. An unknown binary, effort, lens or color is a startup error, never a
+          silent default: a typo'd model quietly changing which model reviews your code is worse than a failed
+          launch.
+        </p>
+
+        <h3>Shipped profiles</h3>
+        <div class="scroll-x">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>profile</th>
+                <th>roster</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>comprehensive</td>
+                <td class="prose">
+                  <code>bugs+impl</code>, <code>arch+quality</code>, <code>docs+tests</code> on claude, the last
+                  carrying <code>comments</code> too, plus an adversarial codex peer
+                </td>
+              </tr>
+              <tr>
+                <td>focused</td>
+                <td class="prose">one <code>bugs</code> agent plus the codex peer, for a small or time-boxed change</td>
+              </tr>
+              <tr>
+                <td>final</td>
+                <td class="prose"><code>bugs+impl</code> plus the codex peer, nothing below major reported</td>
+              </tr>
+              <tr>
+                <td>claude-only</td>
+                <td class="prose">the same four lens splits on claude, no codex peer, for a machine with no codex</td>
+              </tr>
+              <tr>
+                <td>codex-only</td>
+                <td class="prose">
+                  the same four lens splits on codex, and synthesis and verify with them, no claude anywhere
+                </td>
+              </tr>
+              <tr>
+                <td>grill-me</td>
+                <td class="prose">
+                  <code>bugs+impl</code> and <code>architecture+quality</code>, each run once on claude and once
+                  on codex, every agent reading against the change
+                </td>
+              </tr>
+              <tr>
+                <td>expert</td>
+                <td class="prose">
+                  two agents at the highest effort, codex <code>gpt-5.6-sol:xhigh</code> and claude
+                  <code>fable:xhigh</code>, each carrying all eight lenses, both stages on fable
+                </td>
+              </tr>
+              <tr>
+                <td>triage</td>
+                <td class="prose">
+                  <code>facts</code>, <code>thesis</code>, <code>antithesis</code> on claude plus
+                  <code>cost</code> on codex: a panel over a filed item rather than a diff, and it wants
+                  <code>--no-synthesis</code>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          <code>expert</code> is for when the answer matters more than the wall clock, and it is expensive
+          enough to be worth asking for deliberately. Both agents read everything rather than splitting the
+          lenses, so where the two models independently agree the cross-source boost measures genuine
+          corroboration rather than two halves of one review. Its severity bar rates what goes wrong if the
+          thing is built and run as written, so a plan reads as naturally as a diff.
+        </p>
+        <p>
+          <code>triage</code> reviews an issue, a proposal or a discussion instead of a change. Its severities
+          rate how much a point bears on the decision rather than what goes wrong at runtime, and it returns
+          arguments for a maintainer to weigh. revmux decides nothing. Run it with
+          <code>--no-synthesis</code>: every argument on a four-way panel is single-source by construction, so
+          the drop rule eats the minor ones and the confidence boost fires on agreement between agents told to
+          disagree. <code>--verify-group-by source</code> keeps each panelist's case in front of its own
+          verifier.
+        </p>
+
+        <h2 id="lenses">Lenses <a class="anchor" href="#lenses">#</a></h2>
+        <p>
+          Executor and lens are orthogonal. Every roster entry composes lenses, and its <code>model:</code> only
+          selects which binary runs it. There is no codex-specific prompt file: codex is an entry whose
+          <code>model:</code> names it, composing <code>lenses/adversarial.md</code>, so the adversarial lens
+          runs on claude by changing one word and <code>bugs</code> runs on codex the same way. Lens text stays
+          executor-agnostic, and the output-contract difference (claude has <code>--json-schema</code>, codex
+          does not) is injected by the executor.
+        </p>
+        <div class="scroll-x">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>lens</th>
+                <th>covers</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>bugs</td><td class="prose">correctness defects: logic and boundaries, nil and bounds, concurrency, resource lifetime, error handling</td></tr>
+              <tr><td>impl</td><td class="prose">goal fit: whether the change does what it set out to do, is wired up, and is proportionate</td></tr>
+              <tr><td>architecture</td><td class="prose">conventions and organization: the project's own rules, established patterns, dependency and interface shape</td></tr>
+              <tr><td>quality</td><td class="prose">style, over-engineering, error handling and accidental duplication in code that already works</td></tr>
+              <tr><td>docs</td><td class="prose">documentation accuracy: doc comments against the code, and the project docs the change leaves stale</td></tr>
+              <tr><td>tests</td><td class="prose">whether tests exist where a defect can hide, actually exercise the code, and survive concurrency</td></tr>
+              <tr><td>comments</td><td class="prose">the code's own stated rules: doc comments and inline notes the change was supposed to obey</td></tr>
+              <tr><td>adversarial</td><td class="prose">attacks the change looking for what a sympathetic reader would accept</td></tr>
+              <tr><td>grounding</td><td class="prose">whether what a filed item claims is true of the code as it stands today</td></tr>
+              <tr><td>precedent</td><td class="prose">how comparable asks were decided here before, and whether that bears on this one</td></tr>
+              <tr><td>thesis</td><td class="prose">the strongest honest case that a filed item should be done or that its report is real</td></tr>
+              <tr><td>antithesis</td><td class="prose">the strongest case against, and whether something simpler reaches the same goal</td></tr>
+              <tr><td>cost</td><td class="prose">what implementing a filed item reaches into, and whether the work is proportionate</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          The last five read a filed item rather than a diff and are what the <code>triage</code> profile
+          composes; the eight above them review a change.
+        </p>
+        <p>
+          <code>--lenses bugs,impl</code> replaces a profile's roster while keeping its body. It produces
+          <strong>one</strong> agent carrying every named lens, not one agent per lens: a caller asking for two
+          lenses is asking for a viewpoint, not for two corroborating votes. The synthesized entry inherits the
+          profile's top-level <code>model</code> whole, binary included, so
+          <code>--profile codex-only --lenses bugs</code> runs on codex.
+        </p>
+
+        <h2 id="composition">Prompt composition <a class="anchor" href="#composition">#</a></h2>
+        <p>
+          One agent's prompt is the profile body plus each of its lens files, concatenated, with
+          <code>{{VAR}}</code> substituted and the prior-rounds block appended. The variable vocabulary is
+          closed: <code>{{SCOPE}}</code>, <code>{{GOAL}}</code>, <code>{{PROFILE}}</code>,
+          <code>{{CONTEXT}}</code>, <code>{{WORKDIR}}</code>, plus <code>{{FINDINGS}}</code> for both model
+          stages and <code>{{SOURCES}}</code> for synthesis only. Verify sees one group at a time and is never
+          given the roster. A prompt file naming anything else fails at load, which is what makes a typo loud
+          instead of silent.
+        </p>
+
+        <h2 id="knobs">Runtime knobs <a class="anchor" href="#knobs">#</a></h2>
+        <p>
+          These read from the config file under the same name as the flag. The
+          <a href="/reference#flags">reference</a> carries the full flag list.
+        </p>
+        <div class="scroll-x">
+          <table class="tbl">
+            <thead>
+              <tr><th>flag</th><th>default</th><th>meaning</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>--idle-timeout</td><td>2m</td><td class="prose">kill and retry an agent after this long with no output</td></tr>
+              <tr><td>--hard-timeout</td><td>20m</td><td class="prose">kill an agent after this long, per attempt</td></tr>
+              <tr><td>--stagger-delay</td><td>30s</td><td class="prose">how long to wait for the first agent before releasing the rest</td></tr>
+              <tr><td>--max-parallel</td><td>4</td><td class="prose">how many agents run at once</td></tr>
+              <tr><td>--verify-groups</td><td>6</td><td class="prose">cap on the number of verifier groups</td></tr>
+              <tr><td>--verify-group-by</td><td>dir</td><td class="prose">key verifier groups by directory or by the agent that raised the finding</td></tr>
+              <tr><td>--tasks-dir</td><td>./.revmux/tasks</td><td class="prose">root directory holding task directories</td></tr>
+              <tr><td>--auto-exit</td><td>0s</td><td class="prose">close the terminal UI this long after the report arrives; 0 never closes it</td></tr>
+              <tr><td>--profile</td><td>comprehensive</td><td class="prose">profile naming the roster to run</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          <code>--task</code> and <code>--run</code> are both required for a review, and neither is a config
+          key: a config file naming the round to write would make the same command review different context in
+          different directories.
+        </p>
+
+        <h2 id="output">The report <a class="anchor" href="#output">#</a></h2>
+        <p>
+          The report goes to <strong>stdout</strong> as JSON, or as markdown with <code>--markdown</code>. The
+          TUI renders to the tty and progress lines go to stderr, so
+          <code>revmux --task pr-123 &gt; findings.json</code> works with the display running. The TUI is gated
+          on the tty being openable, never on stdout being a terminal, which is false in exactly that
+          invocation.
+        </p>
+        <pre class="code">{
+  "scope": {"task": "pr-123", "run": "02-after-fix",
+            "scope_path": "/abs/.revmux/tasks/pr-123/02-after-fix/input/scope.md"},
+  "sources": {
+    "expected": 4, "reported": 3, "degraded": ["docs+tests"],
+    "agents": [
+      {"name": "bugs+impl", "lenses": ["bugs", "impl"], "executor": "claude",
+       "requested_model": "opus", "actual_model": "claude-opus-5",
+       "effort": "high", "tokens": 48210, "raised": 6, "degraded": false}
+    ]
+  },
+  "findings": [
+    {"id": "f1", "file": "app/pipeline/find.go", "line": 88, "end_line": 0,
+     "severity": "major", "confidence": 90,
+     "title": "...", "body": "...", "fix": "...",
+     "sources": ["bugs+impl", "codex"], "lenses": ["bugs", "adversarial"],
+     "verdict": "confirmed"}
+  ],
+  "open_questions": [], "pre_existing": [], "immaterial": [],
+  "stats": {
+    "started_at": "2026-07-26T16:02:11Z", "finished_at": "2026-07-26T16:07:44Z",
+    "duration_ms": 333000, "tokens": 184920,
+    "stages": [{"name": "find", "duration_ms": 201000},
+               {"name": "synthesis", "duration_ms": 62000,
+                "executor": "claude", "model": "opus", "effort": "high"}]
+  }
+}</pre>
+        <p>
+          <code>line</code> is the anchor and <code>end_line</code> is optional: zero means a single line, and a
+          zero <code>line</code> means a file-level finding that renders as the bare path.
+          <code>verdict</code> is one of <code>confirmed</code>, <code>refined</code>, <code>rejected</code>,
+          <code>immaterial</code>, <code>pre_existing</code>, or <code>unverified</code> when the verify stage
+          was skipped. Empty lists are emitted as arrays rather than <code>null</code>.
+        </p>
+        <p>
+          <code>--min-confidence</code> filters once, before anything renders, and the printed report, the
+          findings browser and the exit code are all computed from the filtered set. A finding the exit code
+          says is absent is never listed in the TUI. Open questions, pre-existing and immaterial findings pass
+          through untouched.
+        </p>
+
+        <h2 id="exit-codes">Exit codes <a class="anchor" href="#exit-codes">#</a></h2>
+        <div class="scroll-x">
+          <table class="tbl">
+            <thead>
+              <tr><th>code</th><th>meaning</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>0</td><td class="prose">no findings above <code>--min-confidence</code></td></tr>
+              <tr><td>1</td><td class="prose">findings above <code>--min-confidence</code>. A normal outcome, not a failure</td></tr>
+              <tr>
+                <td>2</td>
+                <td class="prose">
+                  tool error: bad config, unreadable prompt tree, an omitted <code>--run</code>, a round with no
+                  <code>input/</code> or an empty <code>scope.md</code>, a round that has already run or is being
+                  written by another run, an unwritable run artifact, or every source degraded
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          The subcommands use the same <code>2</code> for their own tool errors and never exit <code>1</code>:
+          there is no report and so no threshold to be above. A run that exits <code>2</code> usually leaves no
+          report, the exception being a failure writing the report to stdout, which happens after the round is
+          archived.
+        </p>
+        <p>
+          A configuration error is caught before the round is claimed at all, so it leaves no
+          <code>manifest.json</code> and the name is free. Anything that fails once the pipeline has started
+          leaves an empty marker beside what it had written, and both <code>revmux new</code> and the run itself
+          refuse the name and say what the round holds. Either way the <code>input/</code> you wrote is
+          untouched.
+        </p>
+
+        <h2 id="archive">Run archive <a class="anchor" href="#archive">#</a></h2>
+        <p>
+          Every run writes its artifacts into its own round directory, beside the <code>input/</code> it was
+          pointed at. They exist so a review can be audited without re-running it, which the final report alone
+          cannot support, and because the round holds its own context, one round read in isolation shows both
+          what was reviewed and what came back.
+        </p>
+        <pre class="code">&lt;tasks-dir&gt;/pr-123/02-after-fix/
+├── input/                    the scope, goal, profile and context this round was reviewed against
+├── manifest.json             roster, prompt provenance and hashes, requested vs actual model, timings
+├── prompts/
+│   ├── agents/               composed prompt per agent, post-substitution: the bytes the model saw
+│   │   ├── bugs+impl.md
+│   │   └── codex.md
+│   └── stages/               separate from agents/ so an agent named `verify` cannot collide
+│       ├── synthesis.md
+│       ├── verify-app-executor.md      one per group, directories by default
+│       └── verify-app-pipeline.md
+├── stages/                   a skipped stage writes no snapshot
+│   ├── 1-found.json          findings as the find stage left them
+│   ├── 2-synthesized.json
+│   └── 3-verified.json
+├── events.jsonl              revmux's own decisions: stalls, retries, degrades, stage transitions
+├── agents/                   verbatim tees; own subdir so an agent named `events` cannot collide
+│   ├── bugs+impl.jsonl       claude stream-json
+│   ├── bugs+impl.retry.jsonl a retried agent keeps both attempts
+│   └── codex.log             codex prose
+├── report.md                 the filtered report, byte for byte what the caller was shown
+└── findings.json</pre>
+        <p>
+          <code>manifest.json</code> records which of the three precedence layers supplied each prompt file and
+          its content hash, because two rounds of one task can use different lens text. It also records
+          requested-vs-actual model per agent: <code>claude --model</code> can be silently ignored, so a
+          roster's model pin is a claim until it is read back.
+        </p>
+        <p>
+          It doubles as the marker claiming the round. It is created exclusively as the run starts, which is
+          both how a round that has already run is detected and how a real round is told from a directory left
+          under the task. It is created empty and filled in when the run finishes, so a marker still empty means
+          the run never came back, and such a round is not counted as a prior round in the meantime.
+        </p>
+        <p>
+          <strong>A round like that is re-runnable under the same name only while nothing else was written into
+          it</strong>, which is narrower than it sounds: the pipeline opens <code>events.jsonl</code> before it
+          launches an agent, so a review interrupted at any point after it started has written something. What
+          is re-runnable is a round claimed by a run that died before the pipeline began. The error names what
+          it found, nothing is deleted to make the round usable, and the fix is to open the next round and copy
+          the <code>input/</code> across.
+        </p>
+        <p>
+          A round already being written by another revmux is refused too. An empty marker is what an interrupted
+          run leaves and what a run starting right now leaves, so size alone cannot tell them apart. revmux holds
+          an exclusive OS-level lock on the marker for the run's lifetime, and the lock is gone the moment the
+          holding process is, so a round nobody is writing is still re-runnable with nothing to clean up.
+        </p>
+        <div class="note">
+          <p>
+            <b>A failed archive write fails the run.</b> A report emitted next to a half-written archive reads
+            as complete, and the gap only surfaces later when someone tries to audit it. The one exception is a
+            per-agent tee under <code>agents/</code>, which degrades that one source instead: it is owned by that
+            agent's own goroutine and is the only artifact whose failure is attributable to a single source.
+          </p>
+        </div>
+        <p>
+          Rounds accumulate and are never pruned. <a href="#stats"><code>revmux stats</code></a> reads them back
+          as numbers, and <a href="#cleanup"><code>revmux cleanup</code></a> is the one command that removes
+          anything.
+        </p>
+
+        <h2 id="tui">Terminal UI <a class="anchor" href="#tui">#</a></h2>
+        <p>
+          A status table on top, one row per supervised process with its name, state, elapsed time and last
+          activity, and one detail pane below it. The roster fills it first, and the synthesis and verify
+          processes take rows of their own as they start, so the table shows what is running rather than only
+          what the profile named.
+        </p>
+        <figure class="shot" style="margin: 26px 0 30px">
+          <img
+            src="/assets/screenshot-agent-tab.webp"
+            width="1600"
+            height="1312"
+            loading="lazy"
+            decoding="async"
+            alt="The revmux terminal UI with the codex agent tab focused, showing that agent's own scrollback under the status table"
+          />
+          <figcaption>
+            The status table stays visible whichever tab is focused, so a stalled agent is noticed while
+            reading another one's output.
+          </figcaption>
+        </figure>
+        <p>
+          The findings count in the header follows the same logic: the finders add to it, a later stage's merged
+          count replaces it, and it is rebuilt from the finished report at the end, since verify rejects
+          findings and <code>--min-confidence</code> filters without either emitting an event. It is shown
+          broken down by severity when the width allows, and colored by the worst severity in it. Red on any
+          critical, yellow on any major, green only when nothing above minor was found.
+        </p>
+        <p>
+          Tab <code>1 all</code> is the combined chronological view and is focused by default; the tabs after it
+          are per-agent full-detail scrollback. On completion the model switches to the findings browser, and
+          the agent tabs stay reachable so a reader can check why a finding was raised. Each finding's body and
+          fix render as markdown documents.
+        </p>
+        <p>
+          Press <kbd>i</kbd> to replace those panes with the inputs captured when the TUI started. The status
+          table remains visible, and the input tabs show <code>scope</code>, <code>goal</code>,
+          <code>profile</code>, then each file under <code>context/</code>. Markdown files render as documents up
+          to 64 KiB per file; a larger one falls back to the line-at-a-time rendering the log panes use. The
+          snapshot is read after the tty opens and before any review process starts, and it does not refresh
+          during the run. Headless runs read no snapshot at all.
+        </p>
+        <div class="scroll-x">
+          <table class="tbl">
+            <thead>
+              <tr><th>keys</th><th>action</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><kbd>tab</kbd> <kbd>shift+tab</kbd> <kbd>←</kbd> <kbd>→</kbd> <kbd>h</kbd> <kbd>l</kbd></td><td class="prose">switch pane</td></tr>
+              <tr><td><kbd>1</kbd>-<kbd>9</kbd>, then a letter</td><td class="prose">focus that pane directly; the token is shown on the tab</td></tr>
+              <tr><td><kbd>f</kbd></td><td class="prose">jump to the findings browser</td></tr>
+              <tr><td><kbd>i</kbd></td><td class="prose">show the startup input snapshot, or return to the review panes</td></tr>
+              <tr><td><kbd>↑</kbd> <kbd>↓</kbd> <kbd>k</kbd> <kbd>j</kbd></td><td class="prose">scroll</td></tr>
+              <tr><td><kbd>pgup</kbd> <kbd>pgdn</kbd> <kbd>ctrl+b</kbd> <kbd>ctrl+f</kbd></td><td class="prose">page</td></tr>
+              <tr><td><kbd>home</kbd> <kbd>end</kbd> <kbd>g</kbd> <kbd>G</kbd></td><td class="prose">top, bottom</td></tr>
+              <tr><td><kbd>/</kbd></td><td class="prose">filter findings; <kbd>enter</kbd> accepts, <kbd>esc</kbd> clears</td></tr>
+              <tr><td><kbd>esc</kbd></td><td class="prose">return from the input viewer, or abandon a filter; never quits</td></tr>
+              <tr><td><kbd>q</kbd></td><td class="prose">quit, once the report is in</td></tr>
+              <tr><td><kbd>ctrl+c</kbd></td><td class="prose">quit, at any point</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Only <kbd>ctrl+c</kbd> ends a review that is still running. <kbd>q</kbd> waits for the report, so a
+          reader who reaches for it as a pager key does not lose the view of a live run. Quitting stops watching
+          the run, it does not stop the run: the report is still written to stdout when the pipeline finishes.
+        </p>
+        <p>
+          With <code>--no-tui</code>, or when the tty cannot be opened, the same events render as timestamped
+          lines on stderr, each agent in its own color:
+        </p>
+        <pre class="code">16:02:11 bugs+impl     started [bugs, impl]
+16:02:19 arch+quality  reading the roster resolution path
+16:04:02 docs+tests    retrying: agent docs+tests stalled
+16:05:12 bugs+impl     done, 6 findings
+16:05:40               ── synthesis ──
+16:09:03               ── complete ──
+16:09:03               6m52s, sources 4/4, degraded none
+16:09:03               6 findings: 1 major, 5 minor</pre>
+        <p>
+          The closing three lines are written after the last event, to say what the run came to. They carry
+          counts only: the findings themselves go to stdout, and a degraded run names its missing sources here
+          rather than leaving the log looking like a complete one.
+        </p>
+        <p>
+          <kbd>Ctrl-C</kbd> delivers a signal under <code>--no-tui</code>. While the TUI is running it does not:
+          the terminal is in raw mode, so the keystroke reaches revmux as a key rather than a signal. A second
+          <kbd>Ctrl-C</kbd>, once the TUI has restored the terminal, cancels.
+        </p>
+
+        <h2 id="config">revmux config <a class="anchor" href="#config">#</a></h2>
+        <p>
+          revmux is normally driven by a caller model, so the resolved configuration is machine-readable rather
+          than something to reconstruct from <code>--help</code> and a directory listing.
+          <code>revmux config</code> prints it as JSON on stdout and exits <code>0</code>. It runs no pipeline
+          and creates nothing; the only thing it touches is a read of the tasks root.
+        </p>
+        <p>
+          It reports what <strong>resolved</strong>, never what is embedded: a user who overrode one lens and
+          added another sees his own tree. Each runtime knob carries the precedence layer that supplied it, so a
+          caller can tell a deliberate choice from a default. Flags may precede the subcommand, which is how a
+          caller asks what a given invocation would resolve to:
+        </p>
+        <pre class="code"><span class="c-amber">$</span> revmux --stagger-delay=45s config
+{
+  "knobs": [
+    {"name": "stagger-delay", "value": "45s", "source": "flag"},
+    {"name": "max-parallel",  "value": 2,     "source": "project"},
+    {"name": "profile", "value": "comprehensive", "source": "default"}
+  ],
+  "profiles": [{"name": "comprehensive", "description": "...",
+                "runner": {"executor": "claude", "model": "opus", "effort": "high"},
+                "roster": [...], "stages": [...]}],
+  "lenses": [{"name": "adversarial", "description": "..."}],
+  "stages": [{"name": "synthesis", "description": "..."}],
+  "vocabulary": {"executors": ["claude", "codex"],
+                 "efforts": ["low", "medium", "high", "xhigh", "max"]},
+  "paths": {
+    "tasks_dir": "/abs/project/.revmux/tasks",
+    "config_dir": "/home/user/.config/revmux",
+    "project_dir": "/abs/project/.revmux",
+    "workdir": "/abs/project",
+    "tasks": [{"id": "pr-123", "description": "OAuth token exchange rework",
+               "url": "...", "branch": "feature/oauth", "base": "4ed3259",
+               "rounds": ["01-initial", "02-after-fix"]}]
+  }
+}</pre>
+        <p>
+          The top-level <code>stages</code> array is the stage prompt itself, with a runner only if that file
+          authored one, which the shipped pair do not. <strong>What actually runs is
+          <code>profiles[].stages</code></strong>, and each profile also reports its own base runner as
+          <code>profiles[].runner</code>: the one the roster falls back to and the one the single agent
+          <code>--lenses</code> synthesizes runs on. That is why a preflight check can tell which binaries an
+          invocation needs.
+        </p>
+        <p>
+          <code>paths.tasks</code> is the task store: every task that already exists, whatever its
+          <code>task.md</code> says about it, and the rounds recorded under it. Rounds are those that ran to
+          completion, so neither a directory prepared but not yet reviewed nor a round whose review was
+          interrupted is one. An empty list always means empty: a tasks root that could not be read is reported
+          as <code>paths.tasks_error</code>, and nothing that failed is reported as nothing being there.
+        </p>
+
+        <h2 id="init">revmux init <a class="anchor" href="#init">#</a></h2>
+        <p>
+          <code>revmux init</code> materializes <code>./.revmux/</code> so there is something local to edit: the
+          commented-out config template, plus every prompt file as it currently <strong>resolved</strong>.
+          <code>--init</code> is the same implementation behind a flag, for a caller that already builds an
+          argument list.
+        </p>
+        <p>
+          What it writes is the winning layer's own bytes, front matter included. A user with
+          <code>~/.config/revmux/</code> overrides gets those copied down rather than the shipped text, so
+          editing the result changes the review that already runs instead of reverting it to the default one.
+          <code>--dump-defaults &lt;dir&gt;</code> is the other direction, and the only way to reach the embedded
+          copy for a diff.
+        </p>
+        <pre class="code">{
+  "dir": "/abs/project/.revmux",
+  "config": "/abs/project/.revmux/config",
+  "files": [
+    {"path": "/abs/project/.revmux/lenses/bugs.md", "layer": "user", "created": true},
+    {"path": "/abs/project/.revmux/prompts/synthesis.md", "layer": "embedded", "created": true}
+  ]
+}</pre>
+        <p>
+          <code>layer</code> is where the content came from: <code>project</code>, <code>user</code> or
+          <code>embedded</code>. <code>created</code> is false for a file already there, which is reported and
+          left byte-identical, so a second run changes nothing and no prompt file you customized is ever
+          overwritten.
+        </p>
+        <p>
+          The config is reported as a path alone because it is not materialized the same way. It ships commented
+          out, and one holding no uncommented key is rewritten with the current template, which is what lets an
+          upgrade move a default you never set. A config carrying an actual setting is left exactly as it is.
+        </p>
+
+        <h2 id="stats">revmux stats <a class="anchor" href="#stats">#</a></h2>
+        <p>
+          <code>revmux stats</code> reads what past rounds produced and prints it as JSON on stdout. It runs no
+          pipeline, spawns no agent and writes nothing: it is arithmetic over the archive, so it is always safe
+          to call.
+        </p>
+        <pre class="code"><span class="c-amber">$</span> revmux stats                    <span class="c-dim"># every task under the tasks root</span>
+<span class="c-amber">$</span> revmux stats --task pr-123      <span class="c-dim"># one task</span>
+
+{
+  "tasks": [
+    {"id": "pr-123", "description": "the auth refactor", "rounds": 5,
+     "size_mb": 6.6, "last_run": "2026-07-27", "skipped": [],
+     "agents": [{"name": "bugs+impl", "raised": 8, "survived": 8, "corroborated": 5,
+                 "degraded_rounds": 0, "retries": 0, "tokens": 10441185}],
+     "lenses": [{"name": "bugs", "raised": 14, "ambiguous": 3,
+                 "verdicts": {"confirmed": 4, "refined": 6, "unverified": 4}}],
+     "stages": [{"name": "synthesis", "in": 62, "out": 46},
+                {"name": "verify", "in": 46, "out": 46},
+                {"name": "report", "in": 46, "out": 46}]}
+  ],
+  "totals": {"rounds": 5, "size_mb": 6.6, "last_run": "2026-07-27", ...}
+}</pre>
+        <p>
+          <strong>Per agent.</strong> <code>raised</code> is what it put on the table before synthesis merged
+          anything; <code>survived</code> is what was still there in the round's last stage snapshot, counted
+          across all four of that report's arrays; and <code>corroborated</code> is the subset of those another
+          agent independently reached. The attribution is exact rather than model-supplied.
+        </p>
+        <p>
+          <strong>Per lens.</strong> <code>raised</code> counts the find stage only, since after synthesis a
+          finding's <code>lenses</code> is a union across merged findings from different agents.
+          <code>ambiguous</code> is the part of it attributable only by the raising agent's whole lens set, which
+          is what the find stage falls back to when the model named no valid lens. A per-lens number is only as
+          good as its <code>ambiguous</code> share, so the two belong together wherever either is quoted.
+        </p>
+        <p>
+          A lens whose <code>raised</code> sits well above its verdict total lost findings somewhere between the
+          two, but not necessarily to the verifier: synthesis merging two findings that carry the same lens
+          produces the same gap. Read it as attrition to look into rather than as rejections counted.
+        </p>
+        <p>
+          <strong>Per stage.</strong> <code>in</code> and <code>out</code> for <code>synthesis</code>,
+          <code>verify</code> and <code>report</code>, each the union of that report's four finding arrays.
+          <code>report</code> carries the <code>--min-confidence</code> attrition, and there is no
+          <code>find</code> entry since nothing goes into it. <code>reclassified</code> and
+          <code>refined</code> are there because <code>in</code> and <code>out</code> understate verification
+          badly: a finding moved into <code>immaterial</code> or <code>pre_existing</code> leaves the total
+          unchanged. Over one corpus verify dropped 2 findings of the 150 that reached it while lowering the
+          severity of 28.
+        </p>
+        <p>
+          <strong>Per task.</strong> <code>size_mb</code> is what the task occupies, summed from file sizes
+          rather than disk blocks. <code>last_run</code> is the <code>finished_at</code> of the newest round's
+          <code>manifest.json</code>, so it says when the task was last reviewed rather than when anything last
+          touched the directory. A round skipped because its artifacts would not decode is named in
+          <code>skipped</code>, with the artifact and the reason, so a corpus that shrank does not read as a
+          corpus that is simply smaller.
+        </p>
+        <p>
+          Every survivor and every per-lens number comes from the per-stage snapshots under
+          <code>stages/</code>, never from the round's <code>findings.json</code>, which is the filtered report.
+          Two numbers come from elsewhere and say so: the <code>report</code> stage entry reads
+          <code>findings.json</code> precisely to measure what the filter removed, and <code>retries</code>
+          comes from <code>events.jsonl</code>.
+        </p>
+
+        <h2 id="cleanup">revmux cleanup <a class="anchor" href="#cleanup">#</a></h2>
+        <p>
+          <code>revmux cleanup --task &lt;id&gt;</code> removes one task and everything under it, and prints what
+          went as JSON. It is the only thing in revmux that deletes anything: a review, <code>new</code>,
+          <code>init</code>, <code>config</code> and <code>stats</code> remove nothing, so nothing is ever
+          removed as a side effect of doing something else.
+        </p>
+        <pre class="code"><span class="c-amber">$</span> revmux cleanup --task since-1f21e93
+{
+  "tasks_dir": "/repo/.revmux/tasks",
+  "removed": [{"id": "since-1f21e93", "rounds": 5, "size_mb": 6.6}],
+  "total_mb_after": 6.4
+}</pre>
+        <p>
+          The archive grows by roughly half a megabyte per round and revmux never prunes on its own, so
+          reclaiming is a decision rather than a policy. There is no age threshold, no size cap and no all-tasks
+          form. What to remove is read off <code>revmux stats</code>, which reports every task's size, round
+          count, description and date.
+        </p>
+        <p>
+          <strong>It removes a whole task, never a round inside one.</strong> A task's rounds are one review's
+          history and are read together; a task that quietly lost its early rounds would keep being reported by
+          <code>revmux stats</code> as the whole record.
+        </p>
+        <div class="note warn">
+          <p>
+            <b>It refuses more than it removes.</b> A name that is not one task directly under the tasks root is
+            an error and nothing is removed. An absent <code>--task</code> names the flag rather than meaning
+            every task. A task a running review holds is refused, though that is a check taken as it goes rather
+            than a lock held across the removal, so do not run it against a task under review.
+          </p>
+        </div>
+
+        <h2 id="skills">Agent skills <a class="anchor" href="#skills">#</a></h2>
+        <p>
+          revmux is built to be driven by a caller model, and the repository ships that caller as a skill for
+          two harnesses. The skill does the half revmux deliberately does not: it resolves what is being
+          reviewed, runs the git commands, writes the round's <code>input/</code>, launches revmux, reads the
+          JSON back, and opens a new round on the same task after fixes.
+        </p>
+        <div class="scroll-x">
+          <table class="tbl">
+            <thead>
+              <tr><th>harness</th><th>location</th><th>install</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Claude Code</td>
+                <td><code>.claude-plugin/skills/revmux/</code></td>
+                <td class="prose">
+                  <code>/plugin marketplace add umputun/revmux</code> then
+                  <code>/plugin install revmux@revmux</code>
+                </td>
+              </tr>
+              <tr>
+                <td>Codex CLI</td>
+                <td><code>plugins/codex/skills/revmux/</code></td>
+                <td class="prose"><code>cp -r plugins/codex/skills/revmux ~/.codex/skills/revmux</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Asked for a pull request, the skill fetches the head into a throwaway worktree, points
+          <code>--workdir</code> at it while running from the main checkout, so the archive outlives the
+          checkout and the branch's own <code>.revmux/</code> never loads, and removes both the worktree and the
+          temp branch afterwards. Asked to triage a filed item instead of a change, it gathers the issue or
+          discussion, its thread and the author's history into <code>context/</code>, runs the
+          <code>triage</code> panel over them and puts the maintainer's six answers to him with the arguments
+          behind each.
+        </p>
+        <p>Both trees carry the same reference material and the same scripts:</p>
+        <dl class="deflist">
+          <dt>preflight.sh</dt>
+          <dd>check revmux plus the binaries a given profile and invocation need, <code>--lenses</code> included</dd>
+          <dt>task-state.sh</dt>
+          <dd>
+            resolve the tasks root from <code>revmux config</code> and report what a task holds: its
+            <code>task.md</code> anchors, its rounds, and each round's <code>input/</code> state
+          </dd>
+          <dt>launch-revmux.sh</dt>
+          <dd>
+            run revmux with its TUI in a terminal overlay (agterm, tmux, Zellij, herdr, kitty, wezterm, cmux,
+            ghostty, iTerm2, Emacs vterm), returning the report on stdout and revmux's own exit code
+          </dd>
+          <dt>analyze-corpus.py</dt>
+          <dd>
+            read the run archive and report what it says about the review itself: which stage is filtering,
+            which lens rates hardest, whether the gating count converges
+          </dd>
+        </dl>
+        <p>
+          The launcher exists because an agent's shell has no tty, so the TUI never appears there. The overlay
+          is how a user watches a review happen; everything else about the run is identical. It forwards
+          <code>PATH</code> into the overlay deliberately, since revmux spawns <code>claude</code> and
+          <code>codex</code> itself and an overlay shell inherits an environment that predates the user's shell
+          rc files. <code>ANTHROPIC_API_KEY</code> is not forwarded, since an <code>env KEY=VAL</code> prefix
+          would put it in the process argv.
+        </p>
+
+        <h2 id="development">Development <a class="anchor" href="#development">#</a></h2>
+        <pre class="code">make build    <span class="c-dim"># build .bin/revmux</span>
+make install  <span class="c-dim"># symlink .bin/revmux into $BINDIR (default /usr/local/bin)</span>
+make test     <span class="c-dim"># race detector plus coverage, mocks excluded</span>
+make lint     <span class="c-dim"># golangci-lint plus shellcheck over the shipped scripts</span>
+make fmt      <span class="c-dim"># gofmt and goimports</span></pre>
+        <p>
+          No test spawns a real model. The executors are driven through a mocked <code>CommandRunner</code>
+          against recorded CLI fixtures, the pipeline through mocked runners, and the TUI through synthetic
+          bubbletea messages. revmux is MIT licensed;
+          <a href="https://github.com/umputun/revmux">the source is on GitHub</a>.
+        </p>
+      </main>
+    </div>
+
+    <footer>
+      <div class="wrap cols">
+        <div class="set">
+          <b>revmux</b>
+          <a href="/">home</a>
+          <a href="/reference">reference</a>
+          <a href="https://github.com/umputun/revmux">source</a>
+          <a href="https://github.com/umputun/revmux/releases">releases</a>
+        </div>
+        <div class="set">
+          <b>license</b>
+          <span class="c-dim">MIT, © umputun</span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,39 @@
+# revmux
+
+> Supervised multi-agent code review: spawns claude and codex subprocesses, watches them, returns findings as JSON
+
+revmux runs a structured multi-agent code review by spawning and supervising `claude --print` and `codex exec` subprocesses, then returning findings on stdout. It exists because agent fan-out driven from inside an AI coding session is unobservable and unrecoverable: agents go quiet for minutes, sometimes never return, and the caller has no timeout, no kill, no retry and no progress. A subprocess does not make the model faster. What it buys is control: a watchdog that notices a stall, a kill and retry the caller owns, a live view of every agent, per-agent token counts, and a run archive that can be audited afterwards.
+
+revmux runs a review and returns findings, and does nothing else. It performs no scope detection, no git operations, no PR fetching and no source modification, and it has zero VCS dependency. All review context is written to disk by the caller as a task round and passed in with `--task` and `--run`.
+
+## Key Features
+
+- Three fixed stages: parallel find across a roster of lens agents, one synthesis call that dedupes and boosts corroborated findings, then parallel verification grouped so no verifier anchors on a neighbour
+- Supervision: per-agent idle and hard timeouts, one automatic retry, and degrade-rather-than-abort with the missing source named in the report
+- Cross-source confidence: a source is a process, never a lens, so an agent cannot corroborate itself; Go stamps the attribution and no schema exposes it to the model
+- Profiles and lenses are files resolved per file across project, user and embedded layers, so a project's review rules ship with its repository
+- One `model:` string per agent or stage selects binary, model and effort together, so claude and codex mix inside one review
+- Run archive per round: composed prompts, verbatim agent output, per-stage findings, an event log of stalls and retries, and a manifest recording prompt provenance and requested vs actual model
+- Task rounds: a review, some fixes, another round, with prior rounds injected into every prompt along with an instruction to judge them independently
+- Terminal UI with a per-process status table and a findings browser, or timestamped stderr lines with `--no-tui`
+- JSON on stdout by default with `--markdown` as the alternative, and exit codes 0, 1, 2 that callers script against
+- Caller shipped as an agent skill for Claude Code and Codex CLI, including a launcher that runs the TUI in a terminal overlay
+
+## Docs
+
+- [Documentation](https://revmux.com/docs): the full user guide covering install, task rounds, the three stages, profiles, lenses, configuration, the report, the run archive, the terminal UI and every subcommand
+- [Reference](https://revmux.com/reference): every flag, config key, front-matter key, lens, prompt variable, JSON field, verdict and exit code
+- [README](https://github.com/umputun/revmux/blob/master/README.md): the project synopsis, with install and a quick start
+
+## Install
+
+- `go install github.com/umputun/revmux/app@latest` (installs as `app`, rename it to `revmux`)
+- From a clone: `make build` produces `.bin/revmux`, `make install` symlinks it into `/usr/local/bin`
+- The model CLIs the chosen profile names must be installed and authenticated; `preflight.sh` in the shipped skill checks any invocation
+
+## Optional
+
+- [Home page](https://revmux.com): what it does, the pipeline, the archive and the shipped profiles
+- [Source](https://github.com/umputun/revmux): MIT licensed
+- [Issues](https://github.com/umputun/revmux/issues): bug reports
+- [agterm](https://agterm.com): the terminal whose overlay the shipped launcher uses to show a live review
