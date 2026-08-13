@@ -208,7 +208,7 @@
               <span class="eyebrow">watchdog</span>
               <h3>A stall is caught and relaunched</h3>
               <p>
-                An agent with nothing on its output for the idle timeout is killed and retried once. If the
+                A finder with nothing on its output for the idle timeout is killed and retried once. If the
                 second attempt fails too, the run carries on without it: the report names the missing source
                 and synthesis is told the real count, so the other agents' work still reaches you. Only a run
                 where every source failed is an error.
@@ -413,9 +413,10 @@
                 alt="The input snapshot view showing the round's scope.md rendered as a markdown document"
               />
               <figcaption>
-                <b>What it was asked.</b> The input snapshot renders this round's <code>scope.md</code>,
-                <code>goal.md</code>, <code>profile.md</code> and every context file as markdown documents, so
-                the context the agents were given is one keystroke away from the run they are doing.
+                <b>What it was asked.</b> The input snapshot shows this round's <code>scope.md</code>,
+                <code>goal.md</code>, <code>profile.md</code> and every context file, markdown rendered as a
+                document and other text shown as it is, so the context the agents were given is one keystroke
+                away from the run they are doing.
               </figcaption>
             </figure>
           </div>
@@ -760,7 +761,8 @@ roster receives, including what counts as critical, major and minor here.</pre>
                 JSON is the default because the usual reader is the agent that launched the run, which decides
                 what to fix, what to argue with and what to put in front of you. <code>--markdown</code> is for
                 when a person is the one reading. The terminal UI renders to the tty and progress lines go to
-                stderr, so <code>revmux &gt; findings.json</code> works with the display running.
+                stderr, so <code>revmux --task pr-123 --run 02-after-fix &gt; findings.json</code> works with the
+                display running.
               </p>
             </div>
           </div>

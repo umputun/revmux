@@ -305,11 +305,18 @@ revmux --task pr-123 --run 02-after-fix &gt; findings.json</pre>
 
         <h2 id="supervision">Supervision and degrade <a class="anchor" href="#supervision">#</a></h2>
         <p>
-          An agent that produces no output for <code>--idle-timeout</code> (2m by default) is killed and retried
-          once. So is one that exceeds <code>--hard-timeout</code> (20m per attempt). On a second failure the
-          agent is marked degraded and the run continues: the report banner names the missing agent, and
-          synthesis is told the real source count rather than being left to assume a full roster. A run where
-          every source degraded is a tool error, not a clean empty report.
+          A <strong>finder</strong> that produces no output for <code>--idle-timeout</code> (2m by default) is
+          killed and retried once. So is one that exceeds <code>--hard-timeout</code> (20m per attempt). On a
+          second failure the agent is marked degraded and the run continues: the report banner names the
+          missing agent, and synthesis is told the real source count rather than being left to assume a full
+          roster. A run where every source degraded is a tool error, not a clean empty report.
+        </p>
+        <p>
+          <strong>Verification is single-attempt.</strong> A verifier that fails, times out, or answers with
+          something carrying no verdicts leaves its own group <code>unverified</code> rather than being
+          relaunched, and a verdict the model omits or spells wrongly leaves that one finding
+          <code>unverified</code>. The findings themselves are never dropped by such a failure: silence from a
+          verifier is not a rejection.
         </p>
         <p>
           Agent processes are started in their own session, so the terminal never signals them directly. A
@@ -442,7 +449,7 @@ Reviewing the token exchange path after the provider swap.</pre>
         <p>
           <strong>Prompt and lens files</strong> resolve from <code>./.revmux/</code>, then
           <code>~/.config/revmux/</code>, then the defaults built into the binary, <strong>per file</strong>.
-          Overriding one lens does not orphan the other six, and deleting an override falls back to the embedded
+          Overriding one lens leaves every other lens where it was, and deleting an override falls back to the embedded
           copy rather than disabling the lens. To actually drop a lens, remove it from the profile roster.
         </p>
 
@@ -753,7 +760,7 @@ receives, including what counts as critical, major and minor here.</pre>
         <p>
           The report goes to <strong>stdout</strong> as JSON, or as markdown with <code>--markdown</code>. The
           TUI renders to the tty and progress lines go to stderr, so
-          <code>revmux --task pr-123 &gt; findings.json</code> works with the display running. The TUI is gated
+          <code>revmux --task pr-123 --run 02-after-fix &gt; findings.json</code> works with the display running. The TUI is gated
           on the tty being openable, never on stdout being a terminal, which is false in exactly that
           invocation.
         </p>
@@ -788,8 +795,8 @@ receives, including what counts as critical, major and minor here.</pre>
           <code>line</code> is the anchor and <code>end_line</code> is optional: zero means a single line, and a
           zero <code>line</code> means a file-level finding that renders as the bare path.
           <code>verdict</code> is one of <code>confirmed</code>, <code>refined</code>, <code>rejected</code>,
-          <code>immaterial</code>, <code>pre_existing</code>, or <code>unverified</code> when the verify stage
-          was skipped. Empty lists are emitted as arrays rather than <code>null</code>.
+          <code>immaterial</code>, <code>pre_existing</code>, or <code>unverified</code> when nobody checked it,
+          whether because the stage was skipped or because that group's verifier failed. Empty lists are emitted as arrays rather than <code>null</code>.
         </p>
         <p>
           <code>--min-confidence</code> filters once, before anything renders, and the printed report, the
@@ -859,7 +866,7 @@ receives, including what counts as critical, major and minor here.</pre>
 │   ├── bugs+impl.jsonl       claude stream-json
 │   ├── bugs+impl.retry.jsonl a retried agent keeps both attempts
 │   └── codex.log             codex prose
-├── report.md                 the filtered report, byte for byte what the caller was shown
+├── report.md                 the filtered report rendered as markdown, what --markdown writes
 └── findings.json</pre>
         <p>
           <code>manifest.json</code> records which of the three precedence layers supplied each prompt file and

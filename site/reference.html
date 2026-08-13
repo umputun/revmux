@@ -139,6 +139,15 @@
               <tr><td>--no-tui</td><td></td><td class="prose">disable the terminal UI</td></tr>
               <tr><td>--markdown</td><td></td><td class="prose">write the report as markdown instead of JSON</td></tr>
               <tr><td>--preserve-anthropic-api-key</td><td></td><td class="prose">pass <code>ANTHROPIC_API_KEY</code> to the model CLIs</td></tr>
+              <tr><td>--idle-timeout=&lt;d&gt;</td><td>2m</td><td class="prose">kill and retry an agent after this long with no output. Also a <a href="#knobs">config key</a></td></tr>
+              <tr><td>--hard-timeout=&lt;d&gt;</td><td>20m</td><td class="prose">kill an agent after this long, per attempt. Also a config key</td></tr>
+              <tr><td>--stagger-delay=&lt;d&gt;</td><td>30s</td><td class="prose">how long to wait for the first agent before releasing the rest. Also a config key</td></tr>
+              <tr><td>--max-parallel=&lt;n&gt;</td><td>4</td><td class="prose">how many agents run at once. Also a config key</td></tr>
+              <tr><td>--verify-groups=&lt;n&gt;</td><td>6</td><td class="prose">cap on the number of verifier groups. Also a config key</td></tr>
+              <tr><td>--verify-group-by=&lt;k&gt;</td><td>dir</td><td class="prose"><code>dir</code> or <code>source</code>. Also a config key</td></tr>
+              <tr><td>--tasks-dir=&lt;dir&gt;</td><td>./.revmux/tasks</td><td class="prose">root directory holding task directories. Also a config key</td></tr>
+              <tr><td>--auto-exit=&lt;d&gt;</td><td>0s</td><td class="prose">close the terminal UI this long after the report arrives; 0 never closes it. Also a config key</td></tr>
+              <tr><td>--profile=&lt;name&gt;</td><td>comprehensive</td><td class="prose">profile naming the roster to run. Also a config key</td></tr>
               <tr><td>--config-dir=&lt;dir&gt;</td><td>~/.config/revmux</td><td class="prose">directory holding the config file and the prompt tree</td></tr>
               <tr><td>--init</td><td></td><td class="prose">materialize the resolved config and prompt tree into <code>./.revmux/</code></td></tr>
               <tr><td>--dump-defaults=&lt;dir&gt;</td><td></td><td class="prose">extract the embedded prompt tree into a directory</td></tr>
@@ -149,9 +158,10 @@
 
         <h2 id="knobs">Config keys <a class="anchor" href="#knobs">#</a></h2>
         <p>
-          These read from <code>./.revmux/config</code> and <code>~/.config/revmux/config</code> under the same
-          name as the flag, INI format. Command line wins, then project, then user, then the default, merged per
-          key.
+          The nine runtime knobs above also read from <code>./.revmux/config</code> and
+          <code>~/.config/revmux/config</code>, under the same name as the flag, in INI format. Command line
+          wins, then project, then user, then the default, merged per key. Every other flag is command line
+          only.
         </p>
         <div class="scroll-x">
           <table class="tbl">
@@ -202,8 +212,9 @@
               <tr>
                 <td>revmux init</td>
                 <td class="prose">
-                  materializes <code>./.revmux/</code> from what resolved, reporting each file's source layer.
-                  <code>--init</code> is the same thing behind a flag
+                  materializes each prompt file into <code>./.revmux/</code> from the layer that won it, reporting which
+                  one that was, and writes the config from the shipped commented template rather than from
+                  what resolved. <code>--init</code> is the same thing behind a flag
                 </td>
               </tr>
               <tr>
@@ -445,7 +456,7 @@ claude/opus:hgih         <span class="c-crimson">refused: not an effort</span></
               <tr><td>rejected</td><td class="prose">does not hold; dropped from the report</td></tr>
               <tr><td>immaterial</td><td class="prose">true and not worth acting on; moved to <code>immaterial</code></td></tr>
               <tr><td>pre_existing</td><td class="prose">real but not introduced here; moved to <code>pre_existing</code></td></tr>
-              <tr><td>unverified</td><td class="prose">the verify stage was skipped with <code>--no-verify</code></td></tr>
+              <tr><td>unverified</td><td class="prose">nobody checked it: the stage was skipped with <code>--no-verify</code>, its verifier group failed, or the model returned no usable verdict for it</td></tr>
             </tbody>
           </table>
         </div>

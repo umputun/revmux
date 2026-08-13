@@ -9,7 +9,7 @@ revmux runs a review and returns findings, and does nothing else. It performs no
 ## Key Features
 
 - Three fixed stages: parallel find across a roster of lens agents, one synthesis call that dedupes and boosts corroborated findings, then parallel verification grouped so no verifier anchors on a neighbour
-- Supervision: per-agent idle and hard timeouts, one automatic retry, and degrade-rather-than-abort with the missing source named in the report
+- Supervision: per-finder idle and hard timeouts, one automatic retry, and degrade-rather-than-abort with the missing source named in the report; verification is single-attempt and leaves a failed group `unverified` rather than dropping its findings
 - Cross-source confidence: a source is a process, never a lens, so an agent cannot corroborate itself; revmux stamps the attribution itself and no schema exposes it to the model
 - Profiles and lenses are files resolved per file across project, user and embedded layers; the eight shipped profiles are starting points, and adding a file under `prompts/profiles/` or `lenses/` is all it takes to have your own
 - A profile composes any number of agents, each with its own lens set and optionally its own binary, model and effort, and the two stages choose separately, so one review can mix vendors and effort levels

@@ -25,7 +25,7 @@ Nothing else does: the two sets share the composer and nothing else, so a change
 cannot reach the panel and a change to a panel lens cannot reach a review.
 
 Precedence, per file: `./.revmux/` > `~/.config/revmux/` > `go:embed` defaults.
-Per-**file** fallback, not per-directory — overriding one lens must not orphan the other six.
+Per-**file** fallback, not per-directory — overriding one lens must not orphan the rest.
 
 There is no per-file CLI flag in that chain, unlike the runtime knobs in `config`.
 `--profile` names a profile, not a path, and `--config-dir` relocates the whole tree;

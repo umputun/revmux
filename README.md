@@ -144,9 +144,11 @@ findings and anchors on them, which is exactly what the cross-source confidence 
 two lenses that flags the same issue under both is still one source: it cannot corroborate itself. revmux
 stamps the attribution itself once the output is parsed; no schema exposes it to the model.
 
-**Degrade, never abort.** A stalled or crashed agent is killed, retried once, and on a second failure marked
-degraded while the run continues. The report banner names the missing agent, and synthesis is told the real
-source count. A run where *every* source degraded is a tool error, not a clean empty report.
+**Degrade, never abort.** A stalled or crashed **finder** is killed, retried once, and on a second failure
+marked degraded while the run continues. The report banner names the missing agent, and synthesis is told the
+real source count. A run where *every* source degraded is a tool error, not a clean empty report.
+Verification is single-attempt instead: a verifier that fails leaves its group `unverified` rather than being
+relaunched, and never drops the findings it was given.
 
 ## Task rounds
 
@@ -179,7 +181,8 @@ review auditable without re-running it. [The archive layout](https://revmux.com/
 ## Output
 
 The report goes to **stdout** as JSON, or as markdown with `--markdown`. The TUI renders to the tty and
-progress lines go to stderr, so `revmux --task pr-123 > findings.json` works with the display running.
+progress lines go to stderr, so `revmux --task pr-123 --run 02-after-fix > findings.json` works with the
+display running.
 
 ```json
 {
@@ -256,8 +259,9 @@ stages:
 ```
 
 Prompt text resolves per file across three layers: `./.revmux/`, then `~/.config/revmux/`, then the
-defaults built into the binary. `revmux init` materializes whatever resolved into `./.revmux/` so there is
-something local to edit, and `--dump-defaults <dir>` extracts the embedded tree for a diff.
+defaults built into the binary. `revmux init` copies each prompt file down into `./.revmux/` from the layer
+that won it, so there is something local to edit, and writes the config from the shipped commented template
+rather than from what resolved. `--dump-defaults <dir>` extracts the embedded tree for a diff.
 
 **Checked in, `.revmux/` is the project's review standard.** What a project cares about, its conventions,
 what counts as major, the mistakes it keeps repeating, usually lives in a maintainer's head and reaches
