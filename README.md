@@ -22,10 +22,10 @@ the **[reference](https://revmux.com/reference)**.
 
 ## Why
 
-**Every agent is visible, and every stall is recoverable.** Each model runs as a subprocess revmux owns, so
-it can be watched, timed, killed and relaunched: a watchdog on each one, a live view of what it is doing and
+**Every agent is visible, and every phase recoverable.** Each model runs as a subprocess revmux owns, so it
+can be watched, timed, killed and relaunched: a watchdog on each one, a live view of what it is doing and
 what it has spent, one automatic retry, and a run archive to debug a bad review afterwards. Fan-out driven
-from inside an AI coding session has none of that, and agents that go silent for minutes cannot be recovered
+from inside an AI coding session has none of that, and agents that go quiet for minutes cannot be recovered
 from there. A subprocess does not make the model faster; it makes the run something the caller can hold on
 to.
 
