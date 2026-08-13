@@ -93,6 +93,7 @@ subscription auth; pass `--preserve-anthropic-api-key` if you authenticate by ke
 $ revmux new --task pr-123 --run 01-initial
 {
   "task_dir": "/abs/.revmux/tasks/pr-123",
+  "task_file": "/abs/.revmux/tasks/pr-123/task.md",
   "round_dir": "/abs/.revmux/tasks/pr-123/01-initial",
   "input_dir": "/abs/.revmux/tasks/pr-123/01-initial/input",
   "scope": "/abs/.revmux/tasks/pr-123/01-initial/input/scope.md",
@@ -284,7 +285,7 @@ All five print JSON on stdout and exit before any review starts.
 |---|---|
 | `revmux config` | reports the resolved configuration: knobs with their precedence layer, every profile, lens and stage, and the task store |
 | `revmux new` | creates a task, a round and its `input/`, and prints every path plus which of them it created |
-| `revmux init` | materializes `./.revmux/` from what resolved, reporting each file's source layer |
+| `revmux init` | copies each prompt file down from the layer that won it, reporting which one that was, and writes the config from the shipped template |
 | `revmux stats` | arithmetic over the archive: per agent, per lens, per stage and per task |
 | `revmux cleanup` | removes one named task and everything under it, the only command that deletes anything |
 

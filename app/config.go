@@ -67,13 +67,13 @@ type options struct {
 	Profile       string        `long:"profile" ini-name:"profile" default:"comprehensive" description:"profile naming the roster to run"`
 
 	ConfigDir    string `long:"config-dir" no-ini:"true" description:"directory holding the config file and the prompt tree"`
-	Init         bool   `long:"init" no-ini:"true" description:"materialize the resolved config and prompt tree into ./.revmux/"`
+	Init         bool   `long:"init" no-ini:"true" description:"materialize the resolved prompt tree and a config template into ./.revmux/"`
 	DumpDefaults string `long:"dump-defaults" no-ini:"true" description:"extract the embedded prompt tree into a directory"`
 	Version      bool   `long:"version" no-ini:"true" description:"show version and exit"`
 
 	Config  configCmd  `command:"config" description:"print the resolved configuration as JSON"`
 	New     newCmd     `command:"new" description:"create a task round and print the paths its context goes in"`
-	InitCmd initCmd    `command:"init" description:"materialize the resolved config and prompt tree into ./.revmux/"`
+	InitCmd initCmd    `command:"init" description:"materialize the resolved prompt tree and a config template into ./.revmux/"`
 	Stats   statsCmd   `command:"stats" description:"print what past rounds produced, per agent and per lens, as JSON"`
 	Cleanup cleanupCmd `command:"cleanup" description:"remove the task named by --task, with every round it holds"`
 
