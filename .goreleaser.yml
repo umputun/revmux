@@ -39,15 +39,22 @@ nfpms:
       - deb
       - rpm
 
-brews:
-  - ids:
+homebrew_casks:
+  - name: revmux
+    ids:
       - revmux
     repository:
       owner: umputun
       name: homebrew-apps
-    directory: Formula
     homepage: https://github.com/umputun/revmux
     description: Supervised multi-agent code review with parallel claude and codex subprocesses
     license: MIT
-    test: |
-      system "#{bin}/revmux", "--version"
+    binaries:
+      - revmux
+    # the release binaries are unsigned, so macOS quarantines what brew downloads
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/revmux"]
+          end

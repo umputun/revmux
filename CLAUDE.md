@@ -565,6 +565,21 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
   is worse than one that omits it: the caller acts on it confidently and has to recover afterwards.
   Treat `.claude-plugin/skills/` and `plugins/codex/` as consumers of `app/config.go`, `app/finding/`
   and `app/archive/` the way `README.md` and `site/` are.
+- **How revmux is installed is stated in twelve places across eleven files**, and every one of them leads
+  with Homebrew, since that is the path a reader should take.
+  The README's install section; `site/index.html` twice, in the hero copy line and in the install section;
+  `site/docs.html`'s install section; `site/llms.txt`; `SKILL.md`'s absent-revmux block, `preflight.sh`'s
+  missing-binary hint and `launch-revmux.sh`'s, each in **both** skill trees; and the requirements list in
+  `plugins/codex/README.md`.
+  The two scripts print theirs at the moment a user is blocked, so a stale command there is read as the
+  answer rather than as documentation.
+  What backs it is `homebrew_casks:` in `.goreleaser.yml`, published to `umputun/homebrew-apps` when a `v*`
+  tag is pushed. It is a cask rather than a formula — the `brews:` key is deprecated — so the tap entry lands
+  in `Casks/`, a post-install hook clears the macOS quarantine flag from the unsigned binary, and Linux is
+  served by the release archives and the `.deb` and `.rpm` packages rather than by brew, which supports
+  casks on macOS only.
+  `goreleaser check` is the gate on that file and must pass; `goreleaser release --snapshot --clean
+  --skip=publish` renders the cask into `dist/homebrew/Casks/` without publishing anything.
 - A new prompt input — a variable, an injected block, a per-agent knob — needs a matching record in
   `manifest.json` or the archived prompt, or a reflection agent cannot tell what shaped the review.
 - Changing any of the three stage schemas means changing the embedded JSON under `app/finding/`

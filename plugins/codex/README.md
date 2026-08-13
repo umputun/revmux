@@ -13,8 +13,8 @@ conventions.
 
 ## Requirements
 
-- `revmux` — `go install github.com/umputun/revmux/app@latest` (installs as `app`, rename it), or
-  clone and `make install`
+- `revmux` — `brew install umputun/apps/revmux` on macOS, a binary from the releases page, or
+  `go install github.com/umputun/revmux/app@latest` (installs as `app`, rename it)
 - `claude` — every lens agent and both model stages run on it by default
 - `codex` — needed by any profile, roster entry or stage naming it in a `model:`, which every shipped
   profile does

@@ -52,7 +52,8 @@ PID_GRACE_SECONDS=10
 REVMUX_BIN=$(command -v revmux 2>/dev/null || true)
 if [ -z "$REVMUX_BIN" ]; then
     echo "error: revmux not found in PATH" >&2
-    echo "install: go install github.com/umputun/revmux/app@latest (installs as 'app', rename it)" >&2
+    echo "install: brew install umputun/apps/revmux (macOS)" >&2
+    echo "     or: go install github.com/umputun/revmux/app@latest (installs as 'app', rename it)" >&2
     echo "     or: git clone https://github.com/umputun/revmux.git && cd revmux && make install" >&2
     exit 127
 fi
