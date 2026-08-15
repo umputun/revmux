@@ -45,10 +45,11 @@ func (w *treeWriter) close() error {
 // between the look and the write.
 func (w *treeWriter) write(relPath string, data []byte) (bool, error) {
 	if dir := path.Dir(relPath); dir != "." {
-		// an escaping link occupying a directory name reports ErrExist here and is named by the entry
-		// check below, which says where the path leaves the destination rather than that it is taken
+		// an escaping link occupying a directory name is refused here rather than at the entry check
+		// below, so the failure names the entry: the directory alone does not say which file was
+		// refused. A link landing back inside the destination is followed and reports ErrExist.
 		if err := w.root.MkdirAll(dir, 0o750); err != nil && !errors.Is(err, fs.ErrExist) {
-			return false, fmt.Errorf("create %s: %w", w.dest(dir), err)
+			return false, fmt.Errorf("create %s: %w", w.dest(relPath), err)
 		}
 	}
 
