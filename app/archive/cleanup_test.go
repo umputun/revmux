@@ -75,6 +75,8 @@ func TestCleanup(t *testing.T) {
 	})
 }
 
+// the idle check releases each round's lock as it moves on, so it must leave none behind on a task it
+// refused: a lock still held would block the next review from claiming that round.
 func TestCleanup_refusals(t *testing.T) {
 	t.Run("no task named", func(t *testing.T) {
 		_, err := Cleanup(CleanupQuery{TasksDir: t.TempDir()})
@@ -123,7 +125,6 @@ func TestCleanup_refusals(t *testing.T) {
 		assert.DirExists(t, round, "nothing is removed while a review is writing into it")
 	})
 
-	// the check releases as it goes, so it must not leave a lock behind that blocks the next review
 	t.Run("the check leaves no lock behind on a task it refused", func(t *testing.T) {
 		root := t.TempDir()
 		round := filepath.Join(root, "alpha", "01-initial")
@@ -165,9 +166,9 @@ func TestCleanup_refusals(t *testing.T) {
 	})
 }
 
+// task.List accepts a task directory that is a relative symlink to a sibling, and every read path follows
+// it — so cleanup reaches one and must not report the alias as the history it points at.
 func TestCleanup_alias(t *testing.T) {
-	// task.List accepts a task directory that is a relative symlink to a sibling, and every read path
-	// follows it — so cleanup reaches one and must not report the alias as the history it points at
 	t.Run("a symlinked task is refused, naming what it points at", func(t *testing.T) {
 		root := t.TempDir()
 		recordRound(t, filepath.Join(root, "pr-123", "01-initial"), map[string]finding.Report{
@@ -205,9 +206,9 @@ func TestCleanup_alias(t *testing.T) {
 	})
 }
 
+// a task holding one unreadable directory must still be removable, or the user is pushed back to the
+// rm -rf this command exists to replace.
 func TestCleanup_unreadableEntry(t *testing.T) {
-	// a task holding one unreadable directory must still be removable, or the user is pushed back to the
-	// rm -rf this command exists to replace
 	t.Run("a task with an unreadable directory is still removed, its size a floor", func(t *testing.T) {
 		if os.Geteuid() == 0 {
 			t.Skip("root traverses a 0000 directory regardless of its mode")

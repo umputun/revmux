@@ -160,6 +160,9 @@ func TestCodex_readRollout(t *testing.T) {
 	})
 }
 
+// codex prints the session id before it creates the rollout, so the file is not there for the first
+// glob. Giving up at that one look silenced a real codex source for a whole review while its rollout
+// filled beside it, which is why the tail keeps looking rather than returning.
 func TestCodex_tailRollout(t *testing.T) {
 	t.Run("an unknown session reports nothing and stops when the run does", func(t *testing.T) {
 		c := NewCodex(nil, Opts{})
@@ -179,9 +182,6 @@ func TestCodex_tailRollout(t *testing.T) {
 		assert.Empty(t, sink.all(), "a session with no rollout reports nothing at all")
 	})
 
-	// codex prints the session id before it creates the rollout, so the file is not there for the first
-	// glob. Giving up at that one look silenced a real codex source for a whole review while its rollout
-	// filled beside it, which is why the tail keeps looking rather than returning.
 	t.Run("a rollout created after the tail starts is still picked up, from its first record", func(t *testing.T) {
 		home := t.TempDir()
 		t.Setenv("CODEX_HOME", home)

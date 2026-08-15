@@ -14,6 +14,8 @@ import (
 	"github.com/umputun/revmux/app/task"
 )
 
+// the reason no --task is declared on the subcommand: a second one would make the two invocations below
+// fill different fields, and the one the caller passed would be the one nothing read.
 func TestParseArgs_statsSubcommand(t *testing.T) {
 	t.Run("the command word selects the corpus reading", func(t *testing.T) {
 		isolate(t)
@@ -32,8 +34,6 @@ func TestParseArgs_statsSubcommand(t *testing.T) {
 		assert.False(t, o.showStats)
 	})
 
-	// the reason no --task is declared on the subcommand: a second one would make these two invocations
-	// fill different fields, and the one the caller passed would be the one nothing read
 	t.Run("--task lands in one field whichever side of the command word it is on", func(t *testing.T) {
 		isolate(t)
 		before, err := parseArgs([]string{"--task", "pr-1", "stats"})
@@ -55,6 +55,8 @@ func TestParseArgs_statsSubcommand(t *testing.T) {
 	})
 }
 
+// ambiguous and the verdict map are the two per-lens numbers a suggestion has to quote, so they have to
+// survive the trip through the payload rather than only through the archive types.
 func TestRun_stats(t *testing.T) {
 	corpusOf := func(t *testing.T, o options) (statsDoc, *runHarness) {
 		t.Helper()
@@ -91,8 +93,6 @@ func TestRun_stats(t *testing.T) {
 		assert.Empty(t, doc.Tasks[0].Skipped, "every round here decodes, and the field is present rather than absent")
 	})
 
-	// ambiguous and the verdict map are the two per-lens numbers a suggestion has to quote, so they have to
-	// survive the trip through the payload rather than only through the archive types
 	t.Run("per-lens ambiguity and verdicts reach stdout", func(t *testing.T) {
 		isolate(t)
 		root := t.TempDir()

@@ -42,6 +42,8 @@ func TestParseArgs_newSubcommand(t *testing.T) {
 	})
 }
 
+// the whole point of the subcommand: what a caller writes to the paths it was handed is what a review of
+// that same round reads, with no path composed anywhere in between.
 func TestRun_new(t *testing.T) {
 	scaffold := func(t *testing.T, o options) (task.Paths, *runHarness) {
 		t.Helper()
@@ -81,8 +83,6 @@ func TestRun_new(t *testing.T) {
 		assert.Equal(t, p.TaskDir, rc.TaskDir, "the task directory, not the round, is what history enumerates")
 	})
 
-	// the whole point of the subcommand: what a caller writes to the paths it was handed is what a review
-	// of that same round reads, with no path composed anywhere in between
 	t.Run("a review of the scaffolded round reads its input and archives into it", func(t *testing.T) {
 		root := t.TempDir()
 		p, _ := scaffold(t, options{TasksDir: root, Task: "pr-123", Run: "01-initial"})

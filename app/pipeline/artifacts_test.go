@@ -18,6 +18,10 @@ import (
 	"github.com/umputun/revmux/app/task"
 )
 
+// in the archive-path subtest both sides of the comparison are the constants' own runtime values,
+// so it cannot see a literal that happens to spell one of them correctly — what it catches is an
+// archived name under none of the seven roots, and a root nothing wrote to. The literal values are
+// pinned in app/archive/archive_test.go
 func TestPipeline_Run_artifacts(t *testing.T) {
 	t.Run("every composed prompt is archived byte for byte", func(t *testing.T) {
 		h, seen := artifactHarness(t)
@@ -205,9 +209,6 @@ func TestPipeline_Run_artifacts(t *testing.T) {
 		assert.NotEmpty(t, kinds[EventStage], "stage transitions are decisions too")
 	})
 
-	// both sides of the comparison are the constants' own runtime values, so this cannot see a literal
-	// that happens to spell one of them correctly — what it catches is an archived name under none of the
-	// seven roots, and a root nothing wrote to. The literal values are pinned in app/archive/archive_test.go
 	t.Run("every archive path lands under an app/task constant", func(t *testing.T) {
 		h, _ := artifactHarness(t)
 

@@ -576,6 +576,8 @@ func synthJSON(items ...string) json.RawMessage {
 	return json.RawMessage(`{"findings":[` + strings.Join(items, ",") + `],"open_questions":[],"pre_existing":[]}`)
 }
 
+// a merge claiming every input is the ordinary case, and the empty result is what suppresses the
+// dropped event entirely — an archive line saying nothing was dropped on every clean round is noise
 func TestSynthesizer_unclaimed(t *testing.T) {
 	s := &synthesizer{}
 	inputs := map[string]finding.Finding{
@@ -591,8 +593,6 @@ func TestSynthesizer_unclaimed(t *testing.T) {
 			"ordered by id, so an archived event does not reorder between two runs of one round")
 	})
 
-	// a merge claiming everything is the ordinary case, and the empty result is what suppresses the
-	// event entirely — an archive line saying nothing was dropped on every clean round is noise
 	t.Run("a merge that claimed every input drops nothing", func(t *testing.T) {
 		claimed := map[string]bool{"bugs+impl-1": true, "bugs+impl-2": true, "codex-1": true}
 		assert.Empty(t, s.unclaimed(inputs, claimed))

@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// one unreadable round under one task must not discard every other task's numbers, and must not be
+// reported as a task occupying nothing either: the total is a floor and says which entry it is missing.
 func TestDirSize(t *testing.T) {
 	t.Run("regular files under the tree are summed, at every depth", func(t *testing.T) {
 		dir := t.TempDir()
@@ -29,8 +31,6 @@ func TestDirSize(t *testing.T) {
 		assert.Empty(t, unread, "an absent dir is not even a skip")
 	})
 
-	// one unreadable round under one task must not discard every other task's numbers, and must not be
-	// reported as a task occupying nothing either: the total is a floor and says which entry it is missing
 	t.Run("an unreadable entry is skipped and named, and what is readable is still summed", func(t *testing.T) {
 		if os.Geteuid() == 0 {
 			t.Skip("root traverses a 0000 directory regardless of its mode")
@@ -90,6 +90,7 @@ func TestMB(t *testing.T) {
 	}
 }
 
+// the rounds argument is task.Rounds' order, which is lexical rather than chronological.
 func TestLastRun(t *testing.T) {
 	write := func(t *testing.T, dir, round, body string) {
 		t.Helper()
@@ -105,7 +106,6 @@ func TestLastRun(t *testing.T) {
 		assert.Equal(t, "2026-07-31", lastRun(dir, []string{"01-initial", "02-after-fix"}))
 	})
 
-	// the rounds argument is task.Rounds' order, which is lexical rather than chronological
 	t.Run("order of the rounds argument does not decide it", func(t *testing.T) {
 		dir := t.TempDir()
 		write(t, dir, "01-initial", `{"finished_at":"2026-07-31T09:00:00Z"}`)

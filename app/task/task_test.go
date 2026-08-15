@@ -665,6 +665,9 @@ func TestRounds(t *testing.T) {
 	})
 }
 
+// metaFile is a task's own metadata one level down, so the tasks root reserves no name at all: a directory
+// called task.md there is a task a review really runs under, and omitting it from the enumeration would
+// hide a task revmux new can still scaffold.
 func TestList(t *testing.T) {
 	root := t.TempDir()
 	for _, name := range []string{"pr-1", "pr-2"} {
@@ -677,9 +680,6 @@ func TestList(t *testing.T) {
 	assert.Equal(t, []string{"pr-1", "pr-2"}, got,
 		"only directories are tasks, and the ids come back in a stable order")
 
-	// metaFile is a task's own metadata one level down, so the tasks root reserves no name at all: a
-	// directory called task.md there is a task a review really runs under, and omitting it from the
-	// enumeration would hide a task revmux new can still scaffold
 	t.Run("no name is reserved at the tasks root", func(t *testing.T) {
 		dir := t.TempDir()
 		require.NoError(t, os.MkdirAll(filepath.Join(dir, metaFile), 0o750))

@@ -250,7 +250,5 @@ func (pr *progress) paint(agent string) string {
 			return spec.Paint(agent)
 		}
 	}
-	// a stage or verify group is not in the roster, and it gets its color from the same place the TUI
-	// takes it, so one agent is one color whichever renderer a reviewer is watching
 	return prompt.DerivedSpec(agent).Paint(agent)
 }

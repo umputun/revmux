@@ -13,6 +13,8 @@ import (
 	"github.com/umputun/revmux/app/task"
 )
 
+// the reason no --task is declared on the subcommand: the one a caller passed would be the one nothing
+// read, and that removes nothing while reporting success.
 func TestParseArgs_cleanupSubcommand(t *testing.T) {
 	t.Run("the command word selects the removal and nothing else", func(t *testing.T) {
 		isolate(t)
@@ -32,8 +34,6 @@ func TestParseArgs_cleanupSubcommand(t *testing.T) {
 		assert.False(t, o.showCleanup)
 	})
 
-	// the reason no --task is declared on the subcommand: the one a caller passed would be the one nothing
-	// read, and here that removes nothing while reporting success
 	t.Run("--task lands in one field whichever side of the command word it is on", func(t *testing.T) {
 		isolate(t)
 		before, err := parseArgs([]string{"--task", "pr-1", "cleanup"})

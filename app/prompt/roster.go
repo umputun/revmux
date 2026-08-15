@@ -50,7 +50,7 @@ var colorPalette = []string{"cyan", "magenta", "green", "yellow", "blue", "red",
 
 var hexColor = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 
-// Each kind of prompt file declares its own front-matter shape rather than sharing one, because unknown
+// each kind of prompt file declares its own front-matter shape rather than sharing one, because unknown
 // keys are rejected and one shared shape accepts every key in every file. Every one of them selects its
 // runner through a single `model:` string — see runner.go — and there is no `executor:` or `effort:` key.
 

@@ -797,6 +797,8 @@ func TestRunOpts_render(t *testing.T) {
 	})
 }
 
+// the reader may close the browser before or after the report reaches it; either way package main is the
+// one writer, which is what these assert.
 func TestRun_reportWrittenOnce(t *testing.T) {
 	base := func(t *testing.T) options {
 		t.Helper()
@@ -809,8 +811,6 @@ func TestRun_reportWrittenOnce(t *testing.T) {
 	found := executor.Result{StructuredOutput: json.RawMessage(
 		`{"findings":[{"file":"a.go","line":1,"severity":"major","confidence":90,"title":"unchecked error"}]}`)}
 
-	// the reader may close the browser before or after the report reaches it; either way package
-	// main is the one writer, which is what these assert
 	t.Run("under the tui", func(t *testing.T) {
 		r := newRunOpts(t, base(t))
 		r.result = found

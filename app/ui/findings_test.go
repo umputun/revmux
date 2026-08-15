@@ -58,7 +58,7 @@ func listedReport() finding.Report {
 func browsed(t *testing.T, rep finding.Report) Model {
 	t.Helper()
 	m := New(ModelConfig{Roster: roster()})
-	// same five-line pane the scroll tests use, so the cursor-follow expectations stay in screenfuls
+	// same five-line pane the scroll tests use, so the scroll expectations stay in screenfuls
 	m = feed(t, m, tea.WindowSizeMsg{Width: 100, Height: len(roster()) + chromeLines + 5},
 		CompletedMsg{Report: rep})
 	return m
@@ -143,9 +143,9 @@ func TestModel_findingsPane(t *testing.T) {
 	})
 }
 
+// the browser has no cursor: it renders the report and the pane's own scrolling reads it, which is the
+// same scrolling every other pane has.
 func TestFindingsState_scroll(t *testing.T) {
-	// the browser has no cursor: it renders the report and the pane's own scrolling reads it, which is
-	// the same scrolling every other pane has
 	t.Run("the arrow and vi keys scroll it like any other pane", func(t *testing.T) {
 		m := browsed(t, report())
 		require.Positive(t, m.maxScroll(), "the report is longer than the pane, or there is nothing to test")

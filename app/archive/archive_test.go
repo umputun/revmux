@@ -448,11 +448,11 @@ func TestNew_liveRound(t *testing.T) {
 	})
 }
 
+// New looks at the round entry and then opens it, and those are two operations: a symlink planted in
+// between is followed by os.Root whenever it lands back inside the task, which is exactly the
+// round -> earlier round case the look exists to refuse. These reproduce that window by opening the
+// handle on the swapped entry first and only then running the check that has to catch it.
 func TestCheckHandle(t *testing.T) {
-	// New looks at the round entry and then opens it, and those are two operations: a symlink planted in
-	// between is followed by os.Root whenever it lands back inside the task, which is exactly the
-	// round -> earlier round case the look exists to refuse. These reproduce that window by opening the
-	// handle on the swapped entry first and only then running the check that has to catch it.
 	t.Run("a symlink swapped in before the open is caught after it", func(t *testing.T) {
 		taskPath := t.TempDir()
 		require.NoError(t, os.MkdirAll(filepath.Join(taskPath, "01-initial", inputDir), 0o750))

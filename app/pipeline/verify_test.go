@@ -264,6 +264,8 @@ func TestVerifier_run_groupIsolation(t *testing.T) {
 	}
 }
 
+// the codex path has no --json-schema, so a refined verdict can name a severity outside the enum:
+// letting it through replaces a schema-checked value with one nothing validated
 func TestVerifier_run_verdicts(t *testing.T) {
 	t.Run("every verdict routes its finding", func(t *testing.T) {
 		h := newHarness(t)
@@ -313,8 +315,6 @@ func TestVerifier_run_verdicts(t *testing.T) {
 		assert.Equal(t, []string{"bugs"}, got.Sources, "verification does not touch attribution")
 	})
 
-	// the codex path has no --json-schema, so a refined verdict can name a severity outside the enum.
-	// letting it through replaces a schema-checked value with one nothing validated
 	t.Run("a refined verdict with an unknown severity keeps the original", func(t *testing.T) {
 		h := newHarness(t)
 		h.cfg.NewRunner = verdictRunner(map[string]string{

@@ -12,6 +12,8 @@ import (
 	"github.com/umputun/revmux/app/finding"
 )
 
+// the totals fold both size and date across tasks — only the id and the description are per-task, since no
+// one description covers a corpus.
 func TestCorpus_JSON(t *testing.T) {
 	c := Corpus{
 		Tasks: []taskStats{{
@@ -60,8 +62,6 @@ func TestCorpus_JSON(t *testing.T) {
 		assert.Equal(t, map[string]any{"confirmed": 1.0, "unverified": 2.0}, lens["verdicts"])
 	})
 
-	// the totals fold both size and date across tasks — only the id and the description are per-task,
-	// since no one description covers a corpus
 	t.Run("totals carry size and date but no id or description", func(t *testing.T) {
 		totals := got["totals"].(map[string]any)
 		assert.Equal(t, []string{"agents", "last_run", "lenses", "rounds", "size_mb", "skipped", "stages"},

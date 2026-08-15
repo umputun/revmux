@@ -173,6 +173,8 @@ func TestOptions_catalogProfileRunner(t *testing.T) {
 	assert.Empty(t, wire.Runner.Name, "the base runner names no stage")
 }
 
+// an unreadable tasks root reported as no tasks at all is the advice that mints a duplicate id, the same
+// failure an unreported meta_error produces one level down.
 func TestOptions_paths(t *testing.T) {
 	root := t.TempDir()
 	for _, name := range []string{"pr-1", "pr-2"} {
@@ -205,8 +207,6 @@ func TestOptions_paths(t *testing.T) {
 			"a workdir that will not resolve is a review that dies later, not a resolved path")
 	})
 
-	// an unreadable tasks root reported as no tasks at all is the advice that mints a duplicate id, the
-	// same failure an unreported meta_error produces one level down
 	t.Run("an unreadable tasks root is reported, never as an empty one", func(t *testing.T) {
 		if os.Geteuid() == 0 {
 			t.Skip("root reads a directory with no permissions")

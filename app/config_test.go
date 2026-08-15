@@ -585,6 +585,9 @@ func TestOptions_promptSetUnknownProfile(t *testing.T) {
 	assert.Contains(t, err.Error(), "resolve profile")
 }
 
+// the config was the last leaf on the init path still written by name. os.ReadFile reports a dangling link
+// as an absent file and os.WriteFile then creates its target, so the two symlink cases are the write
+// escaping ./.revmux/ entirely and an existing file outside it being truncated.
 func TestOptions_initConfig(t *testing.T) {
 	dir := isolate(t)
 	path := filepath.Join(dir, projectDirName, configFileName)
@@ -631,9 +634,6 @@ func TestOptions_initConfig(t *testing.T) {
 		assert.Contains(t, out.String(), "customized")
 	})
 
-	// the config was the last leaf on the init path still written by name. os.ReadFile reports a
-	// dangling link as an absent file and os.WriteFile then creates its target, so the two cases below
-	// are the write escaping ./.revmux/ entirely and an existing file outside it being truncated.
 	t.Run("a dangling symlink at the config is refused rather than written through", func(t *testing.T) {
 		outside := filepath.Join(t.TempDir(), "elsewhere.ini")
 		require.NoError(t, os.Remove(path))

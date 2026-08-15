@@ -99,6 +99,8 @@ func TestRoundReader_readFullRound(t *testing.T) {
 	})
 }
 
+// --no-synthesis --no-verify writes neither snapshot, so stages/1-found.json is the last word and nothing
+// filtered anything: survived equals raised because no stage ran, not because the agent earned it.
 func TestRoundReader_read(t *testing.T) {
 	t.Run("an agent whose findings all get dropped survives nothing", func(t *testing.T) {
 		dir := t.TempDir()
@@ -140,8 +142,6 @@ func TestRoundReader_read(t *testing.T) {
 			"a stage nothing wrote is not a transition that happened")
 	})
 
-	// --no-synthesis --no-verify writes neither snapshot, so stages/1-found.json is the last word and
-	// nothing filtered anything: survived equals raised because no stage ran, not because the agent earned it
 	t.Run("a run that skipped both stages counts stage 1 as its own survivors", func(t *testing.T) {
 		dir := t.TempDir()
 		writeArtifact(t, dir, foundFile, finding.Report{
@@ -279,6 +279,8 @@ func TestRoundReader_ambiguousLenses(t *testing.T) {
 	}
 }
 
+// the synthesis stage retries under the same event kind, naming itself as the agent. Counted blind it
+// becomes a source no roster contains, reported beside the agents that really ran.
 func TestRoundReader_readEvents(t *testing.T) {
 	t.Run("retries are counted per agent", func(t *testing.T) {
 		dir := t.TempDir()
@@ -300,8 +302,6 @@ func TestRoundReader_readEvents(t *testing.T) {
 			"the kind decides, not a text that happens to name one")
 	})
 
-	// the synthesis stage retries under the same event kind, naming itself as the agent. Counted blind it
-	// becomes a source no roster contains, reported beside the agents that really ran
 	t.Run("a stage retry is not an agent", func(t *testing.T) {
 		dir := t.TempDir()
 		writeArtifact(t, dir, foundFile, finding.Report{
@@ -891,9 +891,9 @@ func TestCollectStats_disk(t *testing.T) {
 	})
 }
 
+// the regression this pins: dirSize walking the whole tree made one unreadable directory under one task
+// fatal for the corpus, so `revmux stats` reported nothing about the other tasks at all.
 func TestCollectStats_unreadableEntry(t *testing.T) {
-	// the regression this pins: dirSize walking the whole tree made one unreadable directory under one
-	// task fatal for the corpus, so `revmux stats` reported nothing about the other tasks at all
 	t.Run("one unreadable directory does not discard every other task's numbers", func(t *testing.T) {
 		if os.Geteuid() == 0 {
 			t.Skip("root traverses a 0000 directory regardless of its mode")
@@ -922,9 +922,9 @@ func TestCollectStats_unreadableEntry(t *testing.T) {
 	})
 }
 
+// the fold is what `revmux stats` prints: it reports the task entry and the totals, never one round's own
+// tally, so a field computed per round and not folded here is zero everywhere it is read.
 func TestTaskStats_addStages(t *testing.T) {
-	// the fold is what `revmux stats` prints: it reports the task entry and the totals, never one
-	// round's own tally, so a field computed per round and not folded here is zero everywhere it is read
 	t.Run("every field folds, not only in and out", func(t *testing.T) {
 		var got taskStats
 		got.addStages([]stageFlow{{Name: "verify", In: 10, Out: 9, Reclassified: 2, Refined: 4}})

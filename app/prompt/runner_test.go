@@ -56,6 +56,7 @@ func TestParseRunner_Errors(t *testing.T) {
 	}
 }
 
+// a model belongs to a binary, so inheriting one across binaries is how `opus` reaches codex
 func TestRunner_or(t *testing.T) {
 	base := Runner{Executor: "claude", Model: "opus", Effort: "high"}
 
@@ -69,7 +70,6 @@ func TestRunner_or(t *testing.T) {
 			Runner{Executor: "claude", Model: "sonnet"}.or(base))
 	})
 
-	// a model belongs to a binary, so inheriting one across binaries is how `opus` reaches codex
 	t.Run("a different binary never inherits the model", func(t *testing.T) {
 		assert.Equal(t, Runner{Executor: "codex", Effort: "high"}, Runner{Executor: "codex"}.or(base))
 		assert.Equal(t, Runner{Executor: "codex", Model: "gpt-5.6-sol", Effort: "low"},

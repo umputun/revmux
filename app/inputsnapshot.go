@@ -60,7 +60,7 @@ func (s *inputSnapshotter) load(rc reviewContext) []ui.InputDocument {
 
 // inputPath preserves an optional file's existence for the display snapshot without changing the
 // prompt-facing resolved value, where a missing file and an empty file both intentionally become the
-// placeholder. All callers are snapshotter methods, so this filesystem decision stays on the owner.
+// placeholder.
 func (*inputSnapshotter) inputPath(rc reviewContext, name, resolved string) string {
 	if rc.InputDir == "" {
 		return resolved

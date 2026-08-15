@@ -8,7 +8,7 @@ import (
 	"github.com/muesli/termenv"
 )
 
-// The palette. Adaptive rather than fixed: a reviewer running a light terminal gets legible muted
+// the palette. Adaptive rather than fixed: a reviewer running a light terminal gets legible muted
 // text instead of the near-invisible grey a dark-only palette produces.
 var (
 	colAccent = lipgloss.AdaptiveColor{Light: "25", Dark: "39"}   // titles, the focused tab

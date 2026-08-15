@@ -36,10 +36,10 @@ func TestWrap(t *testing.T) {
 	})
 }
 
+// markdown() runs before Wrap, so the text carries escape sequences; and prose is arbitrary, so it
+// carries multi-byte and double-width runes. Trimming a byte at a time while measuring display cells
+// exits inside a rune or inside an escape.
 func TestWrap_ansiAndRunes(t *testing.T) {
-	// **the paths that were broken.** markdown() runs before Wrap now, so the text carries escape
-	// sequences; and prose is arbitrary, so it carries multi-byte and double-width runes. Trimming a
-	// byte at a time while measuring display cells exits inside a rune or inside an escape.
 	t.Run("a cut never lands mid-rune", func(t *testing.T) {
 		for _, text := range []string{
 			strings.Repeat("ä", 200),
@@ -125,7 +125,6 @@ func TestWrap_alwaysFitsTheWidth(t *testing.T) {
 	}
 
 	t.Run("below the wrap floor it clips rather than passing the row through", func(t *testing.T) {
-		// this is the branch the plain renderer used to clip itself, before that clip was deleted
 		out := Wrap(strings.Repeat("x", 70), long, 80)
 		require.Len(t, out, 1, "too narrow to wrap into")
 		assert.LessOrEqual(t, lipgloss.Width(out[0]), 80, "but still bounded")

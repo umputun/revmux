@@ -45,10 +45,9 @@ func TestModel_focusedAt(t *testing.T) {
 	assert.Nil(t, m.focusedAt(3))
 }
 
+// both behaviors are exercised past their no-op form: short plain text at the default width exercises
+// neither the markdown rendering nor the wrapping, and passes unchanged with both removed.
 func TestModel_agentLines_rendersAndWraps(t *testing.T) {
-	// **both behaviors, exercised past their no-op form.** The pane gained markdown rendering and
-	// wrapping, and a case feeding short plain text at the default width exercises neither — it passes
-	// unchanged with both removed, which is what the previous assertion did.
 	m := feed(t, New(ModelConfig{Roster: roster()}), tea.WindowSizeMsg{Width: 60, Height: 24})
 	m = feed(t, m,
 		event(pipeline.EventAgentActivity, "bugs+impl",

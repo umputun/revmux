@@ -457,9 +457,9 @@ func TestVocabularies(t *testing.T) {
 	assert.Equal(t, "claude", Executors()[0])
 }
 
+// a stage or verify group is not in the roster but still has to be told apart in the log. Both
+// renderers call this, so what it must guarantee is that they cannot disagree.
 func TestDerivedSpec(t *testing.T) {
-	// a stage or verify group is not in the roster but still has to be told apart in the log. Both
-	// renderers call this, so what it must guarantee is that they cannot disagree.
 	t.Run("the same name always resolves to the same color", func(t *testing.T) {
 		for _, name := range []string{"synthesis", "verify ui", "verify executor"} {
 			first := DerivedSpec(name)

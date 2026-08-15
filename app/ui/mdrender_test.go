@@ -563,6 +563,9 @@ func TestMDRenderer_renderDownsamplesToProfile(t *testing.T) {
 	}
 }
 
+// the nested-list case pins expansion running ahead of the parser: at the terminal's eight-column stop
+// a list nested under a tab lands past the four-space code-block threshold CommonMark measures against,
+// and the nested item comes back as literal "- nested" text with its own bullet gone.
 func TestMDRenderer_renderExpandsTabs(t *testing.T) {
 	// a tab is one cell to lipgloss and up to eight to the terminal, so an unexpanded row is measured
 	// short and drawn wide — straight past the edge of the pane. Models write Go tab-indented.
@@ -580,9 +583,6 @@ func TestMDRenderer_renderExpandsTabs(t *testing.T) {
 		})
 	}
 
-	// regression: expansion runs ahead of the parser, so at the terminal's eight-column stop a list
-	// nested under a tab lands past the four-space code-block threshold CommonMark measures against,
-	// and the nested item comes back as literal "- nested" text with its own bullet gone
 	t.Run("a tab-indented nested list keeps its nesting", func(t *testing.T) {
 		r := testMDRenderer()
 		out := plainMD(r.render("- first\n\t- nested\n", 40))
