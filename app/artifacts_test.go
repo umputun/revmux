@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/umputun/revmux/app/archive"
 	"github.com/umputun/revmux/app/executor"
 	"github.com/umputun/revmux/app/finding"
 	"github.com/umputun/revmux/app/pipeline"
@@ -22,6 +23,97 @@ import (
 	"github.com/umputun/revmux/app/prompt"
 	"github.com/umputun/revmux/app/task"
 )
+
+func TestRun_projectProfileSnapshot(t *testing.T) {
+	const body = "# how this project is calibrated\n"
+
+	project := func(t *testing.T) {
+		t.Helper()
+		t.Chdir(t.TempDir())
+		cwd, err := os.Getwd()
+		require.NoError(t, err)
+		require.NoError(t, os.MkdirAll(filepath.Join(cwd, projectDirName), 0o750))
+		require.NoError(t, os.WriteFile(filepath.Join(cwd, projectDirName, task.ProfileFile),
+			[]byte(body), 0o600))
+	}
+
+	t.Run("the round holds the bytes and the agents were pointed at them", func(t *testing.T) {
+		project(t)
+		r, root := archiveRun(t)
+		require.Equal(t, 1, run(r.opts()))
+
+		dir := filepath.Join(root, "pr-1", "round-1")
+		snapshot := filepath.Join(dir, task.ProfileSnapshotFile)
+		require.FileExists(t, snapshot)
+		assert.Equal(t, body, readFile(t, snapshot), "PROFILE expands to a path, so the archive keeps the bytes")
+		assert.Contains(t, readFile(t, filepath.Join(dir, "prompts", "agents", "lenses.md")), snapshot,
+			"the composed prompt names the round's snapshot, never the project file outside it")
+		assert.NoFileExists(t, filepath.Join(dir, task.InputDir, task.ProfileFile),
+			"input/ is the caller's and revmux writes nothing into it")
+	})
+
+	t.Run("a round carrying its own profile is snapshotted from nothing", func(t *testing.T) {
+		project(t)
+		r, root := archiveRun(t)
+		input := filepath.Join(root, "pr-1", "round-1", task.InputDir)
+		require.NoError(t, os.WriteFile(filepath.Join(input, task.ProfileFile), []byte("# this round only\n"), 0o600))
+		require.Equal(t, 1, run(r.opts()))
+
+		dir := filepath.Join(root, "pr-1", "round-1")
+		assert.NoFileExists(t, filepath.Join(dir, task.ProfileSnapshotFile))
+		assert.Contains(t, readFile(t, filepath.Join(dir, "prompts", "agents", "lenses.md")),
+			filepath.Join(input, task.ProfileFile), "the round's own profile wins over the project one")
+	})
+
+	// the snapshot is the first thing this run writes into the round, so it is also what makes an
+	// interrupted round unreclaimable. That is deliberate — two runs' artifacts under one manifest is
+	// the un-auditable archive CheckReclaim exists to refuse — but it must be the real refusal
+	t.Run("an interrupted round that got a snapshot is refused rather than re-used", func(t *testing.T) {
+		project(t)
+		r, root := archiveRun(t)
+		ro := r.opts()
+
+		review, err := ro.pipelineConfig()
+		require.NoError(t, err)
+		require.NoError(t, ro.materializeProfile(review.archive, review.context))
+		require.NoError(t, review.archive.Close())
+
+		_, err = archive.New(task.Round{TasksDir: root, Task: "pr-1", Run: "round-1"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "prompts", "the refusal names what the dead run left behind")
+	})
+
+	t.Run("a round that already ran is refused before anything is written over it", func(t *testing.T) {
+		project(t)
+		r, root := archiveRun(t)
+		require.Equal(t, 1, run(r.opts()))
+
+		cwd, err := os.Getwd()
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(cwd, projectDirName, task.ProfileFile),
+			[]byte("# rewritten after the round ran\n"), 0o600))
+
+		second := newRunOpts(t, r.o)
+		require.Equal(t, 2, run(second.opts()))
+		assert.Equal(t, body, readFile(t, filepath.Join(root, "pr-1", "round-1", task.ProfileSnapshotFile)),
+			"the claim refuses first, so the finished round keeps the calibration it actually ran under")
+	})
+
+	t.Run("without a project profile an interrupted round is still reclaimable", func(t *testing.T) {
+		t.Chdir(t.TempDir())
+		r, root := archiveRun(t)
+		ro := r.opts()
+
+		review, err := ro.pipelineConfig()
+		require.NoError(t, err)
+		require.NoError(t, ro.materializeProfile(review.archive, review.context))
+		require.NoError(t, review.archive.Close())
+
+		reclaimed, err := archive.New(task.Round{TasksDir: root, Task: "pr-1", Run: "round-1"})
+		require.NoError(t, err, "nothing was written, so the round is still open")
+		require.NoError(t, reclaimed.Close())
+	})
+}
 
 func TestRun_archive(t *testing.T) {
 	t.Run("the run directory holds every artifact a later reader needs", func(t *testing.T) {

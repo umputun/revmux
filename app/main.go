@@ -217,6 +217,9 @@ func (o runOpts) pipelineConfig() (configuredReview, error) {
 // the browser is a rendering path like stdout is.
 func (o runOpts) review(ctx context.Context, review configuredReview) (finding.Report, error) {
 	cfg, arc := review.pipeline, review.archive
+	if err := o.materializeProfile(arc, review.context); err != nil {
+		return finding.Report{}, err
+	}
 	p := pipeline.New(cfg)
 	r := o.render(renderConfig{
 		roster: cfg.Roster, events: p.Events(), context: review.context,

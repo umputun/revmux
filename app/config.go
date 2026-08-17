@@ -104,6 +104,11 @@ type reviewContext struct {
 	Profile  string
 	Context  string
 	WorkDir  string
+
+	// set only when the round carries no profile of its own and the project layer has one. Profile
+	// then names this run's snapshot rather than a path outside the round, so the archive stays
+	// self-contained when the project file later changes.
+	ProfileSource string
 }
 
 // parseArgs parses the command line, then layers the project and user INI files underneath it, and
@@ -352,6 +357,14 @@ func (o options) resolveContext() (reviewContext, error) {
 	if rc.Profile, err = o.contextFile(filepath.Join(input, task.ProfileFile)); err != nil {
 		return reviewContext{}, err
 	}
+	if rc.Profile == "" {
+		if rc.ProfileSource, err = o.projectProfile(); err != nil {
+			return reviewContext{}, err
+		}
+		if rc.ProfileSource != "" {
+			rc.Profile = filepath.Join(dir, o.Run, task.ProfileSnapshotFile)
+		}
+	}
 	if rc.Context, err = o.contextDir(filepath.Join(input, task.ContextDir)); err != nil {
 		return reviewContext{}, err
 	}
@@ -359,6 +372,19 @@ func (o options) resolveContext() (reviewContext, error) {
 		return reviewContext{}, err
 	}
 	return rc, nil
+}
+
+// projectProfile is ./.revmux/profile.md, the repo-wide calibration a round carrying none of its own
+// inherits. It keys on projectDir rather than on layers.project, which the --config-dir ./.revmux
+// collapse empties for provenance reasons while the file itself stays exactly where it was — reading
+// the layer there would make the fallback vanish under one invocation and nothing would say so.
+// Absent and empty both mean no project profile, the same rule contextFile applies inside a round.
+func (o options) projectProfile() (string, error) {
+	dir, err := projectDir()
+	if err != nil {
+		return "", err
+	}
+	return o.contextFile(filepath.Join(dir, task.ProfileFile))
 }
 
 // taskDir joins the task name onto the tasks root and verifies the result stays inside it. Containment is

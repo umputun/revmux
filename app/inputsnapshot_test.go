@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/umputun/revmux/app/task"
 )
 
 func TestInputSnapshotter_load(t *testing.T) {
@@ -47,6 +49,26 @@ func TestInputSnapshotter_load(t *testing.T) {
 		assert.Empty(t, snapshot[1].Content)
 		assert.Empty(t, snapshot[1].Notice, "the renderer identifies this as an empty file")
 	})
+}
+
+// inputPath rebuilds the round-local path and reports the tab absent when that file is missing, which
+// under the project fallback would hide a profile the agents were reading — a calibrated run shown as
+// an uncalibrated one
+func TestInputSnapshotter_projectProfileKeepsItsTab(t *testing.T) {
+	root := t.TempDir()
+	scope := filepath.Join(root, task.ScopeFile)
+	require.NoError(t, os.WriteFile(scope, []byte("scope"), 0o600))
+	snapshot := filepath.Join(root, "input-profile.md")
+	require.NoError(t, os.WriteFile(snapshot, []byte("# project calibration"), 0o600))
+
+	docs := (&inputSnapshotter{limits: inputLimits{
+		fileBytes: 1024, totalBytes: 4096, contexts: 2, entries: 10,
+	}}).load(reviewContext{InputDir: root, Scope: scope, Profile: snapshot, ProfileSource: "/elsewhere/profile.md"})
+
+	require.Len(t, docs, 2)
+	assert.Equal(t, "profile", docs[1].Label)
+	assert.Equal(t, task.ProfileSnapshotFile, docs[1].Path, "labeled by where the bytes really came from")
+	assert.Equal(t, "# project calibration", docs[1].Content)
 }
 
 func TestInputSnapshotter_limits(t *testing.T) {

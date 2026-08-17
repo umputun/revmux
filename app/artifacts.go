@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"time"
 
 	"github.com/umputun/revmux/app/archive"
@@ -43,6 +44,27 @@ func (o runOpts) archiveRun(a *archive.Archive, cfg pipeline.Config, rep finding
 		return err
 	}
 	return o.writeArtifact(a, task.ManifestFile, o.manifest(cfg, rep).write)
+}
+
+// materializeProfile copies a project-level profile.md into the round; a round carrying its own needs
+// none of this, since that file already sits inside the archive.
+//
+// It runs early in review because two readers need the bytes: the agents through {{PROFILE}}, and the
+// TUI's input snapshot, taken when the renderer is built.
+func (o runOpts) materializeProfile(a *archive.Archive, rc reviewContext) error {
+	if rc.ProfileSource == "" {
+		return nil
+	}
+	body, err := os.ReadFile(rc.ProfileSource)
+	if err != nil {
+		return fmt.Errorf("read project profile %s: %w", rc.ProfileSource, err)
+	}
+	return o.writeArtifact(a, task.ProfileSnapshotFile, func(w io.Writer) error {
+		if _, writeErr := w.Write(body); writeErr != nil {
+			return fmt.Errorf("write profile snapshot: %w", writeErr)
+		}
+		return nil
+	})
 }
 
 func (o runOpts) writeArtifact(a *archive.Archive, name string, render func(io.Writer) error) error {

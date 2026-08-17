@@ -53,9 +53,20 @@ func (s *inputSnapshotter) load(rc reviewContext) []ui.InputDocument {
 		s.file(inputFile{label: "scope", relative: filepath.Join(task.InputDir, task.ScopeFile), path: rc.Scope}))
 	docs = append(docs, s.optional(inputFile{label: "goal", relative: filepath.Join(task.InputDir, task.GoalFile),
 		path: s.inputPath(rc, task.GoalFile, rc.Goal)})...)
-	docs = append(docs, s.optional(inputFile{label: "profile", relative: filepath.Join(task.InputDir, task.ProfileFile),
-		path: s.inputPath(rc, task.ProfileFile, rc.Profile)})...)
+	docs = append(docs, s.optional(s.profileFile(rc))...)
 	return append(docs, s.context(rc.Context)...)
+}
+
+// profileFile labels the profile tab by where the bytes actually came from. Under the project fallback
+// the round holds no input/profile.md, so reconstructing that path would report the tab absent and show
+// a calibrated run as an uncalibrated one — the snapshot is what the agents read and is what the reader
+// must see.
+func (s *inputSnapshotter) profileFile(rc reviewContext) inputFile {
+	if rc.ProfileSource != "" {
+		return inputFile{label: "profile", relative: task.ProfileSnapshotFile, path: rc.Profile}
+	}
+	return inputFile{label: "profile", relative: filepath.Join(task.InputDir, task.ProfileFile),
+		path: s.inputPath(rc, task.ProfileFile, rc.Profile)}
 }
 
 // inputPath preserves an optional file's existence for the display snapshot without changing the

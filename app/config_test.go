@@ -790,3 +790,64 @@ func readFile(t *testing.T, path string) string {
 	require.NoError(t, err)
 	return string(data)
 }
+
+func TestResolveContext_projectProfileFallback(t *testing.T) {
+	// the project layer resolves against the process working directory, so each case chdirs into its own
+	// tree and reads the cwd back: a temp dir under /var is really /private/var on macOS, and a path
+	// built from t.TempDir() would not match the one filepath.Abs produces inside projectDir
+	setup := func(t *testing.T, body string) (root, cwd string) {
+		t.Helper()
+		t.Chdir(t.TempDir())
+		cwd, err := os.Getwd()
+		require.NoError(t, err)
+		if body != "" {
+			require.NoError(t, os.MkdirAll(filepath.Join(cwd, projectDirName), 0o750))
+			require.NoError(t, os.WriteFile(filepath.Join(cwd, projectDirName, task.ProfileFile),
+				[]byte(body), 0o600))
+		}
+		return t.TempDir(), cwd
+	}
+
+	t.Run("a round with no profile inherits the project one", func(t *testing.T) {
+		root, cwd := setup(t, "# project calibration\n")
+		roundInput(t, root, "pr-1", task.ScopeFile)
+
+		rc, err := options{Task: "pr-1", Run: testRun, TasksDir: root}.resolveContext()
+		require.NoError(t, err)
+		assert.Equal(t, filepath.Join(cwd, projectDirName, task.ProfileFile), rc.ProfileSource)
+		assert.Equal(t, filepath.Join(root, "pr-1", testRun, task.ProfileSnapshotFile), rc.Profile,
+			"PROFILE must name the round's own snapshot, never a path outside the round")
+	})
+
+	t.Run("a round with its own profile wins over the project one", func(t *testing.T) {
+		root, _ := setup(t, "# project calibration\n")
+		input := roundInput(t, root, "pr-1", task.ScopeFile, task.ProfileFile)
+
+		rc, err := options{Task: "pr-1", Run: testRun, TasksDir: root}.resolveContext()
+		require.NoError(t, err)
+		assert.Empty(t, rc.ProfileSource, "nothing is snapshotted when the round carries its own")
+		assert.Equal(t, filepath.Join(input, task.ProfileFile), rc.Profile)
+	})
+
+	t.Run("no project profile leaves the placeholder", func(t *testing.T) {
+		root, _ := setup(t, "")
+		roundInput(t, root, "pr-1", task.ScopeFile)
+
+		rc, err := options{Task: "pr-1", Run: testRun, TasksDir: root}.resolveContext()
+		require.NoError(t, err)
+		assert.Empty(t, rc.ProfileSource)
+		assert.Empty(t, rc.Profile)
+	})
+
+	t.Run("an empty project profile is no project profile", func(t *testing.T) {
+		root, cwd := setup(t, "")
+		require.NoError(t, os.MkdirAll(filepath.Join(cwd, projectDirName), 0o750))
+		require.NoError(t, os.WriteFile(filepath.Join(cwd, projectDirName, task.ProfileFile), nil, 0o600))
+		roundInput(t, root, "pr-1", task.ScopeFile)
+
+		rc, err := options{Task: "pr-1", Run: testRun, TasksDir: root}.resolveContext()
+		require.NoError(t, err)
+		assert.Empty(t, rc.ProfileSource, "empty and absent already mean the same thing inside a round")
+		assert.Empty(t, rc.Profile)
+	})
+}
