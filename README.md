@@ -185,7 +185,7 @@ caller-chosen and semantic; revmux allocates neither.
 │   ├── input/                    caller-written; the only channel this round's own context travels through
 │   │   ├── scope.md              {{SCOPE}}    required
 │   │   ├── goal.md               {{GOAL}}     optional
-│   │   ├── profile.md            {{PROFILE}}  optional; overrides ./.revmux/profile.md
+│   │   ├── profile.md            {{PROFILE}}  optional; non-empty overrides ./.revmux/profile.md
 │   │   └── context/              {{CONTEXT}}  optional directory
 │   └── ...                       revmux-written artifacts: manifest, prompts, stages, events, tees
 └── 02-after-fix/                 the next round, with its own input/
@@ -196,10 +196,10 @@ large scope. Context belongs to the round rather than to the task, because round
 round 1 found. A round that has already run is an error rather than an overwrite.
 
 `profile.md` is the exception, because what it says is true of the repository rather than of one round. Put
-it in `./.revmux/profile.md` and every round of every task inherits it — `revmux config` reports the
-resolved path as `paths.profile_fallback`, and the bytes are copied into each round as
+it in `./.revmux/profile.md` and every round without a non-empty override inherits it — `revmux config`
+reports the resolved path as `paths.profile_fallback`, and the bytes are copied into each round as
 `prompts/input-profile.md` so the archive records what actually calibrated it. Write a round's own
-`input/profile.md` only to hold that subject to a different bar; it wins outright when present.
+`input/profile.md` only to hold that subject to a different bar. A non-empty round file wins outright.
 
 Every run writes its own artifacts into that round beside the caller's `input/`: `manifest.json` with the
 resolved roster and prompt provenance, the composed prompt each agent received, the findings after every

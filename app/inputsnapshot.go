@@ -58,9 +58,9 @@ func (s *inputSnapshotter) load(rc reviewContext) []ui.InputDocument {
 }
 
 // profileFile labels the profile tab by where the bytes actually came from. Under the project fallback
-// the round holds no input/profile.md, so reconstructing that path would report the tab absent and show
-// a calibrated run as an uncalibrated one — the snapshot is what the agents read and is what the reader
-// must see.
+// the round holds no non-empty input/profile.md, so reconstructing that path would report the tab
+// absent and show a calibrated run as an uncalibrated one — the snapshot is what the agents read and
+// is what the reader must see.
 func (s *inputSnapshotter) profileFile(rc reviewContext) inputFile {
 	if rc.ProfileSource != "" {
 		return inputFile{label: "profile", relative: task.ProfileSnapshotFile, path: rc.Profile}

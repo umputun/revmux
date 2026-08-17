@@ -213,8 +213,8 @@ func TestOptions_paths(t *testing.T) {
 		assert.Empty(t, got.ProfileFallbackError)
 	})
 
-	// reported as absent, this describes an invocation the review would refuse to start — the same
-	// wrong advice tasks_error and workdir_error exist to prevent one level up
+	// reported as absent, this describes an inheriting round as uncalibrated when it would refuse to
+	// start — the same wrong advice tasks_error and workdir_error exist to prevent one level up
 	t.Run("a profile that will not resolve is an error rather than an absence", func(t *testing.T) {
 		dir := isolate(t)
 		require.NoError(t, os.MkdirAll(filepath.Join(dir, projectDirName, task.ProfileFile), 0o750))

@@ -105,9 +105,9 @@ type reviewContext struct {
 	Context  string
 	WorkDir  string
 
-	// set only when the round carries no profile of its own and the project layer has one. Profile
-	// then names this run's snapshot rather than a path outside the round, so the archive stays
-	// self-contained when the project file later changes.
+	// set only when the round carries no non-empty profile of its own and the project layer has one.
+	// Profile then names this run's snapshot rather than a path outside the round, so the archive
+	// stays self-contained when the project file later changes.
 	ProfileSource string
 }
 
@@ -374,7 +374,7 @@ func (o options) resolveContext() (reviewContext, error) {
 	return rc, nil
 }
 
-// projectProfile is ./.revmux/profile.md, the repo-wide calibration a round carrying none of its own
+// projectProfile is ./.revmux/profile.md, the repo-wide calibration a round with no non-empty profile
 // inherits. It keys on projectDir rather than on layers.project, which the --config-dir ./.revmux
 // collapse empties for provenance reasons while the file itself stays exactly where it was — reading
 // the layer there would make the fallback vanish under one invocation and nothing would say so.

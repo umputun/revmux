@@ -93,11 +93,12 @@ archived prompt carries the path and not the text.
 `options.resolveContext` stats `<task>/<run>/input/` and returns the resolved absolute paths:
 
 1. `scope.md` — required, and a missing or empty one is a load-time error, since a review with no scope is a caller bug
-2. `goal.md`, `profile.md` — optional, absent resolves to the "none provided" placeholder
-3. `context/` — optional directory the caller fills with as many files as it likes
+2. `goal.md` — optional, absent resolves to the "none provided" placeholder
+3. `profile.md` — optional, absent or empty falls through to the project profile and then to the placeholder
+4. `context/` — optional directory the caller fills with as many files as it likes
 
 **`profile.md` is the one context file with a layer under it.**
-When the round carries none, `options.projectProfile` looks for `./.revmux/profile.md` and, finding one,
+When the round has no non-empty profile, `options.projectProfile` looks for `./.revmux/profile.md` and, finding one,
 sets `reviewContext.ProfileSource` to it and `Profile` to `<round>/prompts/input-profile.md` — the path the
 snapshot will occupy. `runOpts.materializeProfile` writes those bytes through the held archive at the top of
 `review`, before the renderer is built, since the TUI's input snapshot is taken there and the agents read
@@ -111,9 +112,9 @@ Nothing is ever written into `input/` — a snapshot placed there would be read 
 override by the next attempt on that round, and the authored project file would stop applying with nothing
 saying so.
 
-Absent `goal.md` or `profile.md` is **not an error**.
-The run proceeds, and the variable resolves to a "none provided" placeholder the shipped profile bodies
-instruct the agent to read as generic severity calibration.
+An absent `goal.md` is **not an error**. An absent or empty round profile falls through to the project
+profile; when that is also absent or empty, `{{PROFILE}}` resolves to the "none provided" placeholder the
+shipped profile bodies instruct the agent to read as generic severity calibration.
 That guarantee lives in the prompt text, not in Go — the report header carries the title, the scope path
 and the degraded banner, and says nothing about calibration.
 
@@ -540,7 +541,7 @@ An unreadable tasks root reported as `"tasks": []` is the identical wrong advice
 `rounds_error` on that entry, a `./.revmux/profile.md` that will not resolve is `paths.profile_fallback_error`
 rather than a missing `profile_fallback`, since reporting it as no fallback describes a round that would
 refuse to start as one that is merely uncalibrated — **it is observability and not a gate**, because
-whether it matters depends on the round: one carrying its own `input/profile.md` wins before the project
+whether it matters depends on the round: one with a non-empty `input/profile.md` wins before the project
 file is read, and nothing repo-global can know that before the round exists. It also answers `os.Stat`
 rather than a read, so an unreadable regular file resolves clean here and fails later at
 `materializeProfile`; do not label the field as readability.

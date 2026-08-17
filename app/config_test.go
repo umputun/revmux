@@ -819,19 +819,31 @@ func TestResolveContext_projectProfileFallback(t *testing.T) {
 			"PROFILE must name the round's own snapshot, never a path outside the round")
 	})
 
-	t.Run("a round with its own profile wins over the project one", func(t *testing.T) {
+	t.Run("a round with a non-empty profile wins over the project one", func(t *testing.T) {
 		root, _ := setup(t, "# project calibration\n")
 		input := roundInput(t, root, "pr-1", task.ScopeFile, task.ProfileFile)
 
 		rc, err := options{Task: "pr-1", Run: testRun, TasksDir: root}.resolveContext()
 		require.NoError(t, err)
-		assert.Empty(t, rc.ProfileSource, "nothing is snapshotted when the round carries its own")
+		assert.Empty(t, rc.ProfileSource, "nothing is snapshotted when the round carries a non-empty profile")
 		assert.Equal(t, filepath.Join(input, task.ProfileFile), rc.Profile)
 	})
 
-	// the project file is never opened when the round has its own, so a broken one must not fail an
+	t.Run("an empty round profile inherits the project one", func(t *testing.T) {
+		root, cwd := setup(t, "# project calibration\n")
+		input := roundInput(t, root, "pr-1", task.ScopeFile, task.ProfileFile)
+		require.NoError(t, os.WriteFile(filepath.Join(input, task.ProfileFile), nil, 0o600))
+
+		rc, err := options{Task: "pr-1", Run: testRun, TasksDir: root}.resolveContext()
+		require.NoError(t, err)
+		assert.Equal(t, filepath.Join(cwd, projectDirName, task.ProfileFile), rc.ProfileSource)
+		assert.Equal(t, filepath.Join(root, "pr-1", testRun, task.ProfileSnapshotFile), rc.Profile,
+			"an empty round file is absent for precedence, so PROFILE must name the project snapshot")
+	})
+
+	// the project file is never opened when the round has a non-empty profile, so a broken one must not fail an
 	// invocation that would never have read it
-	t.Run("a broken project profile is irrelevant when the round carries its own", func(t *testing.T) {
+	t.Run("a broken project profile is irrelevant when the round carries a non-empty profile", func(t *testing.T) {
 		root, cwd := setup(t, "")
 		require.NoError(t, os.MkdirAll(filepath.Join(cwd, projectDirName, task.ProfileFile), 0o750))
 		input := roundInput(t, root, "pr-1", task.ScopeFile, task.ProfileFile)

@@ -364,7 +364,7 @@ revmux --task pr-123 --run 02-after-fix &gt; findings.json</pre>
 │   ├── input/                    caller-written; the only channel this round's own context travels through
 │   │   ├── scope.md              {{SCOPE}}    required; missing or empty is a load-time error
 │   │   ├── goal.md               {{GOAL}}     optional
-│   │   ├── profile.md            {{PROFILE}}  optional; overrides ./.revmux/profile.md
+│   │   ├── profile.md            {{PROFILE}}  optional; non-empty overrides ./.revmux/profile.md
 │   │   └── context/              {{CONTEXT}}  optional: ticket text, design notes, spec excerpts
 │   └── ...                       revmux-written artifacts, see the run archive
 └── 02-after-fix/                 the next round, with its own input/</pre>
@@ -386,12 +386,12 @@ revmux --task pr-123 --run 02-after-fix &gt; findings.json</pre>
         </p>
         <p>
           <code>profile.md</code> is the one file with a layer under it, because what it says is true of the
-          repository rather than of one round. Put it in <code>./.revmux/profile.md</code> and every round of
-          every task inherits it — <a href="#config"><code>revmux config</code></a> reports the resolved path
+          repository rather than of one round. Put it in <code>./.revmux/profile.md</code> and every round
+          without a non-empty override inherits it — <a href="#config"><code>revmux config</code></a> reports the resolved path
           as <code>paths.profile_fallback</code>, and the bytes are copied into each round as
           <code>prompts/input-profile.md</code> so the archive records what actually calibrated it. A round's
-          own <code>input/profile.md</code> wins outright, and is worth writing only to hold that subject to a
-          different bar than the repo's. The user layer is never searched for it: calibration spanning
+          non-empty <code>input/profile.md</code> wins outright, and is worth writing only to hold that subject
+          to a different bar than the repo's. The user layer is never searched for it: calibration spanning
           repositories describes none of them.
         </p>
         <p>
@@ -1079,9 +1079,9 @@ receives, including what counts as critical, major and minor here.</pre>
         </p>
         <p>
           <code>paths.profile_fallback</code> is the resolved <code>./.revmux/profile.md</code>, so a caller can
-          tell that a round it leaves without a profile will still be calibrated. The same rule applies here:
+          tell that a round it leaves without a non-empty profile will still be calibrated. The same rule applies here:
           one that will not resolve is <code>paths.profile_fallback_error</code> rather than a missing
-          fallback, because a round that inherited it would refuse to start. A round carrying its own
+          fallback, because a round that inherited it would refuse to start. A round with a non-empty
           <code>input/profile.md</code> is unaffected — that file wins before the project one is read.
         </p>
 

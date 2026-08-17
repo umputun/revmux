@@ -49,8 +49,8 @@ const (
 )
 
 // ProfileSnapshotFile is the round's copy of a project-level profile.md, taken when the round carries
-// none of its own. {{PROFILE}} expands to a path rather than to content, so a round pointed at the
-// project file would carry no record of what calibrated it once that file changed.
+// no non-empty profile of its own. {{PROFILE}} expands to a path rather than to content, so a round
+// pointed at the project file would carry no record of what calibrated it once that file changed.
 const ProfileSnapshotFile = "prompts/input-profile.md"
 
 // FoundFile, SynthesizedFile and VerifiedFile are the per-stage findings snapshots. Each is a

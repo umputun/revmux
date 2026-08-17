@@ -226,8 +226,8 @@ Spawn **one** `general-purpose` agent. Hand it the resolved scope from Step 1 an
 >      document. Say that finding nothing is a valid answer, or the round reads as owing findings and
 >      manufactures them.
 >    - `profile` — **do not write it.** What it holds is about the repository rather than this round, so
->      it lives in `./.revmux/profile.md` and revmux gives every round the same one with nothing copied
->      forward. You see the diff and the file list, which is not enough to state a repo's conventions,
+>      it lives in `./.revmux/profile.md` and revmux gives every round without a non-empty override the same one
+>      with nothing copied forward. You see the diff and the file list, which is not enough to state a repo's conventions,
 >      and a generated file here wins over the project's and silently replaces it.
 >      Write it only when the user says this subject needs a different bar than the repo's.
 >    - `context` — optional. Ticket text, design notes, commit list. Its path is reported but the

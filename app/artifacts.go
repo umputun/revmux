@@ -46,8 +46,8 @@ func (o runOpts) archiveRun(a *archive.Archive, cfg pipeline.Config, rep finding
 	return o.writeArtifact(a, task.ManifestFile, o.manifest(cfg, rep).write)
 }
 
-// materializeProfile copies a project-level profile.md into the round; a round carrying its own needs
-// none of this, since that file already sits inside the archive.
+// materializeProfile copies a project-level profile.md into the round; a round carrying a non-empty
+// profile needs none of this, since that file already sits inside the archive.
 //
 // It runs early in review because two readers need the bytes: the agents through {{PROFILE}}, and the
 // TUI's input snapshot, taken when the renderer is built.

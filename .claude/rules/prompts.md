@@ -235,7 +235,7 @@ plus `{{FINDINGS}}` and `{{SOURCES}}` for the synthesis and verify stages.
 
 **Context variables expand to absolute paths, never to file contents.**
 `{{SCOPE}}` and `{{GOAL}}` become paths to files in the round's `input/`, and so does `{{PROFILE}}` when
-the round carries one — otherwise it names the round's own copy of `./.revmux/profile.md`, written to
+the round carries a non-empty one — otherwise it names the round's own copy of `./.revmux/profile.md`, written to
 `prompts/input-profile.md`, which is the one context variable with a layer under it.
 `.claude/rules/config.md` owns that resolution.
 `{{CONTEXT}}` becomes the path to its `context/` directory, and the profile body instructs agents to read them.

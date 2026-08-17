@@ -117,7 +117,7 @@ round inside it. The caller fills that round's `input/` before revmux is invoked
 │   ├── input/                   CALLER-written; revmux writes nothing into it, ever
 │   │   ├── scope.md    → {{SCOPE}}    required
 │   │   ├── goal.md     → {{GOAL}}     optional
-│   │   ├── profile.md  → {{PROFILE}}  optional, and overrides ./.revmux/profile.md
+│   │   ├── profile.md  → {{PROFILE}}  optional; non-empty overrides ./.revmux/profile.md
 │   │   └── context/    → {{CONTEXT}}  optional, any number of files
 │   └── …                        revmux-owned artifacts, see the archive rule below
 └── 02-after-fix/
@@ -132,7 +132,7 @@ change rather than a project.
 It is the **project** layer alone — `~/.config/revmux/profile.md` is not read, since calibration that spans
 repositories describes none of them — and it resolves through `projectDir`, never through `layers.project`,
 which the `--config-dir ./.revmux` collapse empties for provenance reasons while the file stays where it is.
-A round's own `input/profile.md` wins outright, and absent-or-empty means absent in both places.
+A non-empty round `input/profile.md` wins outright, and absent-or-empty means absent in both places.
 The bytes are copied into the round as `prompts/input-profile.md` and `{{PROFILE}}` names that copy:
 the variable expands to a path, so a round pointed at the project file would carry no record of what
 calibrated it once that file changed. That copy is revmux's own artifact and goes beside the composed
@@ -156,8 +156,8 @@ A round that has already run is a load-time error rather than an overwrite, beca
 is exactly what a reflection agent needs to read.
 A loop re-runs one task under successive run names and accumulates rounds.
 There are no `--goal`, `--goal-file`, `--profile-file` or `--context-file` flags —
-one mechanism, nothing for revmux to author, and the only precedence anywhere in it is the round's
-`profile.md` over the project's.
+one mechanism, nothing for revmux to author, and the only precedence anywhere in it is a non-empty
+round `profile.md` over the project's.
 
 **revmux writes only inside a round, and nothing it does in the course of a review deletes anything.**
 `revmux new --task <id> --run <name>` is the one thing that creates any of this, and it prints the absolute

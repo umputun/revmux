@@ -52,7 +52,7 @@ func TestRun_projectProfileSnapshot(t *testing.T) {
 			"input/ is the caller's and revmux writes nothing into it")
 	})
 
-	t.Run("a round carrying its own profile is snapshotted from nothing", func(t *testing.T) {
+	t.Run("a round carrying a non-empty profile is snapshotted from nothing", func(t *testing.T) {
 		project(t)
 		r, root := archiveRun(t)
 		input := filepath.Join(root, "pr-1", "round-1", task.InputDir)
@@ -62,7 +62,7 @@ func TestRun_projectProfileSnapshot(t *testing.T) {
 		dir := filepath.Join(root, "pr-1", "round-1")
 		assert.NoFileExists(t, filepath.Join(dir, task.ProfileSnapshotFile))
 		assert.Contains(t, readFile(t, filepath.Join(dir, "prompts", "agents", "lenses.md")),
-			filepath.Join(input, task.ProfileFile), "the round's own profile wins over the project one")
+			filepath.Join(input, task.ProfileFile), "the round's non-empty profile wins over the project one")
 	})
 
 	// the snapshot is the first thing this run writes into the round, so it is also what makes an
