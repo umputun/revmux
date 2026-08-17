@@ -548,7 +548,8 @@ EOF
 ├── manifest.json       roster, prompt provenance and hashes, requested vs actual model
 ├── prompts/
 │   ├── agents/         the composed prompt each agent received, post-substitution
-│   └── stages/         synthesis.md, verify-app-pipeline.md, ...
+│   ├── stages/         synthesis.md, verify-app-pipeline.md, ...
+│   └── input-profile.md  the project profile's bytes, when the round inherited one
 ├── stages/             1-found.json, 2-synthesized.json, 3-verified.json
 ├── events.jsonl        revmux's own decisions: stalls, retries, degrades, transitions
 ├── agents/             verbatim tees, one file per attempt

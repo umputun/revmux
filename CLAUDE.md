@@ -104,7 +104,7 @@ Agents run diff commands themselves; revmux only substitutes a path.
 If a change would make revmux read a repo, the change belongs in the caller.
 See `.claude/rules/pipeline.md`.
 
-**Review context arrives as a task round, and only as a task round.**
+**Review context arrives as a task round, with one repo-level default underneath it.**
 `--task <id>` names a directory under `--tasks-dir` (default `./.revmux/tasks`) and `--run <name>` names one
 round inside it. The caller fills that round's `input/` before revmux is invoked:
 
@@ -112,18 +112,38 @@ round inside it. The caller fills that round's `input/` before revmux is invoked
 <tasks-root>/<id>/
 ├── task.md                      optional, front matter describing the task itself
 ├── 01-initial/                  one round; a round is a direct child of the task
-│   ├── input/                   CALLER-written, and the only channel review context travels through
+│   ├── input/                   CALLER-written; revmux writes nothing into it, ever
 │   │   ├── scope.md    → {{SCOPE}}    required
 │   │   ├── goal.md     → {{GOAL}}     optional
-│   │   ├── profile.md  → {{PROFILE}}  optional
+│   │   ├── profile.md  → {{PROFILE}}  optional, and overrides ./.revmux/profile.md
 │   │   └── context/    → {{CONTEXT}}  optional, any number of files
 │   └── …                        revmux-owned artifacts, see the archive rule below
 └── 02-after-fix/
 ```
 
+**`./.revmux/profile.md` is the one input resolved outside the round, because it is the one input that is
+not about the round.**
+What a project is and what counts as a real failure there is the same for every task in it, so making each
+round carry a copy meant round 01 of every task — usually the broad sweep — ran on whatever the caller
+generated that time. Every other variable stays round-only: a repo-level scope or goal would describe a
+change rather than a project.
+It is the **project** layer alone — `~/.config/revmux/profile.md` is not read, since calibration that spans
+repositories describes none of them — and it resolves through `projectDir`, never through `layers.project`,
+which the `--config-dir ./.revmux` collapse empties for provenance reasons while the file stays where it is.
+A round's own `input/profile.md` wins outright, and absent-or-empty means absent in both places.
+The bytes are copied into the round as `prompts/input-profile.md` and `{{PROFILE}}` names that copy:
+the variable expands to a path, so a round pointed at the project file would carry no record of what
+calibrated it once that file changed. That copy is revmux's own artifact and goes beside the composed
+prompts — **not** into `input/`, which is the caller's. A generated file landing there would win as an
+explicit round override on the next attempt, which is the silent replacement this whole mechanism exists
+to prevent.
+
 **Review context belongs to the round, not to the task.**
 Round 2 reviews the fixes for what round 1 found, so its scope, goal, profile and context are all different
 from round 1's.
+There is deliberately no task-level layer between the project file and the round: a task-level `profile.md`
+would be caller-written context that the next round's composition overwrites, which is exactly what this
+rule forbids, while the project file is settings a repository checks in once.
 Holding them at task level makes composing round 2 overwrite the record of what round 1 actually reviewed,
 and no archive can reconstruct that afterwards — an archived prompt carries the path, not the text.
 
@@ -185,9 +205,10 @@ the final report, so a round directory holds:
 ├── input/            the caller's own scope, goal, profile and context for this round
 ├── manifest.json     resolved roster, per-lens prompt provenance + content hash,
 │                     requested vs. actual model per agent, timings
-├── prompts/          the composed prompt each agent and stage actually received,
+├── prompts/          the prompt material this run used, composed and referenced alike,
 │   ├── agents/       post-substitution — exactly the bytes the model saw
-│   └── stages/       split so a roster agent named `verify` cannot overwrite a stage prompt
+│   ├── stages/       split so a roster agent named `verify` cannot overwrite a stage prompt
+│   └── input-profile.md  the project profile's bytes, when the round inherited one
 ├── stages/           findings after find, after synthesis, after verify
 ├── events.jsonl      revmux's own decisions: stalls, retries, degrades, stage changes
 ├── agents/           verbatim tees, own subdir for the same reason
@@ -532,6 +553,11 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
   No layout name is spelled anywhere else. What does not follow them
   is everything that *describes* the shape: `task.Paths` and its JSON field names, the round tree in README,
   the two in this file, the round and archive trees on all three site pages, and both skill trees.
+  **Seven files draw an actual tree diagram**, and that is the set a new artifact has to appear in:
+  this file, `README.md`, `site/index.html`, `site/docs.html`, `site/reference.html`, and
+  `references/output.md` in **each** skill tree. That last pair is the one this bullet used to miss — it
+  points at `task-dir.md`, which describes `input/` and draws no archive tree at all, so an artifact added
+  to the round is invisible to the two files a caller actually reads it out of.
 - A new `task.md` front-matter key needs: the `Meta` field with both a `yaml` and a `json` tag, and the
   commented-out line in `app/task`'s scaffolded template.
   `revmux config` reports it for free, since `taskInfo` embeds `Meta` rather than copying its fields.

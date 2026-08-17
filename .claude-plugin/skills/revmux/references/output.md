@@ -156,7 +156,8 @@ Every artifact lands in the round directory — the `round_dir` `revmux new` rep
 ├── manifest.json             roster, prompt provenance + hashes, requested vs actual model, timings
 ├── prompts/
 │   ├── agents/               composed prompt per agent, post-substitution
-│   └── stages/               synthesis.md, verify-<group>.md
+│   ├── stages/               synthesis.md, verify-<group>.md
+│   └── input-profile.md      the project profile's bytes, when the round inherited one
 ├── stages/
 │   ├── 1-found.json
 │   ├── 2-synthesized.json
@@ -183,6 +184,7 @@ the recovery path when a run's stdout was lost.
 | did verify reject wrongly? | `stages/2-synthesized.json` vs `3-verified.json` |
 | what was this agent asked? | `prompts/agents/<name>.md` |
 | which lens text, from which layer? | `manifest.json` |
+| what calibrated this round? | `input/profile.md`, or `prompts/input-profile.md` when it inherited the project's |
 
 A failed archive write fails the run. The exception is a per-agent tee, which degrades that source.
 

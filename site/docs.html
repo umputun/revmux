@@ -493,6 +493,7 @@ Reviewing the token exchange path after the provider swap.</pre>
         </div>
         <pre class="code">~/.config/revmux/
 ├── config                    INI, runtime knobs only
+├── profile.md                project layer only: what this repo is, and its reporting bar
 ├── prompts/
 │   ├── profiles/
 │   │   ├── comprehensive.md  roster front matter + shared preamble + severity bar
@@ -866,10 +867,11 @@ receives, including what counts as critical, major and minor here.</pre>
 │   ├── agents/               composed prompt per agent, post-substitution: the bytes the model saw
 │   │   ├── bugs+impl.md
 │   │   └── codex.md
-│   └── stages/               separate from agents/ so an agent named `verify` cannot collide
-│       ├── synthesis.md
-│       ├── verify-app-executor.md      one per group, directories by default
-│       └── verify-app-pipeline.md
+│   ├── stages/               separate from agents/ so an agent named `verify` cannot collide
+│   │   ├── synthesis.md
+│   │   ├── verify-app-executor.md      one per group, directories by default
+│   │   └── verify-app-pipeline.md
+│   └── input-profile.md      the project profile's bytes, when this round inherited one
 ├── stages/                   a skipped stage writes no snapshot
 │   ├── 1-found.json          findings as the find stage left them
 │   ├── 2-synthesized.json

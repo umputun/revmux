@@ -95,6 +95,21 @@ archived prompt carries the path and not the text.
 2. `goal.md`, `profile.md` — optional, absent resolves to the "none provided" placeholder
 3. `context/` — optional directory the caller fills with as many files as it likes
 
+**`profile.md` is the one context file with a layer under it.**
+When the round carries none, `options.projectProfile` looks for `./.revmux/profile.md` and, finding one,
+sets `reviewContext.ProfileSource` to it and `Profile` to `<round>/prompts/input-profile.md` — the path the
+snapshot will occupy. `runOpts.materializeProfile` writes those bytes through the held archive at the top of
+`review`, before the renderer is built, since the TUI's input snapshot is taken there and the agents read
+the path later still.
+It resolves through `projectDir`, **never** `o.layers.project`: `resolveLayers` empties that field when
+`--config-dir ./.revmux` collapses the two layers, and keying on it would make the fallback silently vanish
+under that one invocation while the file sat untouched on disk. `revmux config` reports the same resolution
+as `paths.profile_fallback` and must use the same method, or the catalog and the run disagree.
+The user layer is deliberately not searched: calibration that spans repositories describes none of them.
+Nothing is ever written into `input/` — a snapshot placed there would be read as an explicit round-local
+override by the next attempt on that round, and the authored project file would stop applying with nothing
+saying so.
+
 Absent `goal.md` or `profile.md` is **not an error**.
 The run proceeds, and the variable resolves to a "none provided" placeholder the shipped profile bodies
 instruct the agent to read as generic severity calibration.

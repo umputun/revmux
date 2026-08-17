@@ -148,7 +148,7 @@ into defects.
 With no real goal — a mechanical cleanup, a dependency bump — omit the file rather than writing a
 placeholder.
 
-## profile.md — optional, reusable across the repo
+## profile.md — optional, a per-round override of the project's own
 
 What kind of software this is and what counts as a real failure. Without it the implicit bar is
 "production service with real traffic", wrong for a personal tool or a UI surface in both directions.
@@ -165,7 +165,18 @@ What kind of software this is and what counts as a real failure. Without it the 
 - **Which languages the change actually touches** — a Go repo's conventions are not the bar for a
   commit of shell and markdown
 
-Copy it forward into each round of a task; it is the one input that rarely changes between rounds.
+Do not write this file as a matter of course. What it describes — what the software is, what a real
+failure looks like, where the rules live — belongs to the repository rather than to one round, so it
+lives in `./.revmux/profile.md` and every round of every task inherits it with nothing copied forward.
+`revmux config` reports the resolved path as `paths.profile_fallback`.
+
+Write a round's own `input/profile.md` only when this subject genuinely needs a different bar than the
+repo's — a vendored or generated tree, a prototype, a subsystem the project profile does not describe.
+It wins outright when present, and the project file is then not read at all.
+
+A round that inherits gets a copy of the bytes at `prompts/input-profile.md` inside the round, and
+`{{PROFILE}}` names that copy. The archive therefore records what actually calibrated the round even
+after the project file changes.
 
 ## context/ — optional directory
 

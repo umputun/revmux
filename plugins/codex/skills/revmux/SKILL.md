@@ -231,13 +231,11 @@ Hand it the resolved scope from Step 1 and this brief:
 >      that would make a later run wrong, or a contradiction that would mislead an agent executing the
 >      document. Say that finding nothing is a valid answer, or the round reads as owing findings and
 >      manufactures them.
->    - `profile` — optional, reusable across the repo. What the software is, what a real failure looks
->      like, where the project's rules live, which conventions are deliberate. **On any round after the
->      first, `cp` the previous round's file to this round's path** rather than writing one: it is about
->      the project rather than the round, so a fresh one is the same document generated again.
->      Copy from the most recent round `task-state.sh` reported `profile=present` for — the file is
->      optional, so an earlier round may not have one, and `cp` from a round that lacks it just fails.
->      Write one when no round has it.
+>    - `profile` — **do not write it.** What it holds is about the repository rather than this round, so
+>      it lives in `./.revmux/profile.md` and revmux gives every round the same one with nothing copied
+>      forward. You see the diff and the file list, which is not enough to state a repo's conventions,
+>      and a generated file here wins over the project's and silently replaces it.
+>      Write it only when the user says this subject needs a different bar than the repo's.
 >    - `context` — optional. Ticket text, design notes, commit list. Its path is reported but the
 >      directory is not created.
 >    - `task_file` — when `created` lists it, and also when it is already there but still the unfilled
@@ -249,7 +247,7 @@ Hand it the resolved scope from Step 1 and this brief:
 >
 > **Do not read the previous round's `scope.md`, `goal.md` or `context/`.** revmux injects every prior
 > round into every composed prompt itself, so reading them buys nothing and anchors this round's scope
-> on the last one's wording. `profile.md` is the exception, and it is copied rather than read.
+> on the last one's wording. No round's `profile.md` is read either: the project file revmux resolves is not one of these.
 >
 > Return JSON only: `{"task": "", "run": "", "round_dir": "", "scope_path": "", "wrote": [],
 > "files_changed": 0, "insertions": 0, "deletions": 0, "areas": [], "notes": ""}`. `areas` names the
