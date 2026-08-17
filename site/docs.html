@@ -361,7 +361,7 @@ revmux --task pr-123 --run 02-after-fix &gt; findings.json</pre>
         <pre class="code">&lt;tasks-dir&gt;/pr-123/               a task: one subject, reviewed over as many rounds as it takes
 ├── task.md                       optional; front matter identifying the task
 ├── 01-initial/                   a round
-│   ├── input/                    caller-written; the only channel review context travels through
+│   ├── input/                    caller-written; the only channel this round's own context travels through
 │   │   ├── scope.md              {{SCOPE}}    required; missing or empty is a load-time error
 │   │   ├── goal.md               {{GOAL}}     optional
 │   │   ├── profile.md            {{PROFILE}}  optional; overrides ./.revmux/profile.md
@@ -1076,6 +1076,12 @@ receives, including what counts as critical, major and minor here.</pre>
           completion, so neither a directory prepared but not yet reviewed nor a round whose review was
           interrupted is one. An empty list always means empty: a tasks root that could not be read is reported
           as <code>paths.tasks_error</code>, and nothing that failed is reported as nothing being there.
+        </p>
+        <p>
+          <code>paths.profile_fallback</code> is the resolved <code>./.revmux/profile.md</code>, so a caller can
+          tell that a round it leaves without a profile will still be calibrated. The same rule applies here:
+          one that will not resolve is <code>paths.profile_fallback_error</code> rather than a missing
+          fallback, because the review would refuse that invocation.
         </p>
 
         <h2 id="init">revmux init <a class="anchor" href="#init">#</a></h2>

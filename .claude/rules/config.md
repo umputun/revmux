@@ -78,7 +78,8 @@ In documentation use the `--flag=value` form for long flags that take a value, n
 
 revmux never derives context — the caller writes it to disk and names it.
 `--task <id>` selects a directory under `--tasks-dir` (default `./.revmux/tasks`), `--run <name>` selects one
-round inside it, and `<task>/<run>/input/` is the only channel review context travels through.
+round inside it, and `<task>/<run>/input/` is the only channel a round's own context travels through —
+`./.revmux/profile.md` is the one repo-level default underneath it, resolved per the section below.
 There are no `--goal`, `--goal-file`, `--profile-file` or `--context-file` flags:
 variables resolve to **paths**, so a flag carrying inline text could not be substituted without revmux
 first writing it to a file, which would make revmux an author of context rather than a consumer of it.
@@ -536,7 +537,10 @@ denominator of every rate the analysis reports.
 **The same rule applies to every other failure this command can hit: an empty list must mean empty.**
 An unreadable tasks root reported as `"tasks": []` is the identical wrong advice one level up — it reads as
 "nothing is there" and mints a duplicate id — so it is `paths.tasks_error`, an unreadable task directory is
-`rounds_error` on that entry, and a `--workdir` that will not resolve is `paths.workdir_error` beside the
+`rounds_error` on that entry, a `./.revmux/profile.md` that will not resolve is `paths.profile_fallback_error`
+rather than a missing `profile_fallback` — the review refuses that invocation, so reporting it as no
+fallback describes a run that cannot start, and `preflight.sh` gates on the field for the same reason —
+and a `--workdir` that will not resolve is `paths.workdir_error` beside the
 raw value. An absent tasks root is the one clean case: it is a fresh install, not a failure to read one.
 
 **`configCmd.Execute` does not print.** go-flags calls it from inside `parseArgs`, before the injected

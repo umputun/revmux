@@ -101,6 +101,8 @@ It does NOT do scope detection, git operations, PR fetching, issue handling, or 
 It has **zero VCS dependency** — no git library, no `git` subprocess, no repo walking.
 All context (scope description, goal, project profile, prior rounds) is written to disk by the caller and passed in.
 Agents run diff commands themselves; revmux only substitutes a path.
+The one file it opens is `./.revmux/profile.md`, and only to copy its bytes into the round so the archive
+holds them — it parses nothing and reads nothing out of them, exactly as it does not read a `scope.md`.
 If a change would make revmux read a repo, the change belongs in the caller.
 See `.claude/rules/pipeline.md`.
 
@@ -154,7 +156,8 @@ A round that has already run is a load-time error rather than an overwrite, beca
 is exactly what a reflection agent needs to read.
 A loop re-runs one task under successive run names and accumulates rounds.
 There are no `--goal`, `--goal-file`, `--profile-file` or `--context-file` flags —
-one mechanism, no precedence rules, nothing for revmux to author.
+one mechanism, nothing for revmux to author, and the only precedence anywhere in it is the round's
+`profile.md` over the project's.
 
 **revmux writes only inside a round, and nothing it does in the course of a review deletes anything.**
 `revmux new --task <id> --run <name>` is the one thing that creates any of this, and it prints the absolute

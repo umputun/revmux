@@ -696,7 +696,7 @@ User: "revmux this branch"
 → git diff master...HEAD --shortstat → 22 files, +840/-310, handed to the brief as the scale
 → "Preparing the round for the branch against master…"
 → one subagent: reads the diff once, matches no existing task, derives `tui-rework`, opens
-  01-initial, writes task.md/scope/goal/profile → returns round_dir, wrote[4]
+  01-initial, writes task.md/scope/goal → returns round_dir, wrote[3]
 → revmux --task tui-rework --run 01-initial --no-tui > /tmp/…json  (background)
 → tell user: ~9 min, tail -f /tmp/…log for live progress
 → yielded tail session on <round_dir>/events.jsonl, milestone kinds only; one folded line a minute
@@ -708,8 +708,8 @@ User: "revmux this branch"
 User: "fix the major one and run it again"
 → fix applied
 → "Preparing the round for the fixes…" → same subagent, handed task `tui-rework` and the fixes'
-  shortstat so it neither matches a task nor re-measures; opens 02-after-fix, copies profile.md
-  across and writes its own scope
+  shortstat so it neither matches a task nor re-measures; opens 02-after-fix and writes its own
+  scope; the profile is the repo's and revmux resolves it
 → revmux --task tui-rework --run 02-after-fix --no-tui
 → exit 0, nothing above threshold
 ```

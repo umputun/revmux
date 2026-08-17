@@ -405,6 +405,10 @@ An empty list always means empty. If the tasks root could not be read the reason
 if one task's directory could not be read it is `rounds_error` on that entry, and a `--workdir` that would
 not resolve is `.paths.workdir_error`. Treat any of them as "unknown", never as "nothing is there".
 
+`.paths.profile_fallback` is `./.revmux/profile.md` when the repo has one: every round with no
+`input/profile.md` of its own inherits it, so do not write one per round. `.paths.profile_fallback_error`
+means that file will not resolve, and a review would refuse to start — `preflight.sh` already fails on it.
+
 ## `revmux new` — the only call that creates anything
 
 ```bash

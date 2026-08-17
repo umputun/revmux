@@ -182,7 +182,7 @@ caller-chosen and semantic; revmux allocates neither.
 <tasks-dir>/pr-123/               a task: one subject, reviewed over as many rounds as it takes
 ├── task.md                       optional; front matter identifying the task
 ├── 01-initial/                   a round
-│   ├── input/                    caller-written; the only channel review context travels through
+│   ├── input/                    caller-written; the only channel this round's own context travels through
 │   │   ├── scope.md              {{SCOPE}}    required
 │   │   ├── goal.md               {{GOAL}}     optional
 │   │   ├── profile.md            {{PROFILE}}  optional; overrides ./.revmux/profile.md
