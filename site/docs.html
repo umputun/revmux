@@ -528,7 +528,10 @@ Reviewing the token exchange path after the provider swap.</pre>
           Paths resolve against the <strong>process working directory</strong>: the project config layer, and
           <code>--tasks-dir</code>'s <code>./.revmux/tasks</code> default. <code>--workdir</code> is separate,
           setting where the subprocesses run and what <code>{{WORKDIR}}</code> expands to. Reviewing a repository
-          from outside it means passing <code>--config-dir</code> and <code>--tasks-dir</code> as well.
+          from outside it means passing <code>--config-dir</code> and <code>--tasks-dir</code> as well, and
+          writing the round its own <code>input/profile.md</code> — <code>./.revmux/profile.md</code> is
+          cwd-relative too and no flag relocates it, so a round without one inherits the calibration of
+          whatever project you are standing in.
         </p>
 
         <h2 id="profiles">Profiles <a class="anchor" href="#profiles">#</a></h2>

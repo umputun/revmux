@@ -101,8 +101,10 @@ It does NOT do scope detection, git operations, PR fetching, issue handling, or 
 It has **zero VCS dependency** — no git library, no `git` subprocess, no repo walking.
 All context (scope description, goal, project profile, prior rounds) is written to disk by the caller and passed in.
 Agents run diff commands themselves; revmux only substitutes a path.
-The one file it opens is `./.revmux/profile.md`, and only to copy its bytes into the round so the archive
-holds them — it parses nothing and reads nothing out of them, exactly as it does not read a `scope.md`.
+`./.revmux/profile.md` is the one piece of **caller review context** it opens, and only to copy its bytes
+into the round so the archive holds them; it parses nothing and reads nothing out of them.
+That is a rule about review context, not about file access — revmux also reads its config files, its whole
+prompt tree, its own prior `findings.json`, and, under the TUI, the bounded input snapshot below.
 If a change would make revmux read a repo, the change belongs in the caller.
 See `.claude/rules/pipeline.md`.
 

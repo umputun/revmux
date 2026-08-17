@@ -16,7 +16,7 @@ It does no scope detection, no git, no PR fetching, no source modification. This
 |---|---|
 | resolve what is under review | supervise, stagger, retry, degrade |
 | run git, gather context | compose and archive prompts |
-| write `scope.md`, `goal.md`, `profile.md`, `context/` | merge, dedupe, verify |
+| write `scope.md`, `goal.md`, `context/` | merge, dedupe, verify |
 | choose profile, lenses, flags | return findings on stdout |
 | read the JSON, present, fix, re-run | inject prior rounds |
 
@@ -111,6 +111,25 @@ brew install umputun/apps/revmux                   # macOS
 go install github.com/umputun/revmux/app@latest    # installs as 'app'; rename to 'revmux'
 git clone https://github.com/umputun/revmux.git && cd revmux && make install
 ```
+
+### Step 0.5: Offer the project profile, once per repository
+
+`revmux config`'s `paths.profile_fallback` is `./.revmux/profile.md` when the repo has one. Every round
+without its own `input/profile.md` inherits it, and nothing creates it — not `revmux init`, not this
+skill on its own. An empty field means every review here runs on generic calibration.
+
+When it is empty, say so in one line and offer to write it. **Only ever with the user's yes**, and never
+from the diff: read the project's own rules — `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, `docs/`, the
+linter config — and write what the software is, what a real failure looks like there, the blast radius,
+the reporting bar, and which conventions are deliberate. A profile guessed from one change is the thing
+this file exists to replace.
+
+Offer it once. If he declines, do not ask again in the session, and do not write a round-local
+`input/profile.md` instead — that wins over the project file and is exactly the substitution the round
+brief forbids.
+
+**Never on a fetched pull request or any tree that is not his**: `.revmux/` is checked-in configuration,
+so authoring one there commits a review standard to somebody else's repository.
 
 ### Step 1: Resolve what is being reviewed
 

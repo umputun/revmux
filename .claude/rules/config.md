@@ -32,6 +32,8 @@ revmux looks without tracking which flag a given path hangs off. `--workdir` set
 run and what `{{WORKDIR}}` expands to; reviewing a repo from outside it means passing `--config-dir` and
 `--tasks-dir` as well, since by the same rule both would otherwise resolve against the caller's cwd rather
 than the repo under review.
+`./.revmux/profile.md` is the fourth of these and the one no flag relocates, so an out-of-tree round with
+no `input/profile.md` inherits the *caller's* project profile and reviews one repo against another's bar.
 
 **`--config-dir ./.revmux` collapses the two layers into one, and that must be detected.**
 Otherwise the same directory loads twice as both the user and project layer — harmless for a scalar, but
