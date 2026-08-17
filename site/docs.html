@@ -1081,7 +1081,8 @@ receives, including what counts as critical, major and minor here.</pre>
           <code>paths.profile_fallback</code> is the resolved <code>./.revmux/profile.md</code>, so a caller can
           tell that a round it leaves without a profile will still be calibrated. The same rule applies here:
           one that will not resolve is <code>paths.profile_fallback_error</code> rather than a missing
-          fallback, because the review would refuse that invocation.
+          fallback, because a round that inherited it would refuse to start. A round carrying its own
+          <code>input/profile.md</code> is unaffected — that file wins before the project one is read.
         </p>
 
         <h2 id="init">revmux init <a class="anchor" href="#init">#</a></h2>

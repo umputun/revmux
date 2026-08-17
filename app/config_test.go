@@ -829,6 +829,29 @@ func TestResolveContext_projectProfileFallback(t *testing.T) {
 		assert.Equal(t, filepath.Join(input, task.ProfileFile), rc.Profile)
 	})
 
+	// the project file is never opened when the round has its own, so a broken one must not fail an
+	// invocation that would never have read it
+	t.Run("a broken project profile is irrelevant when the round carries its own", func(t *testing.T) {
+		root, cwd := setup(t, "")
+		require.NoError(t, os.MkdirAll(filepath.Join(cwd, projectDirName, task.ProfileFile), 0o750))
+		input := roundInput(t, root, "pr-1", task.ScopeFile, task.ProfileFile)
+
+		rc, err := options{Task: "pr-1", Run: testRun, TasksDir: root}.resolveContext()
+		require.NoError(t, err)
+		assert.Empty(t, rc.ProfileSource)
+		assert.Equal(t, filepath.Join(input, task.ProfileFile), rc.Profile)
+	})
+
+	t.Run("a broken project profile fails a round that would inherit it", func(t *testing.T) {
+		root, cwd := setup(t, "")
+		require.NoError(t, os.MkdirAll(filepath.Join(cwd, projectDirName, task.ProfileFile), 0o750))
+		roundInput(t, root, "pr-1", task.ScopeFile)
+
+		_, err := options{Task: "pr-1", Run: testRun, TasksDir: root}.resolveContext()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "want a file")
+	})
+
 	t.Run("no project profile leaves the placeholder", func(t *testing.T) {
 		root, _ := setup(t, "")
 		roundInput(t, root, "pr-1", task.ScopeFile)

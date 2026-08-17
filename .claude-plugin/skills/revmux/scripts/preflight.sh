@@ -98,14 +98,6 @@ cfg=$(revmux config 2>/dev/null) || {
 }
 
 if command -v jq >/dev/null 2>&1; then
-    # a project profile that will not resolve fails the review at load, so reporting ok here would
-    # send the caller into a run that cannot start
-    profile_err=$(printf '%s' "$cfg" | jq -r '.paths.profile_fallback_error // empty')
-    if [ -n "$profile_err" ]; then
-        fail "project profile: UNREADABLE - $profile_err"
-        echo "hint: fix or remove ./.revmux/profile.md"
-    fi
-
     if [ -n "$profile" ]; then
         known=$(printf '%s' "$cfg" | jq -r --arg p "$profile" '[.profiles[].name] | index($p) // "null"')
         if [ "$known" = "null" ]; then

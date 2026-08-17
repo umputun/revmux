@@ -538,9 +538,13 @@ denominator of every rate the analysis reports.
 An unreadable tasks root reported as `"tasks": []` is the identical wrong advice one level up — it reads as
 "nothing is there" and mints a duplicate id — so it is `paths.tasks_error`, an unreadable task directory is
 `rounds_error` on that entry, a `./.revmux/profile.md` that will not resolve is `paths.profile_fallback_error`
-rather than a missing `profile_fallback` — the review refuses that invocation, so reporting it as no
-fallback describes a run that cannot start, and `preflight.sh` gates on the field for the same reason —
-and a `--workdir` that will not resolve is `paths.workdir_error` beside the
+rather than a missing `profile_fallback`, since reporting it as no fallback describes a round that would
+refuse to start as one that is merely uncalibrated — **it is observability and not a gate**, because
+whether it matters depends on the round: one carrying its own `input/profile.md` wins before the project
+file is read, and nothing repo-global can know that before the round exists. It also answers `os.Stat`
+rather than a read, so an unreadable regular file resolves clean here and fails later at
+`materializeProfile`; do not label the field as readability.
+And a `--workdir` that will not resolve is `paths.workdir_error` beside the
 raw value. An absent tasks root is the one clean case: it is a fresh install, not a failure to read one.
 
 **`configCmd.Execute` does not print.** go-flags calls it from inside `parseArgs`, before the injected
