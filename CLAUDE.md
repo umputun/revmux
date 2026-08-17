@@ -139,8 +139,8 @@ explicit round override on the next attempt, which is the silent replacement thi
 to prevent.
 
 **Review context belongs to the round, not to the task.**
-Round 2 reviews the fixes for what round 1 found, so its scope, goal, profile and context are all different
-from round 1's.
+Round 2 reviews the fixes for what round 1 found, so its scope, goal and context are all different from
+round 1's — and its profile may be, though that one usually resolves to the project file both rounds share.
 There is deliberately no task-level layer between the project file and the round: a task-level `profile.md`
 would be caller-written context that the next round's composition overwrites, which is exactly what this
 rule forbids, while the project file is settings a repository checks in once.

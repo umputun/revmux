@@ -76,8 +76,9 @@ it this brief with every path already expanded:
 > 4. `goal` — the maintainer's framing when he gave one, **under 1000 characters**: what he wants out of
 >    the triage, and anything he has already settled. Omit the file when he said nothing rather than
 >    inventing a frame.
-> 5. `profile` — the project's own conventions, as in Step 2. Copy the previous round's when a round has
->    one.
+> 5. `profile` — **do not write it.** It holds the project's own conventions, which revmux resolves from
+>    `./.revmux/profile.md` for every round. Write one only when the user says this item needs a
+>    different bar than the repo's.
 > 6. `context/` — one file each: the item's body in full, its whole thread in order with each comment's
 >    author, the author's own history from the command above, and any item the thread links. Curate:
 >    every file is a tool call an agent may spend.

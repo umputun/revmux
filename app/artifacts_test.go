@@ -99,9 +99,11 @@ func TestRun_projectProfileSnapshot(t *testing.T) {
 			"the claim refuses first, so the finished round keeps the calibration it actually ran under")
 	})
 
-	t.Run("without a project profile an interrupted round is still reclaimable", func(t *testing.T) {
-		t.Chdir(t.TempDir())
+	t.Run("a round-local profile writes no snapshot and stays reclaimable", func(t *testing.T) {
+		project(t)
 		r, root := archiveRun(t)
+		input := filepath.Join(root, "pr-1", "round-1", task.InputDir)
+		require.NoError(t, os.WriteFile(filepath.Join(input, task.ProfileFile), []byte("# this round\n"), 0o600))
 		ro := r.opts()
 
 		review, err := ro.pipelineConfig()
@@ -109,8 +111,51 @@ func TestRun_projectProfileSnapshot(t *testing.T) {
 		require.NoError(t, ro.materializeProfile(review.archive, review.context))
 		require.NoError(t, review.archive.Close())
 
+		assert.NoFileExists(t, filepath.Join(root, "pr-1", "round-1", task.ProfileSnapshotFile))
 		reclaimed, err := archive.New(task.Round{TasksDir: root, Task: "pr-1", Run: "round-1"})
-		require.NoError(t, err, "nothing was written, so the round is still open")
+		require.NoError(t, err, "the round holds only input/ and the marker, so it is still open")
+		require.NoError(t, reclaimed.Close())
+	})
+
+	// the read finishes before Archive.Writer is called, so a source that vanishes costs the run and
+	// not the round. Only a partial revmux-owned artifact makes a round unreclaimable
+	t.Run("a source that cannot be read fails the run without burning the round", func(t *testing.T) {
+		project(t)
+		r, root := archiveRun(t)
+		ro := r.opts()
+
+		review, err := ro.pipelineConfig()
+		require.NoError(t, err)
+		require.NoError(t, os.Remove(review.context.ProfileSource))
+
+		require.Error(t, ro.materializeProfile(review.archive, review.context))
+		require.NoError(t, review.archive.Close())
+
+		assert.NoFileExists(t, filepath.Join(root, "pr-1", "round-1", task.ProfileSnapshotFile))
+		reclaimed, err := archive.New(task.Round{TasksDir: root, Task: "pr-1", Run: "round-1"})
+		require.NoError(t, err, "nothing was written into the round, so it is still open")
+		require.NoError(t, reclaimed.Close())
+	})
+
+	t.Run("a signal between the claim and the snapshot leaves the round reclaimable", func(t *testing.T) {
+		project(t)
+		r, root := archiveRun(t)
+		ro := r.opts()
+
+		review, err := ro.pipelineConfig()
+		require.NoError(t, err)
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		_, err = ro.review(ctx, review)
+		require.Error(t, err)
+		require.NoError(t, review.archive.Close())
+
+		dir := filepath.Join(root, "pr-1", "round-1")
+		assert.NoFileExists(t, filepath.Join(dir, task.ProfileSnapshotFile))
+		assert.NoFileExists(t, filepath.Join(dir, task.EventsFile))
+		reclaimed, err := archive.New(task.Round{TasksDir: root, Task: "pr-1", Run: "round-1"})
+		require.NoError(t, err, "a round nothing reviewed must not be spent")
 		require.NoError(t, reclaimed.Close())
 	})
 }

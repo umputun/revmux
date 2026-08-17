@@ -217,6 +217,11 @@ func (o runOpts) pipelineConfig() (configuredReview, error) {
 // the browser is a rendering path like stdout is.
 func (o runOpts) review(ctx context.Context, review configuredReview) (finding.Report, error) {
 	cfg, arc := review.pipeline, review.archive
+	// the snapshot is the first artifact written into the round, so a signal that arrived between the
+	// claim and here must stop before it: writing one burns a round nothing has reviewed
+	if err := ctx.Err(); err != nil {
+		return finding.Report{}, fmt.Errorf("review canceled: %w", err)
+	}
 	if err := o.materializeProfile(arc, review.context); err != nil {
 		return finding.Report{}, err
 	}

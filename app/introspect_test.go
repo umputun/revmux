@@ -208,7 +208,20 @@ func TestOptions_paths(t *testing.T) {
 
 	t.Run("no project profile reports no fallback", func(t *testing.T) {
 		isolate(t)
-		assert.Empty(t, options{TasksDir: root}.paths().ProfileFallback)
+		got := options{TasksDir: root}.paths()
+		assert.Empty(t, got.ProfileFallback)
+		assert.Empty(t, got.ProfileFallbackError)
+	})
+
+	// reported as absent, this describes an invocation the review would refuse to start — the same
+	// wrong advice tasks_error and workdir_error exist to prevent one level up
+	t.Run("a profile that will not resolve is an error rather than an absence", func(t *testing.T) {
+		dir := isolate(t)
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, projectDirName, task.ProfileFile), 0o750))
+
+		got := options{TasksDir: root}.paths()
+		assert.Empty(t, got.ProfileFallback)
+		assert.Contains(t, got.ProfileFallbackError, "want a file")
 	})
 
 	t.Run("a relative tasks root resolves against the working directory", func(t *testing.T) {

@@ -364,7 +364,7 @@ revmux --task pr-123 --run 02-after-fix &gt; findings.json</pre>
 │   ├── input/                    caller-written; the only channel review context travels through
 │   │   ├── scope.md              {{SCOPE}}    required; missing or empty is a load-time error
 │   │   ├── goal.md               {{GOAL}}     optional
-│   │   ├── profile.md            {{PROFILE}}  optional, the project's own conventions
+│   │   ├── profile.md            {{PROFILE}}  optional; overrides ./.revmux/profile.md
 │   │   └── context/              {{CONTEXT}}  optional: ticket text, design notes, spec excerpts
 │   └── ...                       revmux-written artifacts, see the run archive
 └── 02-after-fix/                 the next round, with its own input/</pre>
@@ -382,8 +382,17 @@ revmux --task pr-123 --run 02-after-fix &gt; findings.json</pre>
         </p>
         <p>
           There are no <code>--goal</code>, <code>--goal-file</code>, <code>--profile-file</code> or
-          <code>--context-file</code> flags. One mechanism, no precedence rules, and nothing for revmux to
-          author.
+          <code>--context-file</code> flags. One mechanism, and nothing for revmux to author.
+        </p>
+        <p>
+          <code>profile.md</code> is the one file with a layer under it, because what it says is true of the
+          repository rather than of one round. Put it in <code>./.revmux/profile.md</code> and every round of
+          every task inherits it — <a href="#config"><code>revmux config</code></a> reports the resolved path
+          as <code>paths.profile_fallback</code>, and the bytes are copied into each round as
+          <code>prompts/input-profile.md</code> so the archive records what actually calibrated it. A round's
+          own <code>input/profile.md</code> wins outright, and is worth writing only to hold that subject to a
+          different bar than the repo's. The user layer is never searched for it: calibration spanning
+          repositories describes none of them.
         </p>
         <p>
           <code>--run</code> has no default: the round holds your own context, so revmux cannot name one you
@@ -493,7 +502,6 @@ Reviewing the token exchange path after the provider swap.</pre>
         </div>
         <pre class="code">~/.config/revmux/
 ├── config                    INI, runtime knobs only
-├── profile.md                project layer only: what this repo is, and its reporting bar
 ├── prompts/
 │   ├── profiles/
 │   │   ├── comprehensive.md  roster front matter + shared preamble + severity bar
@@ -504,7 +512,11 @@ Reviewing the token exchange path after the provider swap.</pre>
 └── lenses/
     ├── bugs.md  impl.md  architecture.md
     ├── quality.md  docs.md  tests.md  comments.md  adversarial.md
-    └── grounding.md  precedent.md  thesis.md  antithesis.md  cost.md</pre>
+    └── grounding.md  precedent.md  thesis.md  antithesis.md  cost.md
+
+./.revmux/                    the project layer: the same shape, plus one file of its own
+└── profile.md                what this repo is and its reporting bar, inherited by every round
+                              here only — the user layer is never searched for it</pre>
         <p>
           <code>--config-dir</code> relocates the user layer. <a href="#init"><code>revmux init</code></a>
           materializes <code>./.revmux/</code> from whatever resolved, and

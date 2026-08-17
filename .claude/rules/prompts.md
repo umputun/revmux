@@ -234,7 +234,10 @@ Variables: `{{SCOPE}}`, `{{GOAL}}`, `{{PROFILE}}`, `{{CONTEXT}}`, `{{WORKDIR}}`,
 plus `{{FINDINGS}}` and `{{SOURCES}}` for the synthesis and verify stages.
 
 **Context variables expand to absolute paths, never to file contents.**
-`{{SCOPE}}`, `{{GOAL}}` and `{{PROFILE}}` become paths to files in the round's `input/`,
+`{{SCOPE}}` and `{{GOAL}}` become paths to files in the round's `input/`, and so does `{{PROFILE}}` when
+the round carries one — otherwise it names the round's own copy of `./.revmux/profile.md`, written to
+`prompts/input-profile.md`, which is the one context variable with a layer under it.
+`.claude/rules/config.md` owns that resolution.
 `{{CONTEXT}}` becomes the path to its `context/` directory, and the profile body instructs agents to read them.
 Prompt composition therefore only stats those files and never opens one, so there is no way for a large
 scope to bloat a prompt. The TUI separately opens a bounded startup snapshot with size and encoding

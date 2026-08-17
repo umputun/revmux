@@ -89,7 +89,8 @@ type pathInfo struct {
 	TasksError      string     `json:"tasks_error,omitempty"`
 	ConfigDir       string     `json:"config_dir"`
 	ProjectDir      string     `json:"project_dir,omitempty"`
-	ProfileFallback string     `json:"profile_fallback,omitempty"`
+	ProfileFallback      string `json:"profile_fallback,omitempty"`
+	ProfileFallbackError string `json:"profile_fallback_error,omitempty"`
 	WorkDir         string     `json:"workdir"`
 	WorkDirError    string     `json:"workdir_error,omitempty"`
 	Tasks           []taskInfo `json:"tasks"`
@@ -192,9 +193,11 @@ func (o options) knobs() []knob {
 func (o options) paths() pathInfo {
 	p := pathInfo{TasksDir: o.TasksDir, ConfigDir: o.layers.user, ProjectDir: o.layers.project,
 		WorkDir: o.WorkDir, Tasks: []taskInfo{}}
-	// reported so a caller can tell a round it left without a profile will still be calibrated. A read
-	// failure is left silent here: the review reports it, and this command is not where it is decided
-	if fallback, err := o.projectProfile(); err == nil {
+	// a failure reported as no fallback describes an invocation the review would refuse to start, which
+	// is the same wrong advice tasks_error and workdir_error exist to prevent
+	if fallback, err := o.projectProfile(); err != nil {
+		p.ProfileFallbackError = err.Error()
+	} else {
 		p.ProfileFallback = fallback
 	}
 	if dir, err := o.workDir(); err != nil {
