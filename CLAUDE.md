@@ -1,7 +1,7 @@
 # revmux — project notes
 
-revmux runs a structured multi-agent code review by spawning and supervising `claude --print` and
-`codex exec` subprocesses, then returns findings.
+revmux runs a structured multi-agent code review by spawning and supervising `claude --print`,
+`codex exec` and `agy --print` subprocesses, then returns findings.
 It exists because agent fan-out driven from inside an AI coding session is unobservable and unrecoverable:
 agents go silent for minutes, sometimes never return, and the caller has no timeout, no kill, no retry and no progress.
 
@@ -60,7 +60,7 @@ If a note would be equally true of any Go project, it does not belong here.
 - `app/artifacts.go` — the artifacts `package main` owns: `manifest.json`, `report.md`, `findings.json`
 - `app/progress.go` — the non-TTY event subscriber (timestamped lines to stderr), plus the run's closing
   summary, which the pipeline emits no event for
-- `app/executor/` — supervised subprocess execution for claude and codex
+- `app/executor/` — supervised subprocess execution for claude, codex and agy
 - `app/prompt/` — front matter and roster parsing, lens composition, `{{VAR}}` substitution, `go:embed` defaults
 - `app/pipeline/` — the three stages, fan-out, stagger, degrade policy, typed event channel
 - `app/finding/` — `Finding` and `Report` types, the per-stage JSON schemas, markdown and JSON rendering
@@ -314,8 +314,8 @@ There is no codex-specific prompt file — the shipped `adversarial` entry compo
 `lenses/adversarial.md`, and only its `model:` says codex runs it.
 An agent is named for its lens, never for its binary: the exception is a profile whose agents carry
 identical lens sets, where the runner is the only thing distinguishing them — `grill-me` and `expert`.
-Lens text stays executor-agnostic; the output-contract difference (claude has `--json-schema`, codex does not)
-is injected by the executor, never authored into a lens file.
+Lens text stays executor-agnostic; the output-contract difference (claude and agy have `--json-schema`,
+codex does not) is injected by the executor, never authored into a lens file.
 A roster entry also carries an optional `color` — an ANSI-16 name or `#RRGGBB` — resolved in `app/prompt`
 and handed to both renderers, so the TUI and `--no-tui` never color the same agent differently.
 
@@ -451,7 +451,7 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
   One that changes what a stage resolves to needs `revmux config` as a fifth site: `profileInfo.Stages`
   reports the resolution rather than the override, so a key it does not carry is invisible to the caller
   choosing the profile.
-- A change to the `model:` grammar is `app/prompt/runner.go` plus every authored file that uses it: eight
+- A change to the `model:` grammar is `app/prompt/runner.go` plus every authored file that uses it: ten
   shipped profiles, both stage files, the model-string sections of `site/docs.html` and
   `site/reference.html`, `.claude/rules/prompts.md`, and the
   fixtures in `app/prompt` and `app/pipeline` tests. The parsed form reaches `AgentSpec`, `Stage` and
@@ -523,33 +523,33 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
   that list to make a failing run pass is the mechanism the derived-from-`ProfileNames()` design exists to
   prevent, and the three that are there each name the review shape their bar is written for.
 - **The severity bar is duplicated in every profile body** and nothing composes it from one place:
-  `comprehensive`, `codex-only`, `claude-only`, `focused` and `grill-me` carry a byte-identical
-  `## Severity bar` section, `final` carries a two-severity variant of the same text, `triage` carries
+  `comprehensive`, `codex-only`, `claude-only`, `agy-only`, `focused`, `grill-me` and `trio` carry a
+  byte-identical `## Severity bar` section, `final` carries a two-severity variant of the same text, `triage` carries
   a bar that is not a variant of it at all — its severities rate how much a point bears on the decision,
   because it reads a filed item and there is no runtime for anything to go wrong at — and `expert` carries
   a third shape, rating what goes wrong if the thing is built and run as written, because what it reviews
   may be a plan rather than a change.
-  A change to what a severity means is eight edits, and the five identical copies must stay identical —
+  A change to what a severity means is ten edits, and the seven identical copies must stay identical —
   two profiles disagreeing about what `major` is means the same defect gates one review shape and not
   another, which reads as the model being inconsistent rather than the prompts being out of step.
-  A code-review wording change stops at the five: propagating it into `triage` or `expert` is what the
+  A code-review wording change stops at the seven: propagating it into `triage` or `expert` is what the
   separate bars exist to prevent.
   `.claude/rules/prompts.md` calls the body "the shared preamble and severity bar"; shared across the
   agents of one run, not across profiles.
-  **`## What not to report` is the second such block**, byte-identical in six of the eight, and it is the
+  **`## What not to report` is the second such block**, byte-identical in eight of the ten, and it is the
   one a finder consults before writing anything down — so a rule added to one profile and not the others
   makes the same finding reportable under one review shape and suppressed under another.
   `triage` and `expert` are the exceptions and carry their own, since the shipped copy is written about
   diffs and defers to the linters and tests a review runs after: a panel reading an issue is doing
   neither, and `expert` may be reading a plan where nothing ran and no line was touched.
   `TestDefaults_WhatNotToReportContract` exempts both by name and asserts their blocks separately, exactly
-  as the severity contract does — the equality check over the other six is not weakened to accommodate
+  as the severity contract does — the equality check over the other eight is not weakened to accommodate
   either.
   **`grill-me`'s `## Stance` section is the third**, and it duplicates a *lens* rather than another
   profile: roughly half of `lenses/adversarial.md` is copied into it verbatim, including the "Work the
   seams" bullets and the two paragraphs on titling the mechanism.
   The copy exists because that profile puts the adversarial stance on all four agents, where it is
-  preamble rather than a lens — but the six profiles that name `adversarial` compose that file itself, so an
+  preamble rather than a lens — but the eight profiles that name `adversarial` compose that file itself, so an
   edit there leaves `grill-me` stale and the two shapes then instruct agents differently about severity
   inflation in the profile whose whole premise is pushing against that bar.
   What is deliberately **not** copied stays not copied: `adversarial.md` tells its agent not to repeat

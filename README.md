@@ -4,8 +4,8 @@
 
 **[revmux.com](https://revmux.com)** · [Documentation](https://revmux.com/docs) · [Reference](https://revmux.com/reference) · [Releases](https://github.com/umputun/revmux/releases)
 
-revmux runs a structured multi-agent review. It spawns and supervises `claude --print` and `codex exec`
-subprocesses, then returns findings on stdout as JSON or markdown.
+revmux runs a structured multi-agent review. It spawns and supervises `claude --print`, `codex exec` and
+`agy --print` subprocesses, then returns findings on stdout as JSON or markdown.
 
 **It is normally launched by a coding agent rather than typed by you.** The [shipped skill](#agent-skills)
 works out what is under review, writes the context to disk, runs revmux and reads the report back. To that
@@ -99,9 +99,10 @@ either, ask for a review in words: revmux this branch, revmux pr 123, re-review 
 [Agent skills](#agent-skills) for what it does.
 
 revmux drives the model CLIs as subprocesses, so whichever ones your profile names must already be installed
-and authenticated: both for `comprehensive`, `focused`, `final`, `grill-me`, `triage` and `expert`, claude
-alone for `claude-only`, codex alone for `codex-only`. `preflight.sh` in the shipped skill answers it for any
-profile and any invocation.
+and authenticated: claude and codex for `comprehensive`, `focused`, `final`, `grill-me`, `triage` and
+`expert`, claude alone for `claude-only`, codex alone for `codex-only`, agy (Google Antigravity) alone for
+`agy-only`, and all three for `trio`. `preflight.sh` in the shipped skill answers it for any profile and any
+invocation.
 
 `ANTHROPIC_API_KEY` is stripped from the child environment by default so `claude` uses interactive
 subscription auth; pass `--preserve-anthropic-api-key` if you authenticate by key.
@@ -250,8 +251,8 @@ independently agreed".
 ## Profiles
 
 A profile is roster front matter plus a body that is the shared preamble and severity bar. Every roster entry
-composes lenses, and one `model:` string selects the binary, the model and the effort together, so claude and
-codex mix inside one review.
+composes lenses, and one `model:` string selects the binary, the model and the effort together, so claude,
+codex and agy mix inside one review.
 
 | profile | roster |
 |---|---|
@@ -260,11 +261,13 @@ codex mix inside one review.
 | `final` | `bugs+impl` plus the codex peer, nothing below major reported |
 | `claude-only` | the same four lens splits on claude, for a machine with no codex |
 | `codex-only` | the same splits on codex, and synthesis and verify with them |
+| `agy-only` | the same splits on agy, and synthesis and verify with them |
 | `grill-me` | two lens splits, each run once on claude and once on codex |
+| `trio` | one full-coverage finder per binary — claude, codex and agy each carry all eight lenses |
 | `expert` | two agents at the highest effort, each carrying all eight code lenses |
 | `triage` | a four-way panel over a filed item rather than a diff |
 
-**The eight are starting points, not the menu.** A profile is a file under `prompts/profiles/`, so dropping
+**The ten are starting points, not the menu.** A profile is a file under `prompts/profiles/`, so dropping
 `.revmux/prompts/profiles/release.md` into a project makes `--profile release` work with no registration step
 anywhere. Its roster can be as wide as you are willing to pay for, each entry carries whatever lenses the job
 needs, and any entry can leave the profile's model for its own. Lenses resolve the same way, so a roster

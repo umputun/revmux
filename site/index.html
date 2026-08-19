@@ -6,7 +6,7 @@
     <title>revmux — supervised multi-agent review for code, plans and proposals</title>
     <meta
       name="description"
-      content="Your coding agent runs revmux through the shipped skill: it spawns claude and codex as supervised subprocesses with stall detection, retry and a full run archive, and returns verified findings on a branch, a pull request, a plan or a filed issue."
+      content="Your coding agent runs revmux through the shipped skill: it spawns claude, codex and agy as supervised subprocesses with stall detection, retry and a full run archive, and returns verified findings on a branch, a pull request, a plan or a filed issue."
     />
     <meta
       name="keywords"
@@ -18,7 +18,7 @@
     <meta property="og:title" content="revmux — supervised multi-agent review for code, plans and proposals" />
     <meta
       property="og:description"
-      content="Launched by your coding agent, revmux spawns claude and codex as supervised subprocesses, cross-checks what they find, and returns one structured report with a full run archive behind it."
+      content="Launched by your coding agent, revmux spawns claude, codex and agy as supervised subprocesses, cross-checks what they find, and returns one structured report with a full run archive behind it."
     />
     <meta property="og:url" content="https://revmux.com/" />
     <meta property="og:image" content="https://revmux.com/assets/revmux-og.png" />
@@ -30,7 +30,7 @@
     <meta name="twitter:title" content="revmux — supervised multi-agent review for code, plans and proposals" />
     <meta
       name="twitter:description"
-      content="Launched by your coding agent, revmux spawns claude and codex as supervised subprocesses, cross-checks what they find, and returns one structured report with a full run archive behind it."
+      content="Launched by your coding agent, revmux spawns claude, codex and agy as supervised subprocesses, cross-checks what they find, and returns one structured report with a full run archive behind it."
     />
     <meta name="twitter:image" content="https://revmux.com/assets/revmux-og.png" />
     <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
@@ -45,7 +45,7 @@
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
         "name": "revmux",
-        "description": "Command line tool driven by a coding agent that runs a structured multi-agent review of a change, a plan or a filed item by spawning and supervising claude and codex subprocesses, then returning verified findings as JSON with a full run archive.",
+        "description": "Command line tool driven by a coding agent that runs a structured multi-agent review of a change, a plan or a filed item by spawning and supervising claude, codex and agy subprocesses, then returning verified findings as JSON with a full run archive.",
         "url": "https://revmux.com",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "macOS, Linux",
@@ -619,7 +619,7 @@ roster receives, including what counts as critical, major and minor here.</pre>
             </div>
           </div>
 
-          <p class="eyebrow" style="margin-bottom: 16px">eight ship, as starting points rather than as the menu</p>
+          <p class="eyebrow" style="margin-bottom: 16px">ten ship, as starting points rather than as the menu</p>
           <div class="scroll-x">
             <table class="tbl">
               <thead>
@@ -653,9 +653,19 @@ roster receives, including what counts as critical, major and minor here.</pre>
                   <td class="prose">the same splits on codex, both stages with them, no claude anywhere</td>
                 </tr>
                 <tr>
+                  <td>agy-only</td>
+                  <td class="prose">the same splits on agy, both stages with them, no claude or codex anywhere</td>
+                </tr>
+                <tr>
                   <td>grill-me</td>
                   <td class="prose">
                     two lens splits run once on claude and once on codex, every agent reading against the change
+                  </td>
+                </tr>
+                <tr>
+                  <td>trio</td>
+                  <td class="prose">
+                    one full-coverage finder per binary — claude, codex and agy each carry all eight lenses
                   </td>
                 </tr>
                 <tr>

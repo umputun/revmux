@@ -129,8 +129,8 @@
           <h1>revmux</h1>
           <p class="lede">
             A supervised multi-agent review, normally launched by your coding agent rather than typed by you.
-            revmux spawns <code>claude --print</code> and <code>codex exec</code> subprocesses, watches them,
-            and returns findings on stdout as JSON or markdown.
+            revmux spawns <code>claude --print</code>, <code>codex exec</code> and <code>agy --print</code>
+            subprocesses, watches them, and returns findings on stdout as JSON or markdown.
           </p>
         </div>
 
@@ -223,10 +223,12 @@ make install      <span class="c-dim"># and symlinks it to /usr/local/bin/revmux
         <ul>
           <li>
             <code>comprehensive</code>, <code>focused</code>, <code>final</code>, <code>grill-me</code>,
-            <code>triage</code>, <code>expert</code>: both, a claude roster plus codex
+            <code>triage</code>, <code>expert</code>: claude and codex, a claude roster plus a codex peer
           </li>
           <li><code>claude-only</code>: claude alone</li>
           <li><code>codex-only</code>: codex alone</li>
+          <li><code>agy-only</code>: agy (Google Antigravity) alone</li>
+          <li><code>trio</code>: all three — claude, codex and agy</li>
         </ul>
         <p>
           <code>preflight.sh</code> in the shipped skill answers it for any profile and any invocation,
@@ -505,8 +507,8 @@ Reviewing the token exchange path after the provider swap.</pre>
 ├── prompts/
 │   ├── profiles/
 │   │   ├── comprehensive.md  roster front matter + shared preamble + severity bar
-│   │   ├── focused.md  final.md  claude-only.md  codex-only.md
-│   │   └── grill-me.md  expert.md  triage.md
+│   │   ├── focused.md  final.md  claude-only.md  codex-only.md  agy-only.md
+│   │   └── grill-me.md  trio.md  expert.md  triage.md
 │   ├── synthesis.md
 │   └── verify.md
 └── lenses/
@@ -560,14 +562,15 @@ agents:
         <h3>The model string</h3>
         <p>
           One <code>model</code> string selects the binary, the model and the effort together. The binary leads
-          and is mandatory, either <code>claude</code> or <code>codex</code>, so a value validates itself and
-          revmux never has to guess which CLI runs <code>gpt-5.6-sol</code> from a catalog of model names that
-          would go stale.
+          and is mandatory — <code>claude</code>, <code>codex</code> or <code>agy</code> — so a value validates
+          itself and revmux never has to guess which CLI runs <code>gpt-5.6-sol</code> from a catalog of model
+          names that would go stale.
         </p>
         <pre class="code">claude                   claude, its own default model and effort
 claude/opus:high         fully specified
 codex/gpt-5.6-sol        effort falls back to the profile's, then the binary's
-codex:high               codex's default model at high effort</pre>
+codex:high               codex's default model at high effort
+agy/gemini-3.1-pro-high  agy (Google Antigravity) running a gemini model</pre>
         <p>
           The three travel together because they are not independent: <code>opus</code> means nothing to codex.
           A file cannot state a pairing that will not run, and an entry naming a different binary than the
@@ -627,10 +630,24 @@ codex:high               codex's default model at high effort</pre>
                 </td>
               </tr>
               <tr>
+                <td>agy-only</td>
+                <td class="prose">
+                  the same four lens splits on agy, and synthesis and verify with them, no claude or codex
+                  anywhere
+                </td>
+              </tr>
+              <tr>
                 <td>grill-me</td>
                 <td class="prose">
                   <code>bugs+impl</code> and <code>architecture+quality</code>, each run once on claude and once
                   on codex, every agent reading against the change
+                </td>
+              </tr>
+              <tr>
+                <td>trio</td>
+                <td class="prose">
+                  one full-coverage finder per binary — claude, codex <code>gpt-5.6-sol:high</code> and agy
+                  <code>gemini-3.1-pro-high:high</code> each carry all eight lenses, both stages on claude
                 </td>
               </tr>
               <tr>
@@ -660,7 +677,7 @@ codex:high               codex's default model at high effort</pre>
         </p>
         <h3>Writing your own</h3>
         <p>
-          The eight are starting points, not the menu. A profile is a file under
+          The ten are starting points, not the menu. A profile is a file under
           <code>prompts/profiles/</code> in any of the three layers, so dropping
           <code>.revmux/prompts/profiles/release.md</code> into a project makes
           <code>--profile release</code> work, with no registration step anywhere. The same is true of lenses:
@@ -743,6 +760,15 @@ receives, including what counts as critical, major and minor here.</pre>
           lenses is asking for a viewpoint, not for two corroborating votes. The synthesized entry inherits the
           profile's top-level <code>model</code> whole, binary included, so
           <code>--profile codex-only --lenses bugs</code> runs on codex.
+        </p>
+        <p>
+          <code>--runners claude,agy</code> filters the resolved roster by binary, so a combination is picked
+          at the CLI rather than by authoring a profile per pair:
+          <code>--profile trio --runners claude,agy</code> runs the claude+agy pair. The flag takes bare binary
+          names only — it selects among the runners the profile resolved and never builds one, so
+          <code>--runners claude/opus</code> is a load error, as is a filter that would empty the roster. A
+          stage whose resolved binary is excluded falls back to the first listed binary at its own defaults,
+          and the applied filter is recorded in the round's <code>manifest.json</code>.
         </p>
 
         <h2 id="composition">Prompt composition <a class="anchor" href="#composition">#</a></h2>
@@ -1053,7 +1079,7 @@ receives, including what counts as critical, major and minor here.</pre>
                 "roster": [...], "stages": [...]}],
   "lenses": [{"name": "adversarial", "description": "..."}],
   "stages": [{"name": "synthesis", "description": "..."}],
-  "vocabulary": {"executors": ["claude", "codex"],
+  "vocabulary": {"executors": ["claude", "codex", "agy"],
                  "efforts": ["low", "medium", "high", "xhigh", "max"]},
   "paths": {
     "tasks_dir": "/abs/project/.revmux/tasks",

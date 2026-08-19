@@ -12,7 +12,8 @@ and get the same review, and change a timeout without touching a prompt.
 ### Layout
 
 ```
-prompts/profiles/comprehensive.md   focused.md   final.md   claude-only.md   codex-only.md   grill-me.md
+prompts/profiles/comprehensive.md   focused.md   final.md   claude-only.md   codex-only.md   agy-only.md
+prompts/profiles/grill-me.md   trio.md
 prompts/profiles/expert.md
 prompts/profiles/triage.md
 prompts/synthesis.md   prompts/verify.md
@@ -60,6 +61,7 @@ claude                   the binary's own default model and effort
 claude/opus:high         fully specified
 codex/gpt-5.6-sol        effort falls back to the profile's, then the binary's
 codex:high               the binary's default model at high effort
+agy/gemini-3.1-pro-high  agy (Google Antigravity) running a gemini model
 ```
 
 **The binary leads and is mandatory, which is what makes the value validate itself.**
@@ -203,7 +205,7 @@ See `.claude/rules/pipeline.md`.
 
 ### Executor and lens are orthogonal
 
-A `model:` names `claude` or `codex` and nothing else.
+A `model:` names `claude`, `codex` or `agy` and nothing else.
 Anything else is a **load-time** error with a clear message, never a runtime surprise.
 
 There is no codex-specific prompt file and no per-entry prompt-path override.
@@ -212,7 +214,7 @@ Consequences worth preserving: the adversarial lens can run on claude by changin
 and the `bugs` lens can run on codex.
 
 Lens text must stay executor-agnostic.
-The output-contract difference — claude has `--json-schema`, codex does not — is injected by the executor.
+The output-contract difference — claude and agy have `--json-schema`, codex does not — is injected by the executor.
 Never write "return JSON shaped like…" into a lens file.
 
 **The contract is appended after the stage has already archived the prompt, so the stage appends it to what
@@ -395,7 +397,7 @@ the `revmux config` payload, where an untagged field would emit `URL` rather tha
 - every lens named by a roster entry exists
 - every stage named by a profile's `stages:` block is one the pipeline dispatches — `synthesis` or
   `verify`, not merely a `prompts/*.md` that loaded
-- every `model:` parses: the binary is `claude` or `codex`, and an effort suffix is one of `low`,
+- every `model:` parses: the binary is `claude`, `codex` or `agy`, and an effort suffix is one of `low`,
   `medium`, `high`, `xhigh`, `max`. `parseRunner` is the only way a runner is built, so it is the only
   place either vocabulary is checked — a second check elsewhere is unreachable code pretending to guard
 - `color`, when present, is an ANSI-16 name (`red`, `bright-blue`, …) or `#RRGGBB`

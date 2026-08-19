@@ -261,24 +261,35 @@ re-recorded into `app/executor/testdata/` during Task 1):
 
 ### Task 7: Documentation sweep (README, site, rules)
 
-- [ ] README: shipped-profile table (+2 rows), install paragraph naming which binaries each
+- [x] README: shipped-profile table (+2 rows), install paragraph naming which binaries each
       profile needs (agy install path included), the "all five print JSON"-adjacent text only
       where the README already states what changed, flag mention only where README states flags
-- [ ] `site/index.html`: profile table, the lens-names-in-prose profiles section if it
+      (intro sentence also gains `agy --print`; README states no flag list, so no `--runners`)
+- [x] `site/index.html`: profile table, the lens-names-in-prose profiles section if it
       enumerates profiles, install section if it names binaries
-- [ ] `site/docs.html`: profile table, prompt-tree diagram (+2 profile files), model-string
+      (+2 table rows, "eight ship" → "ten ship"; prose and install name no binaries per
+      profile; the meta/OG/JSON-LD descriptions enumerating "claude and codex" gained agy)
+- [x] `site/docs.html`: profile table, prompt-tree diagram (+2 profile files), model-string
       section (binary vocabulary gains `agy`), `--runners` in the runtime-knob table with the
       reason attached, `revmux config` sample payload if the executor vocabulary appears in it
-- [ ] `site/reference.html`: profile table (binaries column), flag table row for `--runners`,
+      (`--runners` is `no-ini` and the knob table is config-backed flags only, so it is
+      documented in prose beside `--lenses` in the profiles section instead, reason attached;
+      Model CLIs install list gains agy-only and trio)
+- [x] `site/reference.html`: profile table (binaries column), flag table row for `--runners`,
       model-string / executor vocabulary section
-- [ ] `site/llms.txt`: only if it states executor names or profile counts — check and update
-- [ ] `.claude/rules/prompts.md`: layout block (+2 profiles), model-string grammar section's
+      (the needs column's "both" rewritten as "claude + codex" — ambiguous with three binaries)
+- [x] `site/llms.txt`: only if it states executor names or profile counts — check and update
+      (it did both: summary lines, "eight shipped profiles", the model-string feature bullet)
+- [x] `.claude/rules/prompts.md`: layout block (+2 profiles), model-string grammar section's
       binary vocabulary, profile examples if they enumerate binaries
-- [ ] `.claude/rules/executor.md`: confirm the Task 1 section landed and reads like the
-      claude/codex sections
-- [ ] CLAUDE.md: project-structure and keep-in-sync counts that name the profile set literally
+      (also the orthogonality note: claude *and agy* have `--json-schema`)
+- [x] `.claude/rules/executor.md`: confirm the Task 1 section landed and reads like the
+      claude/codex sections (landed in Task 1, measured facts with rediscovery costs — verified)
+- [x] CLAUDE.md: project-structure and keep-in-sync counts that name the profile set literally
       (e.g. "eight shipped profiles" in the model-grammar bullet becomes ten; the severity-bar
       bullet's five identical copies becomes seven; the what-not-to-report six becomes eight)
+      (also: intro and `app/executor/` line gain agy, the adversarial-composing six becomes
+      eight, the orthogonality `--json-schema` note gains agy)
 
 ### Task 8: Skill trees (both, kept identical)
 

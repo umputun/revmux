@@ -132,6 +132,7 @@
               <tr><td>--task=&lt;id&gt;</td><td></td><td class="prose">name of the task directory holding the review context</td></tr>
               <tr><td>--run=&lt;name&gt;</td><td></td><td class="prose">name for this round of the review</td></tr>
               <tr><td>--lenses=&lt;a,b&gt;</td><td></td><td class="prose">lens set replacing the profile roster, as one agent</td></tr>
+              <tr><td>--runners=&lt;a,b&gt;</td><td></td><td class="prose">restrict the review to these binaries; bare binary names, filters the resolved roster</td></tr>
               <tr><td>--workdir=&lt;dir&gt;</td><td>working directory</td><td class="prose">directory the review subprocesses run in</td></tr>
               <tr><td>--min-confidence=&lt;n&gt;</td><td>0</td><td class="prose">drop findings below this confidence</td></tr>
               <tr><td>--no-synthesis</td><td></td><td class="prose">skip the synthesis stage</td></tr>
@@ -301,6 +302,7 @@ claude                   claude, its own default model and effort
 claude/opus:high         fully specified
 codex/gpt-5.6-sol        effort falls back to the profile's, then the binary's
 codex:high               codex's default model at high effort
+agy/gemini-3.1-pro-high  agy running a gemini model
 claude/                  <span class="c-crimson">refused: a second spelling of `claude`</span>
 claude/opus:hgih         <span class="c-crimson">refused: not an effort</span></pre>
         <div class="scroll-x">
@@ -309,7 +311,7 @@ claude/opus:hgih         <span class="c-crimson">refused: not an effort</span></
               <tr><th>vocabulary</th><th>values</th></tr>
             </thead>
             <tbody>
-              <tr><td>executors</td><td class="prose"><code>claude</code>, <code>codex</code></td></tr>
+              <tr><td>executors</td><td class="prose"><code>claude</code>, <code>codex</code>, <code>agy</code></td></tr>
               <tr><td>efforts</td><td class="prose"><code>low</code>, <code>medium</code>, <code>high</code>, <code>xhigh</code>, <code>max</code></td></tr>
             </tbody>
           </table>
@@ -329,14 +331,16 @@ claude/opus:hgih         <span class="c-crimson">refused: not an effort</span></
               <tr><th>profile</th><th>needs</th><th>roster</th></tr>
             </thead>
             <tbody>
-              <tr><td>comprehensive</td><td>both</td><td class="prose">three claude lens splits plus an adversarial codex peer. The default</td></tr>
-              <tr><td>focused</td><td>both</td><td class="prose">one <code>bugs</code> agent plus the codex peer</td></tr>
-              <tr><td>final</td><td>both</td><td class="prose"><code>bugs+impl</code> plus the codex peer, nothing below major reported</td></tr>
+              <tr><td>comprehensive</td><td>claude + codex</td><td class="prose">three claude lens splits plus an adversarial codex peer. The default</td></tr>
+              <tr><td>focused</td><td>claude + codex</td><td class="prose">one <code>bugs</code> agent plus the codex peer</td></tr>
+              <tr><td>final</td><td>claude + codex</td><td class="prose"><code>bugs+impl</code> plus the codex peer, nothing below major reported</td></tr>
               <tr><td>claude-only</td><td>claude</td><td class="prose">the four lens splits on claude alone</td></tr>
               <tr><td>codex-only</td><td>codex</td><td class="prose">the four lens splits on codex, both stages with them</td></tr>
-              <tr><td>grill-me</td><td>both</td><td class="prose">two lens splits, each run once on claude and once on codex</td></tr>
-              <tr><td>expert</td><td>both</td><td class="prose">two agents at the highest effort, each carrying all eight code lenses</td></tr>
-              <tr><td>triage</td><td>both</td><td class="prose">a four-way panel over a filed item; wants <code>--no-synthesis</code></td></tr>
+              <tr><td>agy-only</td><td>agy</td><td class="prose">the four lens splits on agy, both stages with them</td></tr>
+              <tr><td>grill-me</td><td>claude + codex</td><td class="prose">two lens splits, each run once on claude and once on codex</td></tr>
+              <tr><td>trio</td><td>claude + codex + agy</td><td class="prose">one full-coverage finder per binary, all eight lenses each, both stages on claude</td></tr>
+              <tr><td>expert</td><td>claude + codex</td><td class="prose">two agents at the highest effort, each carrying all eight code lenses</td></tr>
+              <tr><td>triage</td><td>claude + codex</td><td class="prose">a four-way panel over a filed item; wants <code>--no-synthesis</code></td></tr>
             </tbody>
           </table>
         </div>
