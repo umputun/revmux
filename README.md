@@ -106,6 +106,9 @@ profile and any invocation.
 `ANTHROPIC_API_KEY` is stripped from the child environment by default so `claude` uses interactive
 subscription auth; pass `--preserve-anthropic-api-key` if you authenticate by key.
 
+`claude` runs with `--strict-mcp-config`, so a review boots no MCP servers even when the working directory
+sits inside a project that configures them. Pass `--preserve-mcp` if a lens needs one.
+
 ## Quick start
 
 `revmux new` creates the round and prints every path you write to, so nothing constructs a path by hand:
