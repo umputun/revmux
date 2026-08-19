@@ -579,8 +579,7 @@ is always stripped — a `claude` child refuses to start when it believes it is 
 is exactly the situation when an agent invokes revmux.
 
 `claude` runs with `--strict-mcp-config`, so a review boots no MCP servers even when the workdir sits
-inside a project that configures them; `--preserve-mcp` turns that off. Codex has no equivalent single
-switch, so a codex entry still loads whatever `~/.codex/config.toml` defines.
+inside a project that configures them; `--preserve-mcp` turns that off.
 
 Agent processes start in their own session, so the terminal never signals them directly; revmux tears
 each process group down itself rather than leaving model CLIs running unsupervised after it exits.

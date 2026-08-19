@@ -75,11 +75,6 @@ func (c *Claude) args(req Request) []string {
 		"--no-session-persistence",
 		"--include-partial-messages",
 	}
-	// a finder reads a diff and returns findings, so the caller's MCP servers cost startup time and tool
-	// schemas for nothing. claude resolves .mcp.json by walking up from the workdir, so a review worktree
-	// inside a configured repo inherits the whole roster, including any server whose auth was never
-	// completed, which opens a browser tab on every spawn. --strict-mcp-config with no --mcp-config leaves
-	// zero servers and, unlike --bare, still discovers project instructions.
 	if !c.opts.PreserveMCP {
 		argv = append(argv, "--strict-mcp-config")
 	}

@@ -106,10 +106,9 @@ claude --print --output-format stream-json --verbose
   under roughly 130 bytes of JSON wrapper per chunk.
 - **`--strict-mcp-config` by default: a review boots no MCP servers.**
   claude resolves `.mcp.json` by walking up from the workdir, so a review worktree inside a configured
-  repo inherits the caller's whole roster — measured at 12 project servers plus 3 plugin ones, 161 tools
-  where a strict run has 31, and a server whose OAuth was never completed opens a browser tab on every
-  spawn. A finder reads a diff and returns findings; none of that roster is work it can use.
-  Unlike `--bare` this keeps project-instruction discovery. `--preserve-mcp` is the escape hatch.
+  repo inherits the caller's whole roster — 161 tools against 31 measured on one monorepo, and a server
+  whose OAuth was never completed opens a browser tab per spawn. Unlike `--bare` it keeps
+  project-instruction discovery. `--preserve-mcp` is the escape hatch.
 - The prompt goes in on **stdin**, never as an argv positional.
   Windows `cmd.exe` caps a command line at 8191 characters and a composed lens prompt blows past that instantly.
 
@@ -321,10 +320,6 @@ Codex is a peer executor, not a special case in the pipeline — but the executo
   prompt quoted — a lens body, a finding describing an error — as the failure,
   and hands `classify` a line that can carry a limit pattern the run never hit.
 - `--sandbox read-only` always. revmux never lets an agent write.
-- **Codex has no single switch that disables its MCP servers, so `--preserve-mcp` is claude-only.**
-  `-c mcp_servers={}` merges with the config rather than replacing it — measured: `codex mcp list --json`
-  returns the same servers with and without it. Turning them off needs one
-  `-c mcp_servers.<name>.enabled=false` per server, which means reading the list first.
 
 ### Error and limit patterns
 
