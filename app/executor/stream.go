@@ -77,7 +77,7 @@ func (b contentBlock) arg() string {
 		}
 		val = flattenLines(val)
 		if key == "file_path" || key == "path" {
-			val = b.shortPath(val)
+			val = shortPath(val)
 		}
 		return clampRunes(val)
 	}
@@ -101,7 +101,7 @@ func clampRunes(s string) string {
 
 // shortPath keeps the last two elements of a path. An absolute path eats a status row on its own, and
 // the leading directories are the same for every file in one review anyway.
-func (b contentBlock) shortPath(p string) string {
+func shortPath(p string) string {
 	parts := strings.Split(p, "/")
 	if len(parts) <= 2 {
 		return p

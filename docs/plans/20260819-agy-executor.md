@@ -129,18 +129,25 @@ re-recorded into `app/executor/testdata/` during Task 1):
 
 ### Task 2: agy stream parser
 
-- [ ] add the agy NDJSON decoder in `app/executor/` (own file beside `stream.go`), parsing
+- [x] add the agy NDJSON decoder in `app/executor/` (own file beside `stream.go`), parsing
       `init` / `step_update` / `result` events; unknown `event` values are ignored, not errors
-- [ ] map events to the existing emit vocabulary the way the claude parser does: agent text
+      (`app/executor/agystream.go`, `agyStream` fed line-by-line the way `readLines` will)
+- [x] map events to the existing emit vocabulary the way the claude parser does: agent text
       from `agent_response` deltas/steps, tool activity from tool-call step types (a step whose
       command cannot be recovered follows the codex rule — dropped, not reported by name),
       result text/`structured_output`/`usage` from the terminal `result` event
-- [ ] flatten multi-line text blocks rather than truncating (decoder emits text; width belongs
+      (deltas accumulate per step and emit once at completion; thinking-only steps emit nothing;
+      a schema-forced JSON answer is suppressed from activity the way claude's StructuredOutput
+      tool never reaches progress; tool dispatch only, completions not doubled)
+- [x] flatten multi-line text blocks rather than truncating (decoder emits text; width belongs
       to the renderers)
-- [ ] read token counts only from the result `usage`; map agy's fields onto the existing usage
+- [x] read token counts only from the result `usage`; map agy's fields onto the existing usage
       shape (`thinking_tokens` and `cache_read_tokens` fold in wherever claude's equivalents go)
-- [ ] tests against the recorded fixtures: event mapping, structured_output extraction, usage,
+      (input + output + cache_read; thinking already inside output_tokens, not added again)
+- [x] tests against the recorded fixtures: event mapping, structured_output extraction, usage,
       a stream that fails to parse is a degraded source, not a crash
+      (`agystream_test.go`, internal package test over all seven `agy-*.jsonl` captures plus
+      derived truncated / garbage / command-stripped cases)
 
 ### Task 3: agy executor
 
