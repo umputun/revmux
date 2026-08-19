@@ -22,6 +22,7 @@ type manifest struct {
 	Task       string               `json:"task"`
 	Run        string               `json:"run"`
 	Profile    string               `json:"profile"`
+	Runners    []string             `json:"runners,omitempty"` // the applied --runners filter, absent when none
 	ScopePath  string               `json:"scope_path"`
 	StartedAt  time.Time            `json:"started_at"`
 	FinishedAt time.Time            `json:"finished_at"`
@@ -105,7 +106,7 @@ func (o runOpts) manifest(cfg pipeline.Config, rep finding.Report) manifest {
 	}
 
 	return manifest{
-		Task: cfg.Task, Run: cfg.Run, Profile: cfg.Profile.Name, ScopePath: cfg.ScopePath,
+		Task: cfg.Task, Run: cfg.Run, Profile: cfg.Profile.Name, Runners: o.opts.Runners, ScopePath: cfg.ScopePath,
 		StartedAt: rep.Stats.StartedAt, FinishedAt: rep.Stats.FinishedAt,
 		DurationMS: rep.Stats.DurationMS, Tokens: rep.Stats.Tokens,
 		Agents: agents, Degraded: rep.Sources.DegradedSources,

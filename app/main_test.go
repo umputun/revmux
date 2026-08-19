@@ -1040,6 +1040,67 @@ func holdKey(t *testing.T, press func(string) error, k string) {
 	}()
 }
 
+func TestRun_runnersFilter(t *testing.T) {
+	// focused is a mixed roster: bugs on claude, adversarial on codex
+	base := func(t *testing.T) (options, string) {
+		t.Helper()
+		root := taskRoot(t)
+		return options{
+			Task: "pr-1", Run: "round-1", TasksDir: root, Profile: "focused",
+			StaggerDelay: 30 * time.Second, MaxParallel: 4, NoSynthesis: true, NoVerify: true,
+		}, root
+	}
+
+	t.Run("an unknown binary is a load error naming the valid set", func(t *testing.T) {
+		o, _ := base(t)
+		o.Runners = []string{"gemini"}
+		r := newRunOpts(t, o)
+		assert.Equal(t, 2, run(r.opts()))
+		assert.Contains(t, r.stderr.String(), `"gemini"`)
+		assert.Contains(t, r.stderr.String(), "agy", "the error carries the vocabulary")
+	})
+
+	t.Run("a filter that empties the roster is a load error naming the profile", func(t *testing.T) {
+		o, root := base(t)
+		o.Runners = []string{"agy"}
+		r := newRunOpts(t, o)
+		assert.Equal(t, 2, run(r.opts()))
+		assert.Contains(t, r.stderr.String(), "focused")
+		assert.Contains(t, r.stderr.String(), "claude", "and what the roster runs")
+		assert.NoFileExists(t, filepath.Join(root, "pr-1", "round-1", task.ManifestFile),
+			"the error lands before the round is claimed")
+	})
+
+	t.Run("the surviving agents run and the manifest records the filter", func(t *testing.T) {
+		o, root := base(t)
+		o.Runners = []string{"codex"}
+		r := newRunOpts(t, o)
+		r.result = executor.Result{StructuredOutput: json.RawMessage(
+			`{"findings":[{"file":"a.go","line":1,"severity":"major","confidence":90,` +
+				`"title":"x","lenses":["adversarial"]}]}`)}
+
+		assert.Equal(t, 1, run(r.opts()))
+
+		var got manifest
+		data, err := os.ReadFile(filepath.Join(root, "pr-1", "round-1", task.ManifestFile)) //nolint:gosec // path built from t.TempDir
+		require.NoError(t, err)
+		require.NoError(t, json.Unmarshal(data, &got))
+		assert.Equal(t, []string{"codex"}, got.Runners)
+		require.Len(t, got.Agents, 1, "the claude agent is filtered out")
+		assert.Equal(t, "adversarial", got.Agents[0].Name)
+		assert.Equal(t, "codex", got.Agents[0].Executor)
+	})
+
+	t.Run("no flag records no filter", func(t *testing.T) {
+		r, root := archiveRun(t)
+		require.Equal(t, 1, run(r.opts()))
+
+		data, err := os.ReadFile(filepath.Join(root, "pr-1", "round-1", task.ManifestFile)) //nolint:gosec // path built from t.TempDir
+		require.NoError(t, err)
+		assert.NotContains(t, string(data), `"runners"`, "an absent filter stays absent, byte-identical to before")
+	})
+}
+
 func TestRunOpts_runnerFactory(t *testing.T) {
 	t.Run("a supplied factory wins", func(t *testing.T) {
 		r := newRunOpts(t, options{})

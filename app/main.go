@@ -179,6 +179,13 @@ func (o runOpts) pipelineConfig() (configuredReview, error) {
 	if err != nil {
 		return configuredReview{}, fmt.Errorf("resolve profile: %w", err)
 	}
+	// the filter selects among runners the profile resolved: the roster below, and the stage and
+	// --lenses resolutions the restricted profile hands the pipeline later
+	if len(o.opts.Runners) > 0 {
+		if profile, err = profile.Restrict(o.opts.Runners); err != nil {
+			return configuredReview{}, fmt.Errorf("apply --runners: %w", err)
+		}
+	}
 	roster, err := profile.Roster(o.opts.Lenses, set.LensNames())
 	if err != nil {
 		return configuredReview{}, fmt.Errorf("resolve roster: %w", err)

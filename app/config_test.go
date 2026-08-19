@@ -81,6 +81,19 @@ func TestParseArgs_lensesAcceptCommasAndRepetition(t *testing.T) {
 	}
 }
 
+func TestParseArgs_runnersAcceptCommasAndRepetition(t *testing.T) {
+	home := isolate(t)
+	cfg := filepath.Join(home, "cfg")
+
+	o, err := parseArgs([]string{"--task", "pr-1", "--config-dir", cfg, "--runners", "claude, agy", "--runners", "codex"})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"claude", "agy", "codex"}, o.Runners)
+
+	o, err = parseArgs([]string{"--task", "pr-1", "--config-dir", cfg})
+	require.NoError(t, err)
+	assert.Nil(t, o.Runners, "absent means no filter")
+}
+
 func TestParseArgs_configSubcommand(t *testing.T) {
 	home := isolate(t)
 	cfg := filepath.Join(home, "cfg")

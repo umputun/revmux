@@ -48,6 +48,7 @@ type options struct {
 	Task           string   `long:"task" no-ini:"true" description:"name of the task directory holding the review context"`
 	Run            string   `long:"run" no-ini:"true" description:"name for this round of the review"`
 	Lenses         []string `long:"lenses" no-ini:"true" description:"lens set replacing the profile roster"`
+	Runners        []string `long:"runners" no-ini:"true" description:"restrict the review to these binaries"`
 	WorkDir        string   `long:"workdir" no-ini:"true" description:"directory the review subprocesses run in"`
 	MinConfidence  int      `long:"min-confidence" no-ini:"true" default:"0" description:"drop findings below this confidence"`
 	NoSynthesis    bool     `long:"no-synthesis" no-ini:"true" description:"skip the synthesis stage"`
@@ -123,6 +124,7 @@ func parseArgs(args []string) (options, error) {
 		return o, fmt.Errorf("parse arguments: %w", err)
 	}
 	o.Lenses = splitList(o.Lenses)
+	o.Runners = splitList(o.Runners)
 
 	layers, err := resolveLayers(o.ConfigDir)
 	if err != nil {

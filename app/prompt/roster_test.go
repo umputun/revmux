@@ -285,6 +285,97 @@ func TestProfile_ValidationErrors(t *testing.T) {
 	}
 }
 
+func TestProfile_Restrict(t *testing.T) {
+	// a mixed roster: one claude agent, one codex agent, stages inheriting claude/opus:high
+	const mixed = `model: claude/opus:high
+agents:
+  - {name: bugs, lenses: [bugs]}
+  - {name: adversarial, lenses: [adversarial], model: codex/gpt-5.6-sol:high}
+`
+	known := map[string]struct{}{"bugs": {}, "adversarial": {}}
+
+	t.Run("filters a mixed roster to the named binaries, order unchanged", func(t *testing.T) {
+		_, p := loadProfile(t, mixed)
+		p, err := p.Restrict([]string{"codex"})
+		require.NoError(t, err)
+		specs, err := p.Roster(nil, known)
+		require.NoError(t, err)
+		require.Len(t, specs, 1)
+		assert.Equal(t, "adversarial", specs[0].Name)
+		assert.Equal(t, "codex", specs[0].Executor)
+		assert.Equal(t, "gpt-5.6-sol", specs[0].Model, "a surviving agent keeps its own runner whole")
+	})
+
+	t.Run("a filter that empties the roster is an error, never a zero-agent run", func(t *testing.T) {
+		_, p := loadProfile(t, mixed)
+		p, err := p.Restrict([]string{"agy"})
+		require.NoError(t, err)
+		_, err = p.Roster(nil, known)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "custom", "names the profile")
+		assert.Contains(t, err.Error(), "claude", "names what the roster runs")
+		assert.Contains(t, err.Error(), "codex")
+	})
+
+	t.Run("an unknown binary is an error naming the valid set", func(t *testing.T) {
+		_, p := loadProfile(t, mixed)
+		_, err := p.Restrict([]string{"gemini"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), `"gemini"`)
+		assert.Contains(t, err.Error(), "agy", "the message carries the vocabulary")
+	})
+
+	t.Run("a binary carrying a model is an error: the flag filters, model strings select", func(t *testing.T) {
+		_, p := loadProfile(t, mixed)
+		_, err := p.Restrict([]string{"claude/opus"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), `"claude/opus"`)
+	})
+
+	t.Run("a stage resolving to an excluded binary falls back to the first listed, bare", func(t *testing.T) {
+		set, p := loadProfile(t, mixed)
+		p, err := p.Restrict([]string{"codex", "agy"})
+		require.NoError(t, err)
+		st, err := p.Stage(set, "synthesis")
+		require.NoError(t, err)
+		assert.Equal(t, "codex", st.Executor)
+		assert.Empty(t, st.Model, "the excluded runner's model belongs to it and must not carry over")
+		assert.Empty(t, st.Effort)
+	})
+
+	t.Run("a stage already on an allowed binary keeps its resolution", func(t *testing.T) {
+		set, p := loadProfile(t, mixed)
+		p, err := p.Restrict([]string{"claude"})
+		require.NoError(t, err)
+		st, err := p.Stage(set, "verify")
+		require.NoError(t, err)
+		assert.Equal(t, "claude", st.Executor)
+		assert.Equal(t, "opus", st.Model)
+		assert.Equal(t, "high", st.Effort)
+	})
+
+	t.Run("the lenses override falls back the same way rather than erroring", func(t *testing.T) {
+		_, p := loadProfile(t, mixed)
+		p, err := p.Restrict([]string{"agy"})
+		require.NoError(t, err)
+		specs, err := p.Roster([]string{"bugs"}, known)
+		require.NoError(t, err)
+		require.Len(t, specs, 1)
+		assert.Equal(t, "agy", specs[0].Executor)
+		assert.Empty(t, specs[0].Model)
+	})
+
+	t.Run("no filter leaves the roster and stages exactly as before", func(t *testing.T) {
+		set, p := loadProfile(t, mixed)
+		specs, err := p.Roster(nil, known)
+		require.NoError(t, err)
+		require.Len(t, specs, 2)
+		st, err := p.Stage(set, "synthesis")
+		require.NoError(t, err)
+		assert.Equal(t, "opus", st.Model)
+	})
+}
+
 func TestProfile_Roster_Colors(t *testing.T) {
 	t.Run("every ansi name resolves to its index", func(t *testing.T) {
 		for name, idx := range ansiColors {

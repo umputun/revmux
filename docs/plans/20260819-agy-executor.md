@@ -213,22 +213,29 @@ re-recorded into `app/executor/testdata/` during Task 1):
 
 ### Task 5: `--runners` combination flag
 
-- [ ] add `Runners []string` to the options struct in `app/config.go`
+- [x] add `Runners []string` to the options struct in `app/config.go`
       (`long:"runners" no-ini:"true"`, description in the existing flag style), validated
       against the executor vocabulary at load — an unknown binary is a load error naming the
       valid set
-- [ ] apply the filter where the roster is resolved: drop roster agents whose resolved binary
+      (validation lives in `prompt.Profile.Restrict`, beside the `executors` slice it checks)
+- [x] apply the filter where the roster is resolved: drop roster agents whose resolved binary
       is not in the set; a filter that empties the roster is a load-time error naming the
       profile and the surviving set (never a silent zero-agent run)
-- [ ] stages follow the filter: a stage whose resolved binary is excluded falls back to a bare
+      (`Restrict` stores the filter on the profile copy; `Roster` drops excluded agents and
+      errors naming the profile, the filter, and the binaries the roster runs)
+- [x] stages follow the filter: a stage whose resolved binary is excluded falls back to a bare
       `Runner` on the first listed binary (its own default model and effort), and
       `finding.StageRun` records the resolution as always, so the archive says what actually ran
-- [ ] the `--lenses` synthesized agent resolves through the same filter (its inherited profile
+      (post-resolution check in `Profile.Stage`, after the three layers apply)
+- [x] the `--lenses` synthesized agent resolves through the same filter (its inherited profile
       `model:` may name an excluded binary — same fallback)
-- [ ] record the applied filter in `manifest.json` (a new prompt input needs a matching record,
+- [x] record the applied filter in `manifest.json` (a new prompt input needs a matching record,
       per the keep-in-sync rule for reflection agents)
-- [ ] tests: filter on a mixed roster, empty-roster error, stage fallback, no-flag behavior
+      (`runners` field, `omitempty` so a no-flag manifest is byte-identical to before)
+- [x] tests: filter on a mixed roster, empty-roster error, stage fallback, no-flag behavior
       byte-identical to today
+      (`TestProfile_Restrict` in `roster_test.go`, `TestRun_runnersFilter` in `main_test.go`,
+      `TestParseArgs_runnersAcceptCommasAndRepetition` in `config_test.go`)
 
 ### Task 6: `agy-only` and `trio` profiles
 

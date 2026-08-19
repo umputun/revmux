@@ -87,10 +87,11 @@ type agentYAML struct {
 // stage to.
 type Profile struct {
 	doc
-	Name   string
-	runner Runner
-	agents []AgentSpec
-	stages map[string]Runner // per-stage runner overrides, never a body
+	Name    string
+	runner  Runner
+	agents  []AgentSpec
+	stages  map[string]Runner // per-stage runner overrides, never a body
+	allowed []string          // the --runners filter; empty allows every binary
 }
 
 // Stage is a stage prompt — synthesis or verify. It has no roster and must not expose one. Executor,
@@ -147,21 +148,50 @@ func (p *Profile) Runner() Runner { return p.runner }
 // against, so `revmux config` cannot report a set the loader would refuse.
 func Stages() []string { return slices.Clone(overridableStages) }
 
+// Restrict returns the profile filtered to the named binaries: Roster drops agents on any other binary,
+// and a stage or lens-override runner resolving to one falls back to the first listed binary bare, on its
+// own default model and effort. The flag selects among runners the profile resolved and never builds one,
+// so an entry is a bare binary name — `claude/opus` is an error, not a selection.
+func (p *Profile) Restrict(runners []string) (*Profile, error) {
+	for _, r := range runners {
+		if !slices.Contains(executors, r) {
+			return nil, fmt.Errorf("--runners: unknown binary %q, want bare names from %v", r, executors)
+		}
+	}
+	out := *p
+	out.allowed = slices.Clone(runners)
+	return &out, nil
+}
+
 // Roster returns the resolved roster, every entry carrying a color. A non-empty lensOverride replaces the
 // roster with a single agent carrying every named lens — one viewpoint, not two corroborating votes —
 // inheriting the profile's runner whole. Taking the model while forcing the binary to claude built a
-// claude agent asked for the profile's codex model.
+// claude agent asked for the profile's codex model. A Restrict filter drops roster agents on excluded
+// binaries, and emptying the roster is an error rather than a silent zero-agent run.
 func (p *Profile) Roster(lensOverride []string, known map[string]struct{}) ([]AgentSpec, error) {
 	specs := slices.Clone(p.agents)
-	if len(lensOverride) > 0 {
+	switch {
+	case len(lensOverride) > 0:
+		run := p.runner
+		if len(p.allowed) > 0 && !slices.Contains(p.allowed, run.Executor) {
+			// the inherited model belongs to the excluded binary, so the fallback is the first listed
+			// binary bare — carrying the model across is the pairing Runner.or exists to refuse
+			run = Runner{Executor: p.allowed[0]}
+		}
 		override := AgentSpec{
 			Name: overrideAgent, Lenses: slices.Clone(lensOverride),
-			Executor: p.runner.Executor, Model: p.runner.Model, Effort: p.runner.Effort,
+			Executor: run.Executor, Model: run.Model, Effort: run.Effort,
 		}
 		if err := override.validate(known); err != nil {
 			return nil, fmt.Errorf("lens override: %w", err)
 		}
 		specs = []AgentSpec{override}
+	case len(p.allowed) > 0:
+		specs = slices.DeleteFunc(specs, func(a AgentSpec) bool { return !slices.Contains(p.allowed, a.Executor) })
+		if len(specs) == 0 {
+			return nil, fmt.Errorf("profile %s: --runners %v leaves no agents, the roster runs %v",
+				p.Name, p.allowed, p.rosterExecutors())
+		}
 	}
 
 	for i := range specs {
@@ -192,10 +222,27 @@ func (p *Profile) Stage(set *Set, name string) (*Stage, error) {
 	if over, ok := p.stages[name]; ok {
 		res = over.or(st.runner).or(p.runner)
 	}
+	if len(p.allowed) > 0 && !slices.Contains(p.allowed, res.Executor) {
+		// the resolved model belongs to the excluded binary, so the Restrict fallback is the first listed
+		// binary bare, on its own defaults — finding.StageRun records this resolution like any other
+		res = Runner{Executor: p.allowed[0]}
+	}
 
 	out := *st
 	out.Executor, out.Model, out.Effort = res.Executor, res.Model, res.Effort
 	return &out, nil
+}
+
+// rosterExecutors lists the distinct binaries the roster resolves to, in roster order, so the
+// empty-filter error names what a workable --runners value could pick from.
+func (p *Profile) rosterExecutors() []string {
+	out := make([]string, 0, len(p.agents))
+	for _, a := range p.agents {
+		if !slices.Contains(out, a.Executor) {
+			out = append(out, a.Executor)
+		}
+	}
+	return out
 }
 
 func (p *Profile) validate(known map[string]struct{}) error {
