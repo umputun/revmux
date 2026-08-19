@@ -315,6 +315,83 @@ Codex is a peer executor, not a special case in the pipeline — but the executo
   and hands `classify` a line that can carry a limit pattern the run never hit.
 - `--sandbox read-only` always. revmux never lets an agent write.
 
+### Verified `agy` CLI behavior
+
+Measured directly against agy 1.1.15 (Google Antigravity; plan discovery ran 1.1.14 and every shape below matched).
+The captures live in `app/executor/testdata/` as `agy-*.jsonl`; each fact names what it costs to rediscover.
+
+- Non-interactive form: `agy --print "<prompt>" --output-format stream-json --sandbox
+  --disable-slash-commands [--model <id>] [--effort low|medium|high] [--json-schema <schema>] --print-timeout <dur>`.
+- **The prompt can reach agy on stdin, and that is the path that survives the Windows argv cap.**
+  `agy --print "" --input-format stream-json --output-format stream-json` reads NDJSON lines from stdin;
+  the accepted message is `{"event":"user","message":{"role":"user","content":"<prompt>"}}`,
+  with `content` as a plain string or a claude-style `[{"type":"text","text":...}]` array — both measured working.
+  The output stream is shape-identical to the argv-fed run (`agy-stdin-clean.jsonl` beside `agy-clean.jsonl`),
+  and the process exits after the turn once stdin is closed.
+  Getting the message shape wrong fails three different ways, and only one of them is loud:
+  a line without `"event"` returns a result ERROR naming the field,
+  `{"event":"user"}` without `"message"` likewise,
+  but an unrecognized event name (`user_input`, `prompt`) produces **no result event at all** — the process sits until something kills it.
+  **Bare `--print` with the prompt piped on stdin does not work**: the flag consumes the next argv token as the prompt.
+  Measured: `--print --input-format stream-json ...` answered a question about `--input-format`, in plain text,
+  which means the piped prompt and both format flags were all silently ignored.
+- Output is agy's **own NDJSON dialect**, not claude stream-json. Three event kinds:
+  `init` (cwd, `tools[]`, `permission_mode` — print mode showed `"always-proceed"` with no flag passed),
+  `step_update`, and a terminal `result`. Unknown event kinds must be ignored, not errors.
+- `step_update` carries `conversation_id`, `step_index`, `state` (`ACTIVE`|`DONE`|`ERROR`),
+  `step_type` (observed: `user_input`, `checkpoint`, `agent_response`, `tool`, `system_message`, `finish`),
+  plus optional `text_delta`, `duration_seconds` and a per-step `usage`.
+- **An `agent_response` step can be DONE with no `text_delta` at all** — a thinking-only step before a tool
+  call, carrying only `usage` and `duration_seconds`. A parser that treats every `agent_response` as text
+  emits blank lines for half the steps of a tool-using run (`agy-tools.jsonl`, step 2).
+- Tool steps: `step_type:"tool"` with `tool_name` and `tool_info{name, parameters, output?, error?}`.
+  The command is recoverable from `tool_info.parameters` — `CommandLine` for `run_command`,
+  `AbsolutePath` for `view_file`, `Pattern`/`SearchDirectory` for `find_by_name`.
+  ACTIVE fires at dispatch with the parameters; the completion event repeats them and adds `output`,
+  and a failed tool completes with `state:"ERROR"` and `error:{type:"TOOL_ERROR",message}` (`agy-toolerror.jsonl`).
+- `--json-schema` works like claude's: the result carries a **pre-parsed `structured_output` object**
+  plus a `json_schema` echo, and `response` duplicates the raw JSON string. Read `structured_output`;
+  never scrape `response`. agy accepts a schema file path as well as inline JSON — pass inline anyway,
+  for symmetry with claude (`agy-schema.jsonl`, recorded under `testdata/finder-schema.json`).
+- **A schema-forced answer is a blind window, and agy has no `--include-partial-messages` to fill it.**
+  A 4,225-character structured answer arrived as one `agent_response` DONE event with zero ACTIVE deltas
+  before it — nothing on stdout while the model composes. Plain-text answers do stream ACTIVE
+  `text_delta` chunks, and tool steps stream throughout, so a tool-using review has liveness between
+  answers; the composing window itself rides on the idle timeout being generous and the hard timeout.
+  Do not invent a third liveness source — there is none.
+- Token counts come from the result `usage`:
+  `input_tokens`, `output_tokens`, `thinking_tokens`, `cache_read_tokens`, `total_tokens`,
+  where `output_tokens` already includes thinking (measured 87 output / 86 thinking on a one-word answer).
+  Per-step `usage` exists too; the result is the total. **No event anywhere carries the actual model**
+  (claude has `modelUsage`), so the manifest records the requested model only for agy.
+- **`result.status:"ERROR"` does not imply a failed run.** A mid-run tool error
+  (`read s1: resource temporarily unavailable` from a sandboxed `find /`) propagated into the terminal
+  result as `status:"ERROR"` with an `error` string — while the process exited 0 and `response` carried
+  the complete, correct answer (`agy-toolerror.jsonl`). Outcome mapping must weigh the exit code and the
+  presence of a usable answer, not the status string alone.
+- A bad model id (`agy-error.jsonl`): exit 1, and the diagnostic is a **single `result` event on stdout** —
+  no `init` first — with `status:"ERROR"` and an `error` string that includes the available-model list.
+  **stderr was empty in every capture, errors included**; agy's diagnostics ride the result event on stdout,
+  so there is no stderr prose to mine and no codex-style `error:` prefix gate to apply.
+  A rate-limit/quota error was not cheaply reproducible and no typed rate-limit event was observed;
+  until one is captured, the error tier is the result `error` string.
+- `--print-timeout` defaults to **5m0s** and is agy-internal — it would kill a long review well under
+  revmux's own hard timeout. It accepted `24h` and `100000h` without complaint, so there is no practical
+  maximum; the executor must pass a value derived above the hard timeout. Expiry (`agy-timeout.jsonl`):
+  exit 1, terminal result `status:"ERROR"`, `error:"timeout waiting for response"`, with the step stream
+  up to that point intact.
+- **agy sets no nested-session guard.** Its tool children get `ANTIGRAVITY_LS_ADDRESS`,
+  `ANTIGRAVITY_AGENTAPI_EXE`, `ANTIGRAVITY_CSRF_TOKEN`, `ANTIGRAVITY_CONVERSATION_ID` and
+  `ANTIGRAVITY_SOURCE_METADATA`, and launching agy with all five set succeeds — measured, status SUCCESS.
+  Nothing agy-specific to strip; still strip `CLAUDECODE` as always, since agy proxies claude models and
+  revmux is often launched from a claude session.
+- Under `--sandbox`, `run_command` executed in `~/.gemini/antigravity-cli/scratch`, **not the launch cwd**
+  (measured: the agent's first `ls -la` listed an empty directory). Composed prompts must use absolute
+  paths, which revmux's path-expanding variables already are.
+- `agy models` ids look like `gemini-3.7-flash-{high,medium,low}`, `gemini-3.1-pro-{high,low}`,
+  `claude-sonnet-4-6`; effort exists both as `--effort` and baked into some id suffixes.
+  Pass `--effort` only when the `model:` string carried one, same as the other binaries.
+
 ### Error and limit patterns
 
 claude gets its rate-limit signal from the typed `rate_limit_event`, so string matching is only needed for codex.
@@ -340,4 +417,5 @@ Where patterns are used, tier them: **retry → limit → error**.
 To learn what the upstream CLIs actually emit, do not launch `claude` or `codex` from an AI agent's own tool shell —
 nested launches are commonly blocked by the host tool's permission layer, and the capture silently fails.
 Run the capture in a separate, independent terminal session, redirect stdout and stderr to files, and inspect those.
+`agy` is not a host tool here and launches fine from an agent shell — measured while recording the `agy-*` fixtures.
 Recorded captures belong in `app/executor/testdata/` as fixtures; see `.claude/rules/testing.md`.
