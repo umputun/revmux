@@ -293,16 +293,25 @@ re-recorded into `app/executor/testdata/` during Task 1):
 
 ### Task 8: Skill trees (both, kept identical)
 
-- [ ] `SKILL.md` in both trees: profile table (+2), the "the user says" mapping (a user asking
+- [x] `SKILL.md` in both trees: profile table (+2), the "the user says" mapping (a user asking
       for "agy", "antigravity", "gemini review" or a combo like "claude and agy" maps to
       `agy-only` / `trio` / `--runners`), executor enumeration anywhere it appears
-- [ ] `references/invocation.md` in both trees: profile table (+2), the executor **count** in
+      (three mapping rows; the intro — and the claude tree's frontmatter description — gain
+      `agy --print`; a `--runners` paragraph lands beside the `--lenses` one in Step 3)
+- [x] `references/invocation.md` in both trees: profile table (+2), the executor **count** in
       its Environment bullet (the count is the sync site the CLAUDE.md bullet exists for),
       `--runners` wherever flags are enumerated
-- [ ] any other `references/` file enumerating binaries or profiles — grep both trees for
+      (Environment rewritten: an `agy` bullet plus per-profile needs — three single-binary
+      profiles, trio needs all three, the other six still claude+codex; `--runners` in the flag
+      table and a paragraph under Choosing a profile; the stale "twelve prompt files" under
+      `revmux init` corrected to twenty-five while touching the file)
+- [x] any other `references/` file enumerating binaries or profiles — grep both trees for
       `codex` and update the enumerations that are about executors
-- [ ] `diff -r` of the two trees' `references/` and `scripts/` comes back empty; only
-      `SKILL.md` differs
+      (`output.md`'s agent-tee line notes agy's NDJSON shares the `.jsonl` extension;
+      `preflight.sh` and `launch-revmux.sh` header comments name agy — the scripts themselves
+      are data-driven off `revmux config` and needed no logic change)
+- [x] `diff -r` of the two trees' `references/` and `scripts/` comes back empty; only
+      `SKILL.md` differs (verified after the sync)
 
 ### Task 9: Verify acceptance criteria
 

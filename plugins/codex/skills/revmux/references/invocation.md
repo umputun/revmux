@@ -143,7 +143,7 @@ not the session happened to be split.
 
 ### Why the launcher forwards PATH
 
-revmux spawns `claude` and `codex` itself, and overlay backends start children from a server process
+revmux spawns `claude`, `codex` and `agy` itself, and overlay backends start children from a server process
 whose environment predates the user's shell rc files. Without forwarding, every agent degrades on a
 binary that is plainly installed and the run exits `2`.
 
@@ -221,11 +221,20 @@ will not read, and an unwritable `./.revmux/` under `revmux init`.
 | `final` | `bugs+impl` plus the codex peer, nothing below major reported | last look before merging |
 | `claude-only` | `bugs+impl`, `arch+quality`, `docs+tests`, `adversarial` — all on claude | codex is unavailable or unwanted |
 | `codex-only` | the same four splits on codex, synthesis and verify included — no claude anywhere | claude is unavailable or unwanted |
+| `agy-only` | the same four splits on agy, synthesis and verify included — no claude or codex anywhere | claude and codex are unavailable or unwanted |
+| `trio` | one full-coverage finder per binary — claude, codex and agy each carrying all eight lenses, both stages on claude | corroboration across three vendors on the whole change; `--runners` picks a pair out of it |
 | `grill-me` | `bugs+impl` and `architecture+quality`, each run once on claude and once on codex, every agent reading against the change | the user asked to be grilled; corroboration between two vendors on one lens pair is the point |
 | `expert` | two agents at the highest effort — codex `gpt-5.6-sol:xhigh` and claude `fable:xhigh` — each carrying all eight lenses, both stages on fable | a plan, or a change nobody wants to get wrong. Both agents read everything, so agreement between them is real corroboration rather than two halves of one review |
 | `triage` | `facts` (grounding + precedent), `thesis`, `antithesis` on claude, plus `cost` on codex | the subject is a filed item rather than a diff — an issue, a proposal, a discussion |
 
 `--profile <name>`. The default is `comprehensive` and is itself a config knob.
+
+`--runners claude,agy` filters the resolved roster by binary, so a combination is picked at the CLI
+rather than by authoring a profile per pair: `--profile trio --runners claude,agy` runs the claude+agy
+pair. The flag takes bare binary names only — it selects among the runners the profile resolved and
+never builds one, so `--runners claude/opus` is a load error, as is a filter that would empty the
+roster. A stage whose resolved binary is excluded falls back to the first listed binary at its own
+defaults, and the applied filter is recorded in the round's `manifest.json`.
 
 `triage` is the one shipped profile that needs flags beside it: `--no-synthesis`, because every argument
 a panel produces is single-source and the drop rule eats them, and `--verify-group-by source`, so each
@@ -458,7 +467,7 @@ It prints JSON on stdout and writes nothing outside `./.revmux/`:
   template so an upgrade can still move a default the user never set. One carrying an actual setting is
   left alone. Prompt files ship live, because they are the text agents execute
 
-Take the paths from that output. Twelve prompt files and the config is the shipped tree's size, but a
+Take the paths from that output. Twenty-five prompt files and the config is the shipped tree's size, but a
 user with his own lenses has more, and composing a path from this document rather than reading one
 back is how a caller ends up writing a file nothing loads.
 
@@ -566,12 +575,16 @@ form: the decision is the user's, one task per call.
 
 ## Environment
 
-revmux drives the model CLIs as subprocesses, so both must already be installed and authenticated:
+revmux drives the model CLIs as subprocesses, so every binary the profile names must already be
+installed and authenticated:
 
 - `claude` — every lens agent and both model stages run on it by default
-- `codex` — needed when a profile, a roster entry or a stage names it in its `model:`. `claude-only`
-  needs claude alone and `codex-only` needs codex alone; the other six shipped profiles need both.
-  `preflight.sh <profile>` answers it for the profile that will actually run
+- `codex` — needed when a profile, a roster entry or a stage names it in its `model:`
+- `agy` — the same rule; among the shipped profiles, `agy-only` and `trio` are the two that name it
+
+`claude-only` needs claude alone, `codex-only` codex alone and `agy-only` agy alone; `trio` needs all
+three; the other six shipped profiles need claude and codex. `preflight.sh <profile>` answers it for
+the profile that will actually run.
 
 `ANTHROPIC_API_KEY` is stripped from the child environment by default so `claude` uses interactive
 subscription auth; `--preserve-anthropic-api-key` passes it through for key-based auth. `CLAUDECODE`
@@ -588,6 +601,7 @@ each process group down itself rather than leaving model CLIs running unsupervis
 | `--task=<id>` | required | name of the task directory holding the review context |
 | `--run=<name>` | required | name for this round of the review |
 | `--lenses=<a,b>` | | lens set replacing the profile roster |
+| `--runners=<a,b>` | | restrict the review to these binaries; bare binary names, filters the resolved roster |
 | `--workdir=<dir>` | working directory | directory the review subprocesses run in |
 | `--min-confidence=<n>` | `0` | drop findings below this confidence |
 | `--no-synthesis` | | skip the synthesis stage |

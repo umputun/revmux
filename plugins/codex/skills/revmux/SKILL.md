@@ -12,8 +12,8 @@ description: >
 
 # revmux — supervised multi-agent code review
 
-revmux spawns and supervises parallel `claude --print` and `codex exec` subprocesses, watches each for
-stalls, retries what hangs, and returns findings on stdout.
+revmux spawns and supervises parallel `claude --print`, `codex exec` and `agy --print` subprocesses,
+watches each for stalls, retries what hangs, and returns findings on stdout.
 
 It does no scope detection, no git, no PR fetching, no source modification. This skill does that half.
 
@@ -292,6 +292,8 @@ scale numbers are what Step 4's one-line announcement is built from.
 | `final` | `bugs+impl` plus codex peer, nothing below major | pre-merge |
 | `claude-only` | the same four lens splits, all on claude | no codex available |
 | `codex-only` | the same four lens splits on codex, and synthesis and verify with them | no claude available |
+| `agy-only` | the same four lens splits on agy, synthesis and verify with them | no claude or codex available |
+| `trio` | one finder per binary — claude, codex and agy — each carrying all eight lenses | three-vendor corroboration on the whole change |
 | `grill-me` | `bugs+impl` and `architecture+quality`, each once on claude and once on codex, all reading against the change | the user wants it torn apart |
 | `expert` | two agents at the highest effort, codex `gpt-5.6-sol:xhigh` and claude `fable:xhigh`, each carrying all eight lenses | a plan, or a change nobody wants to get wrong. Slow and expensive; pick it when he says so, not by default |
 | `triage` | `facts` (grounding + precedent), `thesis`, `antithesis`, `cost` on codex | a filed item rather than a diff; needs `--no-synthesis --verify-group-by source`, `references/triage.md` |
@@ -314,6 +316,9 @@ fails the run.
 | last, pre-merge, before merge, strict | `final` |
 | claude only, no codex, skip codex | `claude-only` |
 | codex only, no claude, codex alone | `codex-only` |
+| agy, antigravity, gemini review, no claude and no codex | `agy-only` |
+| all three, trio, every vendor, claude codex and gemini together | `trio` |
+| a pair by name — "claude and agy", "codex and agy" | `trio` plus `--runners claude,agy` — the flag filters the roster by binary |
 | grill me, tear it apart, be brutal, no mercy, adversarial | `grill-me` |
 | expert, best models, highest effort, spare no expense, use sol and fable | `expert` — and only on words like these, never inferred from the subject |
 | triage this, is this worth doing, should we accept this, should I close this | `triage`, and the subject is a filed item rather than a diff — `references/triage.md`, which owns the flags it needs |
@@ -325,6 +330,11 @@ two are genuinely close, as "quick, before I merge" is between `focused` and `fi
 
 `--lenses a,b` produces **one** agent carrying both lenses and drops the codex peer, losing every
 cross-source confidence boost. Prefer a profile unless narrowing is specifically wanted.
+
+`--runners claude,agy` filters the chosen profile's resolved roster by binary — bare binary names
+only, and a filter that would empty the roster is a load error. It selects among the runners the
+profile resolved and never builds one, so a two-vendor pair is `--profile trio --runners claude,agy`
+rather than a profile per pair.
 
 Also useful: `--min-confidence=70` for actionable-only, `--no-verify` when a human reads everything.
 
