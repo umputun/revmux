@@ -151,31 +151,42 @@ re-recorded into `app/executor/testdata/` during Task 1):
 
 ### Task 3: agy executor
 
-- [ ] add `Agy` executor in `app/executor/agy.go` embedding `proc`, supplying `args()`
+- [x] add `Agy` executor in `app/executor/agy.go` embedding `proc`, supplying `args()`
       (`--print <prompt>` or the stdin path Task 1 verified, `--output-format stream-json`,
       `--sandbox`, `--disable-slash-commands`, `--model`/`--effort` from the per-run `Request`
       only when set, `--json-schema` with the running stage's schema inline, `--print-timeout`
       per Task 1) and the agy parser
-- [ ] tee raw bytes to `Request.RawOutput` before parsing; the archive tee stays `<agent>.jsonl`
+      (stdin path: `--print ""` + the stream-json user turn built by `agyStdinMessage`;
+      `--print-timeout` is hard timeout + 1m, or `24h` with the hard timeout disabled)
+- [x] tee raw bytes to `Request.RawOutput` before parsing; the archive tee stays `<agent>.jsonl`
       (agy output is NDJSON)
-- [ ] idle watchdog: touch on every stdout line and stderr line; from the Task 1 captures,
+      (shared `proc` tee; `finder.rawName` already defaults every non-codex executor to `.jsonl`)
+- [x] idle watchdog: touch on every stdout line and stderr line; from the Task 1 captures,
       determine whether a long single answer streams `step_update` deltas throughout or goes
       silent while composing (the claude blind-window problem) — if blind, document the exposure
       in `.claude/rules/executor.md` and rely on the hard timeout; do not invent a third
       liveness source that does not exist
-- [ ] outcome from the result `status` (only `SUCCESS` observed; treat any other status as a
+      (schema-forced answers are blind — documented in the rules' agy section during Task 1;
+      no third source added)
+- [x] outcome from the result `status` (only `SUCCESS` observed; treat any other status as a
       failed attempt carrying the response as the diagnostic); error/limit patterns tiered
       retry → limit → error, checked only against the tail and only on non-zero exit, per the
       existing codex rules; skip pattern checks on a canceled context
-- [ ] child environment: strip `CLAUDECODE` (revmux is often launched from a claude session and
+      (per the ➕ fact below the mapping weighs the exit code, never the status string: exit 0
+      succeeds even under `status:"ERROR"`; the tiering is the codex logic hoisted into the
+      shared `proc.classifyFailure`, with the result `error` string as agy's diagnostic)
+- [x] child environment: strip `CLAUDECODE` (revmux is often launched from a claude session and
       agy can proxy claude models) plus whatever nested-session guard Task 1 found for agy;
       respect the existing `--preserve-anthropic-api-key` behavior consistently
-- [ ] structured output: read the result's `structured_output` object; never scrape `response`;
+      (all shared `proc.childEnv`; Task 1 found no agy guard to strip)
+- [x] structured output: read the result's `structured_output` object; never scrape `response`;
       absence of structured output where a schema was sent is a degraded source
-- [ ] tests: fake runner + fixtures + injected clock — happy path, schema path, error path,
+- [x] tests: fake runner + fixtures + injected clock — happy path, schema path, error path,
       idle timeout fires when the fixture ends in a block (per the testing rule: a fixture that
       simply ends is EOF, not a stall), process-group teardown reuses the shared tests
-- [ ] `GOOS=windows GOARCH=amd64 go build ./...` passes
+      (`agy_test.go`: args, stdin message shape, clean, schema, schema-without-output,
+      tool-error-exit-0, bad model, pattern tiers, truncated, raw tee, idle timeout)
+- [x] `GOOS=windows GOARCH=amd64 go build ./...` passes
 
 ### Task 4: Runner vocabulary and executor wiring
 

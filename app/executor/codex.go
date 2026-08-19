@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"slices"
 	"strconv"
@@ -16,20 +15,6 @@ import (
 // readChunk is how much stdout one read takes. Codex answers in one long block, so the parser reads raw
 // chunks rather than lines: the first chunk is what tells the stagger this process is alive.
 const readChunk = 32 << 10
-
-// patternTailBytes bounds how much output the tiering looks at. A review agent's findings say "rate
-// limit" whenever it reviews code that handles one, so only the tail of a failed run is ever matched.
-const patternTailBytes = 2 << 10
-
-// pattern tiers, in the order the rules fix them: transient hiccups worth another attempt, then quota
-// and rate limits. Matching is case-insensitive substring, so every pattern here is lowercase.
-var (
-	// 500 is deliberately absent: it can be a deterministic failure, so it belongs in the error tier.
-	codexRetryPatterns = []string{"api error: 529", "api error: 502", "api error: 503", "api error: 504"}
-
-	codexLimitPatterns = []string{"rate limit exceeded", "rate limit reached", "429 too many requests",
-		"quota exceeded", "insufficient_quota", "you've hit your usage limit"}
-)
 
 // codexHeaderKeys are the resolved-configuration lines worth forwarding out of codex's noisy stderr.
 var codexHeaderKeys = []string{"model", "sandbox", "reasoning effort"}
@@ -104,7 +89,7 @@ func (c *Codex) Run(ctx context.Context, req Request, sink EventSink) (Result, e
 	if out, exErr := c.extract(res.Raw); exErr == nil {
 		res.StructuredOutput = out
 	}
-	return c.classify(res, errs.diag, sink)
+	return c.classifyFailure(res, errs.diag, sink)
 }
 
 func (c *Codex) args(req Request) []string {
@@ -168,47 +153,6 @@ func (c *Codex) extract(raw string) (json.RawMessage, error) {
 		}
 	}
 	return nil, errors.New("no JSON object in codex output")
-}
-
-// classify tiers a failed run: transient hiccup, quota, or a hard diagnostic. Patterns are consulted
-// only on a non-zero exit and only against the tail plus the one stderr diagnostic line, and an idle
-// timeout never becomes an error, since the caller retries that on its own.
-func (c *Codex) classify(res Result, diag string, sink EventSink) (Result, error) {
-	if res.ExitCode == 0 {
-		return res, nil
-	}
-	text := c.tail(res.Raw) + "\n" + diag
-
-	if p := c.match(text, codexRetryPatterns); p != "" && !res.IdleTimedOut {
-		return res, fmt.Errorf("codex transient failure: %s", p)
-	}
-	if p := c.match(text, codexLimitPatterns); p != "" {
-		res.RateLimited = true
-		res.RateLimit = RateLimitInfo{Status: "limited", RateLimitType: p}
-		c.emit(sink, Event{Kind: EventRateLimit, Text: p})
-		return res, nil
-	}
-	if diag != "" && !res.IdleTimedOut {
-		return res, fmt.Errorf("codex failed: %s", diag)
-	}
-	return res, nil
-}
-
-func (c *Codex) tail(raw string) string {
-	if len(raw) <= patternTailBytes {
-		return raw
-	}
-	return raw[len(raw)-patternTailBytes:]
-}
-
-func (c *Codex) match(text string, patterns []string) string {
-	lower := strings.ToLower(text)
-	for _, p := range patterns {
-		if strings.Contains(lower, p) {
-			return p
-		}
-	}
-	return ""
 }
 
 // codexStderr filters one run's stderr down to what is worth keeping. It is per-run state and therefore

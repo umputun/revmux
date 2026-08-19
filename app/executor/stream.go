@@ -151,6 +151,8 @@ func (e streamEvent) tokens() int {
 
 // actualModel reports what ran rather than what was asked for: --model can be silently ignored. The
 // busiest entry wins, with the name breaking ties so the answer does not depend on map order.
+// Only claude offers this read-back: codex's actual model comes off its stderr banner, and agy has no
+// source at all — no agy event carries the model, so the manifest records the request alone there.
 func (e streamEvent) actualModel() string {
 	name, out := "", -1
 	for m, u := range e.ModelUsage {

@@ -394,7 +394,9 @@ The captures live in `app/executor/testdata/` as `agy-*.jsonl`; each fact names 
 
 ### Error and limit patterns
 
-claude gets its rate-limit signal from the typed `rate_limit_event`, so string matching is only needed for codex.
+claude gets its rate-limit signal from the typed `rate_limit_event`, so string matching is only needed
+for codex and agy — codex's diagnostic is its last stderr `error:` line, agy's is the result event's
+`error` string, and both feed the one shared `classifyFailure` tiering.
 Where patterns are used, tier them: **retry → limit → error**.
 
 - Retry tier covers transient server hiccups: `API Error: 529`, `502`, `503`, `504`.

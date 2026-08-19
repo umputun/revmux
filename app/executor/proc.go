@@ -15,6 +15,20 @@ import (
 // bufio.Scanner's 64k default, and a line over the cap would look like a truncated stream.
 const maxLineBytes = 8 << 20
 
+// patternTailBytes bounds how much output the tiering looks at. A review agent's findings say "rate
+// limit" whenever it reviews code that handles one, so only the tail of a failed run is ever matched.
+const patternTailBytes = 2 << 10
+
+// pattern tiers, in the order the rules fix them: transient hiccups worth another attempt, then quota
+// and rate limits. Matching is case-insensitive substring, so every pattern here is lowercase.
+var (
+	// 500 is deliberately absent: it can be a deterministic failure, so it belongs in the error tier.
+	retryPatterns = []string{"api error: 529", "api error: 502", "api error: 503", "api error: 504"}
+
+	limitPatterns = []string{"rate limit exceeded", "rate limit reached", "429 too many requests",
+		"quota exceeded", "insufficient_quota", "you've hit your usage limit"}
+)
+
 // parser turns a process's stdout into a Result. Each executor supplies its own.
 type parser func(ctx context.Context, r io.Reader) Result
 
@@ -216,6 +230,49 @@ func (p *proc) emit(sink EventSink, ev Event) {
 		return
 	}
 	sink.Emit(ev)
+}
+
+// classifyFailure tiers a failed run: transient hiccup, quota, or a hard diagnostic. It serves the
+// executors with no typed rate-limit event — codex and agy; claude reads its own rate_limit_event
+// instead. Patterns are consulted only on a non-zero exit and only against the tail plus the
+// executor's one diagnostic line, and an idle timeout never becomes an error, since the caller retries
+// that on its own. A canceled context never reaches here: run returns its error first.
+func (p *proc) classifyFailure(res Result, diag string, sink EventSink) (Result, error) {
+	if res.ExitCode == 0 {
+		return res, nil
+	}
+	text := outputTail(res.Raw) + "\n" + diag
+
+	if pat := matchPattern(text, retryPatterns); pat != "" && !res.IdleTimedOut {
+		return res, fmt.Errorf("%s transient failure: %s", p.bin, pat)
+	}
+	if pat := matchPattern(text, limitPatterns); pat != "" {
+		res.RateLimited = true
+		res.RateLimit = RateLimitInfo{Status: "limited", RateLimitType: pat}
+		p.emit(sink, Event{Kind: EventRateLimit, Text: pat})
+		return res, nil
+	}
+	if diag != "" && !res.IdleTimedOut {
+		return res, fmt.Errorf("%s failed: %s", p.bin, diag)
+	}
+	return res, nil
+}
+
+func outputTail(raw string) string {
+	if len(raw) <= patternTailBytes {
+		return raw
+	}
+	return raw[len(raw)-patternTailBytes:]
+}
+
+func matchPattern(text string, patterns []string) string {
+	lower := strings.ToLower(text)
+	for _, p := range patterns {
+		if strings.Contains(lower, p) {
+			return p
+		}
+	}
+	return ""
 }
 
 // finish waits for the process, then kills its group even on a normal exit — that is what reaps the
