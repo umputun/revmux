@@ -158,7 +158,7 @@ func TestRun_config(t *testing.T) {
 				assert.NotEmpty(t, a.Color, "agent %s reports no color, so the palette assignment is invisible", a.Name)
 			}
 		}
-		assert.Equal(t, []string{"claude-only", "codex-only", "comprehensive", "expert", "final", "focused", "grill-me", "triage"}, names)
+		assert.Equal(t, []string{"agy-only", "claude-only", "codex-only", "comprehensive", "expert", "final", "focused", "grill-me", "triage", "trio"}, names)
 
 		set, err := prompt.Load(prompt.LoadOpts{})
 		require.NoError(t, err)

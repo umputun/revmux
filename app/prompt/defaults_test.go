@@ -65,8 +65,8 @@ func TestDefaults_EveryProfileResolvesItsRoster(t *testing.T) {
 	set, err := Load(LoadOpts{})
 	require.NoError(t, err)
 	known := set.LensNames()
-	require.Len(t, set.ProfileNames(), 8,
-		"the shipped set is comprehensive, focused, final, claude-only, codex-only, grill-me, triage and expert")
+	require.Len(t, set.ProfileNames(), 10,
+		"the shipped set is comprehensive, focused, final, claude-only, codex-only, agy-only, trio, grill-me, triage and expert")
 
 	for _, name := range set.ProfileNames() {
 		p, err := set.Profile(name)
@@ -366,7 +366,7 @@ func TestDefaults_LensesStayExecutorAgnostic(t *testing.T) {
 		body, err := set.lens(l.Name)
 		require.NoError(t, err)
 		lower := strings.ToLower(body)
-		for _, banned := range []string{"json", "schema", "claude", "codex"} {
+		for _, banned := range []string{"json", "schema", "claude", "codex", "agy"} {
 			assert.NotContains(t, lower, banned,
 				"lens %s must not carry an output contract or name a binary", l.Name)
 		}

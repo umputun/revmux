@@ -239,17 +239,24 @@ re-recorded into `app/executor/testdata/` during Task 1):
 
 ### Task 6: `agy-only` and `trio` profiles
 
-- [ ] add `app/prompt/defaults/prompts/profiles/agy-only.md`, mirroring `codex-only.md`:
+- [x] add `app/prompt/defaults/prompts/profiles/agy-only.md`, mirroring `codex-only.md`:
       profile-level `model: agy`, same roster shape, the shared `## Severity bar` and
       `## What not to report` blocks byte-identical to the other five/six copies
-- [ ] add `app/prompt/defaults/prompts/profiles/trio.md`: three finder agents with identical
+      (body copied from `codex-only.md` verbatim; profile-level model is
+      `agy/gemini-3.1-pro-high:high` rather than bare `agy` — the shipped-roster test
+      requires every spec to resolve a model and an effort)
+- [x] add `app/prompt/defaults/prompts/profiles/trio.md`: three finder agents with identical
       lens sets, one per binary (`claude`, `codex`, `agy` in `model:`), named for the runner
       per the documented grill-me/expert exception (identical lens sets make the runner the
       only distinguisher); distinct `color:` per agent; a `stages:` block only if the default
       profile-level resolution is not what a mixed run should do — prefer the one-line
       profile-level `model:` for stages (claude) and no `stages:` block
-- [ ] both new profiles pass the derived contract tests with **no new exemptions**
-- [ ] update the literal test inventories: profile name sets in `prompt_test.go` (twice),
+      (profile-level `claude/opus:high`, no `stages:` block; codex and agy entries carry
+      full runner strings per the same shipped-roster rule; colors cyan/magenta/green)
+- [x] both new profiles pass the derived contract tests with **no new exemptions**
+      (severity, what-not-to-report and prior-round contracts all pass; `agy` also added to
+      the lens executor-agnostic ban list)
+- [x] update the literal test inventories: profile name sets in `prompt_test.go` (twice),
       `initcmd_test.go`, `main_test.go`; count and enumerating message in `defaults_test.go`
 
 ### Task 7: Documentation sweep (README, site, rules)
