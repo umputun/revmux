@@ -21,6 +21,10 @@ func TestParseRunner(t *testing.T) {
 		// split on the first slash, so a model whose own name carries one arrives intact
 		{"model containing a slash", "codex/vendor/model-1", Runner{Executor: "codex", Model: "vendor/model-1"}},
 		{"model containing a dot and dashes", "codex/gpt-5.6-sol", Runner{Executor: "codex", Model: "gpt-5.6-sol"}},
+		{"agy alone", "agy", Runner{Executor: "agy"}},
+		{"agy with model", "agy/gemini-3.1-pro-low", Runner{Executor: "agy", Model: "gemini-3.1-pro-low"}},
+		// agy bakes an effort into some model-id suffixes; the `:effort` suffix stays revmux's own
+		{"agy model and effort", "agy/gemini-3.7-flash-high:high", Runner{Executor: "agy", Model: "gemini-3.7-flash-high", Effort: "high"}},
 	}
 
 	for _, tt := range tests {
@@ -74,6 +78,12 @@ func TestRunner_or(t *testing.T) {
 		assert.Equal(t, Runner{Executor: "codex", Effort: "high"}, Runner{Executor: "codex"}.or(base))
 		assert.Equal(t, Runner{Executor: "codex", Model: "gpt-5.6-sol", Effort: "low"},
 			Runner{Executor: "codex", Model: "gpt-5.6-sol", Effort: "low"}.or(base))
+	})
+
+	t.Run("agy neither inherits a model nor leaks one", func(t *testing.T) {
+		assert.Equal(t, Runner{Executor: "agy", Effort: "high"}, Runner{Executor: "agy"}.or(base))
+		agyBase := Runner{Executor: "agy", Model: "gemini-3.1-pro-low", Effort: "medium"}
+		assert.Equal(t, Runner{Executor: "claude", Effort: "medium"}, Runner{Executor: "claude"}.or(agyBase))
 	})
 
 	t.Run("effort carries across binaries, since it belongs to neither model", func(t *testing.T) {

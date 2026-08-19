@@ -190,19 +190,26 @@ re-recorded into `app/executor/testdata/` during Task 1):
 
 ### Task 4: Runner vocabulary and executor wiring
 
-- [ ] add `agy` to the binary vocabulary in `app/prompt/runner.go` (`parseRunner` is the only
+- [x] add `agy` to the binary vocabulary in `app/prompt/runner.go` (`parseRunner` is the only
       place a `Runner` is built; `Runner.or` continues to refuse carrying a model across
       binaries); effort vocabulary is shared — confirm agy's `low|medium|high` matches the
       existing effort constants and extend nothing unless it does not
-- [ ] runner tests: `agy`, `agy/gemini-3.1-pro-low`, `agy/gemini-3.7-flash-high:high`,
+      (the vocabulary lives in `app/prompt/roster.go`'s `executors` slice, which `parseRunner`
+      checks; agy's efforts are a subset of the shared set, nothing extended)
+- [x] runner tests: `agy`, `agy/gemini-3.1-pro-low`, `agy/gemini-3.7-flash-high:high`,
       cross-binary inheritance refusal to/from agy
-- [ ] composition root: construct the agy executor where claude and codex are constructed and
+- [x] composition root: construct the agy executor where claude and codex are constructed and
       register it in the injected factory under the `agy` binary name; reuse the existing
       binary-path/timeout knob pattern exactly — add an agy knob only where claude/codex each
       already have one, with matching INI template entries in `app/defaults/config` and the
       runtime-knob list in `.claude/rules/config.md` only if such knobs exist for the other two
-- [ ] verify `revmux config` reports the `executor` vocabulary from the same constants
+      (claude/codex have no per-binary path or timeout knobs — names are hardcoded in each
+      executor, timeouts are the shared `idle-timeout`/`hard-timeout` — so no knob, no INI
+      entry, no rules edit)
+- [x] verify `revmux config` reports the `executor` vocabulary from the same constants
       `parseRunner` validates against, so `agy` appears automatically; wire it if it does not
+      (already wired: `introspect.go` reads `prompt.Executors()`; verified live —
+      `["claude","codex","agy"]`)
 
 ### Task 5: `--runners` combination flag
 
