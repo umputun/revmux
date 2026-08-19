@@ -315,15 +315,21 @@ re-recorded into `app/executor/testdata/` during Task 1):
 
 ### Task 9: Verify acceptance criteria
 
-- [ ] `--profile agy-only`, `--profile trio`, and `--profile trio --runners claude,agy` all
+- [x] `--profile agy-only`, `--profile trio`, and `--profile trio --runners claude,agy` all
       load without error (config/load-path check; no real model run)
-- [ ] `revmux config` reports `agy` in the executor vocabulary and both new profiles with
+      (verified via a throwaway `prompt` package test — Load + Profile + Restrict + Roster
+      over the shipped defaults; the claude,agy filter on trio survives as exactly that pair)
+- [x] `revmux config` reports `agy` in the executor vocabulary and both new profiles with
       their rosters
-- [ ] `make lint` passes (the full gate, including shellcheck)
-- [ ] `make test` passes (race + coverage)
-- [ ] `GOOS=windows GOARCH=amd64 go build ./...` passes
-- [ ] `diff -r` skill-tree check passes
-- [ ] all commits on the feature branch, none on master; do not push
+      (live run: `vocabulary.executors` is `["claude","codex","agy"]`; `agy-only` lists the
+      four-lens roster, `trio` lists `claude`/`codex`/`agy`)
+- [x] `make lint` passes (the full gate, including shellcheck) — exit 0
+- [x] `make test` passes (race + coverage) — exit 0, 93.7% statements
+- [x] `GOOS=windows GOARCH=amd64 go build ./...` passes
+- [x] `diff -r` skill-tree check passes (`references/` and `scripts/` identical between
+      `.claude-plugin/skills/revmux/` and `plugins/codex/skills/revmux/`; only `SKILL.md` differs)
+- [x] all commits on the feature branch, none on master; do not push
+      (8 commits ahead of master, 0 behind, worktree clean, nothing pushed)
 
 ## Technical Details
 
