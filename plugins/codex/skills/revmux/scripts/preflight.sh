@@ -80,6 +80,9 @@ for arg in "$@"; do
             ;;
     esac
 done
+# revmux's own parser trims whitespace around commas and drops empty parts (splitList), so the value
+# the run will use has to pass here too: normalize once instead of teaching every jq query to trim.
+runners=$(printf '%s' "$runners" | tr -d '[:space:]' | sed 's/,,*/,/g; s/^,//; s/,$//')
 if { [ "$expect" = "runners" ] || [ -n "$runners" ]; } && [ -z "${runners//,/}" ]; then
     echo "--runners needs a comma-separated list of binaries" >&2
     usage
