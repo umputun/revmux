@@ -108,9 +108,6 @@ func agyStdinMessage(prompt string) string {
 	msg := agyUserEvent{Event: "user"}
 	msg.Message.Role = "user"
 	msg.Message.Content = prompt
-	b, err := json.Marshal(msg)
-	if err != nil { // a plain-string payload cannot fail to marshal
-		return prompt
-	}
+	b, _ := json.Marshal(msg) // a struct of plain strings cannot fail to marshal
 	return string(b) + "\n"
 }

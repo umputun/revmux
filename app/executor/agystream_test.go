@@ -50,7 +50,6 @@ func TestAgyStream_clean(t *testing.T) {
 	assert.Equal(t, []string{"pong"}, eventTexts(events, EventActivity))
 	assert.Empty(t, eventTexts(events, EventProgress), "a tool-free run has no dispatches to report")
 
-	require.True(t, s.sawResult)
 	assert.Equal(t, "SUCCESS", s.final.Status)
 	assert.Equal(t, "pong\n", s.final.Response)
 	assert.Empty(t, s.final.StructuredOutput, "no schema was sent")
@@ -65,7 +64,6 @@ func TestAgyStream_stdinFedRunDecodesTheSame(t *testing.T) {
 
 	assert.Equal(t, []string{"pong"}, eventTexts(events, EventActivity),
 		"a DONE carrying the whole text with no ACTIVE deltas before it is still one activity line")
-	require.True(t, s.sawResult)
 	assert.Equal(t, "SUCCESS", s.final.Status)
 }
 
@@ -78,7 +76,6 @@ func TestAgyStream_tools(t *testing.T) {
 	assert.Equal(t, []string{"run_command wc -l /tmp/agy-cap/ws/notes.txt"}, eventTexts(events, EventProgress),
 		"dispatch only: the DONE completion repeats the parameters and must not double the line")
 
-	require.True(t, s.sawResult)
 	assert.Equal(t, "SUCCESS", s.final.Status)
 }
 
@@ -89,7 +86,6 @@ func TestAgyStream_schema(t *testing.T) {
 	// structured_output — reporting the delta text puts a wall of raw JSON in the log
 	assert.Empty(t, eventTexts(events, EventActivity), "the schema-forced answer is plumbing, not commentary")
 
-	require.True(t, s.sawResult)
 	require.NotEmpty(t, s.final.StructuredOutput)
 	var out struct {
 		Findings []struct {
@@ -114,7 +110,6 @@ func TestAgyStream_toolError(t *testing.T) {
 
 	// status ERROR beside a complete response: a mid-run tool failure propagated into the terminal
 	// result while the run still answered — the decoder reports both and judges neither
-	require.True(t, s.sawResult)
 	assert.Equal(t, "ERROR", s.final.Status)
 	assert.Contains(t, s.final.Error, "resource temporarily unavailable")
 	assert.Contains(t, s.final.Response, "Summary of Work")
@@ -146,8 +141,8 @@ func TestAgyStream_toolError(t *testing.T) {
 func TestAgyStream_badModelError(t *testing.T) {
 	s, events := feedAgy(agyCapture(t, "agy-error.jsonl"), false)
 
-	require.True(t, s.sawResult, "the diagnostic is a single result event on stdout, no init before it")
-	assert.Equal(t, "ERROR", s.final.Status)
+	assert.Equal(t, "ERROR", s.final.Status,
+		"the diagnostic is a single result event on stdout, no init before it")
 	assert.Contains(t, s.final.Error, "no-such-model")
 	assert.Empty(t, events, "a run that never started has nothing to report")
 	assert.Zero(t, s.final.tokens())
@@ -156,7 +151,6 @@ func TestAgyStream_badModelError(t *testing.T) {
 func TestAgyStream_printTimeout(t *testing.T) {
 	s, events := feedAgy(agyCapture(t, "agy-timeout.jsonl"), false)
 
-	require.True(t, s.sawResult)
 	assert.Equal(t, "ERROR", s.final.Status)
 	assert.Equal(t, "timeout waiting for response", s.final.Error)
 	assert.Contains(t, eventTexts(events, EventProgress), "run_command sleep 30",
@@ -169,7 +163,6 @@ func TestAgyStream_garbageDegrades(t *testing.T) {
 
 	assert.Equal(t, []string{"pong"}, eventTexts(events, EventActivity),
 		"garbage and unknown event kinds are skipped, never errors")
-	require.True(t, s.sawResult)
 	assert.Equal(t, "SUCCESS", s.final.Status)
 }
 
@@ -180,7 +173,7 @@ func TestAgyStream_truncatedStream(t *testing.T) {
 	require.Positive(t, cut)
 	s, events := feedAgy(data[:cut], false)
 
-	assert.False(t, s.sawResult, "no terminal event arrived")
+	assert.Empty(t, s.final.Status, "no terminal event arrived")
 	assert.Equal(t, []string{"pong"}, eventTexts(events, EventActivity),
 		"everything before the cut is still reported")
 }

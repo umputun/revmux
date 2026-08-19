@@ -172,12 +172,7 @@ func (p *Profile) Roster(lensOverride []string, known map[string]struct{}) ([]Ag
 	specs := slices.Clone(p.agents)
 	switch {
 	case len(lensOverride) > 0:
-		run := p.runner
-		if len(p.allowed) > 0 && !slices.Contains(p.allowed, run.Executor) {
-			// the inherited model belongs to the excluded binary, so the fallback is the first listed
-			// binary bare — carrying the model across is the pairing Runner.or exists to refuse
-			run = Runner{Executor: p.allowed[0]}
-		}
+		run := p.allowedOr(p.runner)
 		override := AgentSpec{
 			Name: overrideAgent, Lenses: slices.Clone(lensOverride),
 			Executor: run.Executor, Model: run.Model, Effort: run.Effort,
@@ -222,15 +217,22 @@ func (p *Profile) Stage(set *Set, name string) (*Stage, error) {
 	if over, ok := p.stages[name]; ok {
 		res = over.or(st.runner).or(p.runner)
 	}
-	if len(p.allowed) > 0 && !slices.Contains(p.allowed, res.Executor) {
-		// the resolved model belongs to the excluded binary, so the Restrict fallback is the first listed
-		// binary bare, on its own defaults — finding.StageRun records this resolution like any other
-		res = Runner{Executor: p.allowed[0]}
-	}
+	res = p.allowedOr(res)
 
 	out := *st
 	out.Executor, out.Model, out.Effort = res.Executor, res.Model, res.Effort
 	return &out, nil
+}
+
+// allowedOr applies the Restrict filter to a resolved runner: one on an excluded binary falls back to
+// the first listed binary bare, on its own default model and effort — carrying the model across is the
+// pairing Runner.or exists to refuse. One definition serves the lens override and the stages alike, so
+// the two cannot drift apart about what an excluded runner becomes.
+func (p *Profile) allowedOr(r Runner) Runner {
+	if len(p.allowed) > 0 && !slices.Contains(p.allowed, r.Executor) {
+		return Runner{Executor: p.allowed[0]}
+	}
+	return r
 }
 
 // rosterExecutors lists the distinct binaries the roster resolves to, in roster order, so the

@@ -75,7 +75,6 @@ type agyStream struct {
 	haveSchema bool
 	steps      map[int]string // accumulated agent_response deltas, keyed by step index
 	final      agyResult
-	sawResult  bool
 }
 
 func newAgyStream(emit func(Event), haveSchema bool) *agyStream {
@@ -98,7 +97,7 @@ func (s *agyStream) line(l string) {
 	case ev.Event == "step_update" && ev.StepUpdate != nil:
 		s.step(*ev.StepUpdate)
 	case ev.Event == "result" && ev.Result != nil:
-		s.final, s.sawResult = *ev.Result, true
+		s.final = *ev.Result
 	}
 }
 
