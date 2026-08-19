@@ -90,7 +90,7 @@ the JSON unparseable.
 ### Step 0: Preflight
 
 ```bash
-~/.codex/skills/revmux/scripts/preflight.sh [profile] [--lenses]
+~/.codex/skills/revmux/scripts/preflight.sh [profile] [--lenses] [--runners a,b]
 ```
 
 Checks revmux plus every binary the invocation needs. Exits `1` naming what is missing.
@@ -108,6 +108,11 @@ profile's own base runner, so the binaries needed are that base plus the stages,
 roster's own. Checked as an ordinary run, a `--lenses` invocation can pass preflight and then have its
 only finder fail to launch; checked the other way round, an ordinary run can be refused over a binary
 it never touches.
+
+**Pass `--runners` when the run will use it, with the same value.** The filter drops roster agents on
+excluded binaries and falls stages back to the first listed one, so a filtered run needs fewer
+binaries than the profile's full roster — checked unfiltered, `--profile trio --runners claude,agy`
+fails preflight over a codex the run never launches, on exactly the host that pairing exists for.
 
 If revmux is absent:
 

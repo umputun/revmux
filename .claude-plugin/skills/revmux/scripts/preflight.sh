@@ -12,11 +12,15 @@
 # it also depends on the invocation. --lenses replaces the roster with one agent running on the
 # profile's own base runner, so that run needs the base plus the stages and none of the roster's
 # own binaries — while an ordinary run needs the roster and the stages and not the base, which
-# may name a binary nothing else uses.
+# may name a binary nothing else uses. --runners filters the roster by binary — a roster agent on
+# an excluded binary is dropped, a stage on one falls back to the first listed — so a filtered run
+# needs fewer binaries than the profile's full roster, and checking the full roster refuses exactly
+# the host the filter exists for.
 #
-# usage: preflight.sh [profile] [--lenses]
-#   profile   profile to check; defaults to whatever revmux resolves as its default
-#   --lenses  check the invocation --lenses produces rather than the profile's own roster
+# usage: preflight.sh [profile] [--lenses] [--runners a,b]
+#   profile        profile to check; defaults to whatever revmux resolves as its default
+#   --lenses       check the invocation --lenses produces rather than the profile's own roster
+#   --runners a,b  check the invocation --runners produces: pass the same value the run will use
 #
 # output: one `key: value` line per check, then `ok: true|false`
 # exit:   0 all good, 1 something missing
@@ -24,9 +28,10 @@
 set -u
 
 usage() {
-    echo "usage: $(basename "$0") [profile] [--lenses]" >&2
-    echo "  profile   profile to check; defaults to whatever revmux resolves as its default" >&2
-    echo "  --lenses  check the invocation --lenses produces rather than the profile's own roster" >&2
+    echo "usage: $(basename "$0") [profile] [--lenses] [--runners a,b]" >&2
+    echo "  profile        profile to check; defaults to whatever revmux resolves as its default" >&2
+    echo "  --lenses       check the invocation --lenses produces rather than the profile's own roster" >&2
+    echo "  --runners a,b  check the invocation --runners produces: pass the same value the run will use" >&2
 }
 
 # strict: an argument that is not understood is a caller mistake, and silently dropping it checks a
@@ -34,10 +39,29 @@ usage() {
 # clean host for a run that then fails to launch its only finder
 profile=""
 lenses=""
+runners=""
+expect=""
 for arg in "$@"; do
+    if [ "$expect" = "runners" ]; then
+        runners="$arg"
+        expect=""
+        continue
+    fi
     case "$arg" in
         --lenses)
             lenses=1
+            ;;
+        --runners)
+            expect=runners
+            ;;
+        --runners=*)
+            runners="${arg#--runners=}"
+            if [ -z "$runners" ]; then
+                echo "--runners needs a comma-separated list of binaries" >&2
+                usage
+                echo "ok: false"
+                exit 1
+            fi
             ;;
         -*)
             echo "unknown option: $arg" >&2
@@ -56,19 +80,37 @@ for arg in "$@"; do
             ;;
     esac
 done
+if { [ "$expect" = "runners" ] || [ -n "$runners" ]; } && [ -z "${runners//,/}" ]; then
+    echo "--runners needs a comma-separated list of binaries" >&2
+    usage
+    echo "ok: false"
+    exit 1
+fi
 
 # executorQuery is the jq that names the binaries this invocation needs. The stages always count; the
 # roster counts only when it will actually run, and the profile's base runner only when --lenses
 # replaces that roster with one agent on it. Unioning both over-checks and turns a review revmux can
 # run into a preflight failure, which is worse than the gap it would close.
-# $p is jq's own variable, bound by --arg, so the single quotes are deliberate.
+# A --runners filter narrows the set the same way revmux does: a roster agent on an excluded binary
+# is dropped, while a stage — and the --lenses base runner — falls back to the first listed binary.
+# Checking the unfiltered roster instead refuses exactly the host the filter exists for.
+# $p and $r are jq's own variables, bound by --arg, so the single quotes are deliberate.
 # shellcheck disable=SC2016
 executorQuery() {
     if [ -n "$lenses" ]; then
-        echo '[.profiles[] | select(.name == $p) | (.runner.executor, .stages[].executor)] | unique | .[]'
+        echo '($r | if . == "" then [] else split(",") end) as $rs
+              | [.profiles[] | select(.name == $p)
+                 | ((.runner.executor, .stages[].executor) | . as $e
+                    | if ($rs | length) == 0 or ($rs | index($e)) then $e else $rs[0] end)]
+              | unique | .[]'
         return
     fi
-    echo '[.profiles[] | select(.name == $p) | (.roster[].executor, .stages[].executor)] | unique | .[]'
+    echo '($r | if . == "" then [] else split(",") end) as $rs
+          | [.profiles[] | select(.name == $p)
+             | (.roster[].executor | select(. as $e | ($rs | length) == 0 or ($rs | index($e)))),
+               (.stages[].executor | . as $e
+                | if ($rs | length) == 0 or ($rs | index($e)) then $e else $rs[0] end)]
+          | unique | .[]'
 }
 
 ok=true
@@ -98,6 +140,20 @@ cfg=$(revmux config 2>/dev/null) || {
 }
 
 if command -v jq >/dev/null 2>&1; then
+    # a --runners name outside the executor vocabulary is refused by revmux at load, so passing it
+    # through would compute requirements for a run that cannot launch
+    # shellcheck disable=SC2016
+    if [ -n "$runners" ]; then
+        bad=$(printf '%s' "$cfg" | jq -r --arg r "$runners" \
+            '.vocabulary.executors as $known | [$r | split(",")[] | . as $x | select($x == "" or (($known | index($x)) | not))] | join(", ")')
+        if [ -n "$bad" ]; then
+            fail "runners: UNKNOWN '$bad'"
+            echo "available: $(printf '%s' "$cfg" | jq -r '.vocabulary.executors | join(", ")')"
+            echo "ok: false"
+            exit 1
+        fi
+        echo "runners: $runners"
+    fi
     if [ -n "$profile" ]; then
         known=$(printf '%s' "$cfg" | jq -r --arg p "$profile" '[.profiles[].name] | index($p) // "null"')
         if [ "$known" = "null" ]; then
@@ -109,7 +165,7 @@ if command -v jq >/dev/null 2>&1; then
         echo "profile: $profile"
         # the stages always count, since a stage runs on every review regardless of the roster. What
         # joins them is the roster, or — under --lenses, which replaces it — the profile's base runner
-        executors=$(printf '%s' "$cfg" | jq -r --arg p "$profile" \
+        executors=$(printf '%s' "$cfg" | jq -r --arg p "$profile" --arg r "$runners" \
             "$(executorQuery)")
     else
         # the resolved default profile, not every profile: checking rosters that will not run reports
@@ -121,8 +177,20 @@ if command -v jq >/dev/null 2>&1; then
             exit 1
         fi
         echo "profile: $profile (resolved default)"
-        executors=$(printf '%s' "$cfg" | jq -r --arg p "$profile" \
+        executors=$(printf '%s' "$cfg" | jq -r --arg p "$profile" --arg r "$runners" \
             "$(executorQuery)")
+    fi
+    # a filter that empties the roster is a load error in revmux, so a clean binary report here would
+    # bless a run that then refuses to launch
+    # shellcheck disable=SC2016
+    if [ -n "$runners" ] && [ -z "$lenses" ]; then
+        left=$(printf '%s' "$cfg" | jq -r --arg p "$profile" --arg r "$runners" \
+            '($r | split(",")) as $rs | [.profiles[] | select(.name == $p) | .roster[].executor | select(. as $e | $rs | index($e))] | length')
+        if [ "$left" = "0" ]; then
+            fail "runners: EMPTY - no roster agent in '$profile' runs on '$runners', revmux refuses an empty roster"
+            echo "ok: false"
+            exit 1
+        fi
     fi
 else
     # jq is how the resolved profile is read, and there is no honest answer without it: checking both

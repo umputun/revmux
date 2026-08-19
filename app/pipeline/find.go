@@ -21,6 +21,10 @@ import (
 // verbatim tee gets a different extension.
 const executorCodex = "codex"
 
+// executorAgy names the one executor whose Run appends nothing to the composed prompt, so its
+// archived copy is the bare text.
+const executorAgy = "agy"
+
 // maxAttempts is one launch plus one retry. A second failure degrades the source and the run
 // continues, because one flaky agent must not waste every other agent's work.
 const maxAttempts = 2

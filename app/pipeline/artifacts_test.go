@@ -107,6 +107,14 @@ func TestPipeline_Run_artifacts(t *testing.T) {
 			"the one instruction asking codex for JSON at all cannot be the missing part")
 	})
 
+	t.Run("an agy prompt is archived bare, because its Run appends nothing", func(t *testing.T) {
+		schema := finding.FinderSchema()
+		assert.Equal(t, "composed", archivedPrompt(executorAgy, "composed", schema),
+			"agy's Run sends the composed text as-is, so an archive carrying a contract describes bytes the model never saw")
+		assert.Equal(t, "composed"+executor.ClaudeNarrationContract(schema), archivedPrompt("claude", "composed", schema))
+		assert.Equal(t, "composed"+executor.CodexOutputContract(schema), archivedPrompt(executorCodex, "composed", schema))
+	})
+
 	t.Run("an agent named events keeps its stream out of the event log", func(t *testing.T) {
 		h := newHarnessWith(t, map[string]string{
 			"prompts/profiles/collide.md": collidingProfile,
@@ -294,12 +302,15 @@ func artifactHarness(t *testing.T) (*harness, func() []string) {
 		return &mocks.RunnerMock{
 			RunFunc: func(ctx context.Context, req executor.Request, sink executor.EventSink) (executor.Result, error) {
 				// the real executors append to the prompt inside Run — codex its output contract,
-				// claude its narration contract — and this mock stands in for one of them. Recording
-				// the prompt as handed over would make "the archived prompt is what a process
-				// received" pass against bytes no process would ever receive.
+				// claude its narration contract, agy nothing at all — and this mock stands in for
+				// one of them. Recording the prompt as handed over would make "the archived prompt
+				// is what a process received" pass against bytes no process would ever receive.
 				prompt := req.Prompt + executor.ClaudeNarrationContract(req.Schema)
-				if spec.Executor == executorCodex {
+				switch spec.Executor {
+				case executorCodex:
 					prompt = req.Prompt + executor.CodexOutputContract(req.Schema)
+				case executorAgy:
+					prompt = req.Prompt
 				}
 				mu.Lock()
 				prompts = append(prompts, prompt)
