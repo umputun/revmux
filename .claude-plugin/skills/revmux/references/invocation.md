@@ -578,6 +578,9 @@ subscription auth; `--preserve-anthropic-api-key` passes it through for key-base
 is always stripped — a `claude` child refuses to start when it believes it is a nested session, which
 is exactly the situation when an agent invokes revmux.
 
+`claude` runs with `--strict-mcp-config`, so a review boots no MCP servers even when the workdir sits
+inside a project that configures them; `--preserve-mcp` turns that off.
+
 Agent processes start in their own session, so the terminal never signals them directly; revmux tears
 each process group down itself rather than leaving model CLIs running unsupervised after it exits.
 
@@ -595,6 +598,7 @@ each process group down itself rather than leaving model CLIs running unsupervis
 | `--no-tui` | | disable the terminal UI |
 | `--markdown` | | write the report as markdown instead of JSON |
 | `--preserve-anthropic-api-key` | | pass `ANTHROPIC_API_KEY` to the model CLIs |
+| `--preserve-mcp` | | let the model CLIs load MCP servers from the caller's config |
 | `--config-dir=<dir>` | `~/.config/revmux` | directory holding the config file and the prompt tree |
 | `--init` | | materialize the resolved config and prompt tree into `./.revmux/` |
 | `--dump-defaults=<dir>` | | extract the embedded prompt tree into a directory |

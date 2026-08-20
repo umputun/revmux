@@ -75,6 +75,9 @@ func (c *Claude) args(req Request) []string {
 		"--no-session-persistence",
 		"--include-partial-messages",
 	}
+	if !c.opts.PreserveMCP {
+		argv = append(argv, "--strict-mcp-config")
+	}
 	if req.Model != "" {
 		argv = append(argv, "--model", req.Model)
 	}

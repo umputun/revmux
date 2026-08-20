@@ -239,6 +239,11 @@ make install      <span class="c-dim"># and symlinks it to /usr/local/bin/revmux
           always stripped, since a <code>claude</code> child refuses to start when it thinks it is a nested
           session.
         </p>
+        <p>
+          <code>claude</code> runs with <code>--strict-mcp-config</code>, so a review boots no MCP servers
+          even when the working directory sits inside a project that configures them. Pass
+          <code>--preserve-mcp</code> if a lens needs one.
+        </p>
 
         <h2 id="quick-start">Quick start <a class="anchor" href="#quick-start">#</a></h2>
         <p>

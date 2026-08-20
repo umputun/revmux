@@ -63,6 +63,7 @@ claude --print --output-format stream-json --verbose
        --disable-slash-commands
        --no-session-persistence
        --include-partial-messages
+       --strict-mcp-config
        --json-schema <findings schema>
        < prompt
 ```
@@ -103,6 +104,11 @@ claude --print --output-format stream-json --verbose
   plaintext reaching the tee through this flag alone — the assistant blocks arrive with `thinking` empty
   and only a `signature` — and the rest is every byte of text and tool input carried a second time
   under roughly 130 bytes of JSON wrapper per chunk.
+- **`--strict-mcp-config` by default: a review boots no MCP servers.**
+  claude resolves `.mcp.json` by walking up from the workdir, so a review worktree inside a configured
+  repo inherits the caller's whole roster — 161 tools against 31 measured on one monorepo, and a server
+  whose OAuth was never completed opens a browser tab per spawn. Unlike `--bare` it keeps
+  project-instruction discovery. `--preserve-mcp` is the escape hatch.
 - The prompt goes in on **stdin**, never as an argv positional.
   Windows `cmd.exe` caps a command line at 8191 characters and a composed lens prompt blows past that instantly.
 
