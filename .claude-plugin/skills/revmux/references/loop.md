@@ -32,8 +32,9 @@ Gating is `critical` and `major` in `findings`. Nothing else:
   the finding usually stops recurring at the source.
 - A `degraded` run gates nothing either way: it is not evidence. Stop and report it.
 
-**A round in which you fixed something is never a clean exit.** Clean means a *review* came back with
-zero gating findings. After fixing, always run the confirming round.
+**A round in which you fixed a GATING finding is never a clean exit.** Clean means a *review* came
+back with zero gating findings. After fixing one, always run the confirming round. Sweeping only
+minors is not an iteration and ends the loop — see Stopping.
 
 ## The iteration
 
