@@ -25,24 +25,15 @@ conventions.
 
 ## Install
 
-Clone the repository:
+Add the marketplace and install the plugin:
 
 ```bash
-git clone https://github.com/umputun/revmux.git
-cd revmux
+codex plugin marketplace add umputun/revmux
+codex plugin add revmux@revmux
 ```
 
-Then copy the skill into the Codex skills directory:
-
-```bash
-cp -r plugins/codex/skills/revmux ~/.codex/skills/revmux
-```
-
-Or symlink it, so `git pull` propagates updates without re-copying:
-
-```bash
-ln -s "$PWD/plugins/codex/skills/revmux" ~/.codex/skills/revmux
-```
+If you previously copied or symlinked the skill into `~/.codex/skills/revmux`, remove that copy after
+installing the plugin so the marketplace package is the only one Codex loads.
 
 ## `/revmux`
 
@@ -64,8 +55,8 @@ round on the same task; revmux carries the prior rounds into every prompt itself
 
 ## Differences from the Claude Code plugin
 
-- Script paths resolve from the installed skill under `$CODEX_HOME` (or `~/.codex`), instead of
-  `$CLAUDE_SKILL_DIR`
+- Script paths resolve from the installed skill's absolute path in Codex's available-skills catalogue,
+  instead of `$CLAUDE_SKILL_DIR`
 - `AskUserQuestion` is replaced by numbered-list prompts, the Codex convention
 - `EnterPlanMode` is replaced by an inline markdown plan plus an explicit confirmation before any
   file is modified

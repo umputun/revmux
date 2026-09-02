@@ -1,0 +1,39 @@
+{
+  "name": "revmux",
+  "version": "0.4.3",
+  "description": "Run supervised multi-agent code reviews and issue triage from Codex",
+  "author": {
+    "name": "Umputun",
+    "email": "umputun@gmail.com",
+    "url": "https://github.com/umputun"
+  },
+  "homepage": "https://revmux.com",
+  "repository": "https://github.com/umputun/revmux",
+  "license": "MIT",
+  "keywords": [
+    "code-review",
+    "multi-agent",
+    "supervision",
+    "claude",
+    "codex"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Revmux",
+    "shortDescription": "Run supervised multi-agent reviews from Codex",
+    "longDescription": "Run supervised multi-agent code reviews and issue triage from Codex, inspect the resulting findings, apply fixes, and review the next round.",
+    "developerName": "Umputun",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://revmux.com",
+    "defaultPrompt": [
+      "Review this branch with Revmux",
+      "Triage this issue with Revmux",
+      "Run another Revmux round after fixes"
+    ]
+  }
+}

@@ -87,16 +87,21 @@ make install      # and symlinks it to /usr/local/bin/revmux
 the location with `BINDIR` when `/usr/local/bin` is not writable. `make uninstall` removes the link.
 
 **Then install the skill, which is what asks for a review.** The binary runs one; the skill is how your
-coding agent drives it. In Claude Code:
+coding agent drives it:
 
-```
-/plugin marketplace add umputun/revmux
-/plugin install revmux@revmux
+```sh
+# Claude Code
+claude plugin marketplace add umputun/revmux
+claude plugin install revmux@revmux
+
+# Codex
+codex plugin marketplace add umputun/revmux
+codex plugin add revmux@revmux
 ```
 
-For Codex CLI, copy the tree instead: `cp -r plugins/codex/skills/revmux ~/.codex/skills/revmux`. After
-either, ask for a review in words: revmux this branch, revmux pr 123, re-review after fixes. See
-[Agent skills](#agent-skills) for what it does.
+Install the skill through one marketplace only. If you previously copied or symlinked the Codex skill into
+`~/.codex/skills/revmux`, remove that copy after installing the plugin. Then ask for a review in words:
+revmux this branch, revmux pr 123, re-review after fixes. See [Agent skills](#agent-skills) for what it does.
 
 revmux drives the model CLIs as subprocesses, so whichever ones your profile names must already be installed
 and authenticated: both for `comprehensive`, `focused`, `final`, `grill-me`, `triage` and `expert`, claude
@@ -342,8 +347,8 @@ same task after fixes.
 
 | harness | location | install |
 |---|---|---|
-| Claude Code | `.claude-plugin/skills/revmux/` | `/plugin marketplace add umputun/revmux` then `/plugin install revmux@revmux` |
-| Codex CLI | `plugins/codex/skills/revmux/` | `cp -r plugins/codex/skills/revmux ~/.codex/skills/revmux` |
+| Claude Code | `.claude-plugin/skills/revmux/` | `claude plugin marketplace add umputun/revmux` then `claude plugin install revmux@revmux` |
+| Codex CLI | `plugins/codex/skills/revmux/` | `codex plugin marketplace add umputun/revmux` then `codex plugin add revmux@revmux` |
 
 Both carry the same reference material and the same scripts: `preflight.sh` checks the binaries an invocation
 needs, `task-state.sh` reports what a task holds, `launch-revmux.sh` runs revmux with its TUI in a terminal

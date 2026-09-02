@@ -17,6 +17,17 @@ stalls, retries what hangs, and returns findings on stdout.
 
 It does no scope detection, no git, no PR fetching, no source modification. This skill does that half.
 
+## Script path resolution
+
+Resolve `<skill-dir>` from this skill's absolute `SKILL.md` path in the available-skills catalogue, then set:
+
+```bash
+SCRIPT_DIR="<skill-dir>/scripts"
+```
+
+Replace `<skill-dir>` with the resolved absolute path before running a command. Use `$SCRIPT_DIR` for all
+bundled scripts below; marketplace plugins live in a versioned cache, not `~/.codex/skills/`.
+
 | this skill | revmux |
 |---|---|
 | resolve what is under review | supervise, stagger, retry, degrade |
@@ -90,7 +101,7 @@ the JSON unparseable.
 ### Step 0: Preflight
 
 ```bash
-~/.codex/skills/revmux/scripts/preflight.sh [profile] [--lenses]
+$SCRIPT_DIR/preflight.sh [profile] [--lenses]
 ```
 
 Checks revmux plus every binary the invocation needs. Exits `1` naming what is missing.
@@ -381,7 +392,7 @@ and the user has no other signal. An overlay run is that signal, on screen, live
 **Overlay — when the user wants to watch:**
 
 ```bash
-~/.codex/skills/revmux/scripts/launch-revmux.sh --task <id> --run <name> [any revmux flag]
+$SCRIPT_DIR/launch-revmux.sh --task <id> --run <name> [any revmux flag]
 ```
 
 Detects the terminal (agterm, tmux, zellij, herdr, kitty, wezterm/kaku, cmux, ghostty, iTerm2, Emacs
@@ -635,7 +646,7 @@ rounds produced and proposes changes to the review configuration itself.
 ### Step S1: Run the analysis
 
 ```bash
-~/.codex/skills/revmux/scripts/analyze-corpus.py
+$SCRIPT_DIR/analyze-corpus.py
 ```
 
 It walks the archive and prints numbered conclusions with the numbers behind each, then the tables they
