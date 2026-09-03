@@ -28,6 +28,9 @@ var revision = "unknown"
 // executorCodex is the one roster executor that is not claude, which is also the default.
 const executorCodex = "codex"
 
+// executorOpenCode is the opencode CLI executor.
+const executorOpenCode = "opencode"
+
 // runOpts is what run needs from its surroundings. Every one of them is injected so the whole entry
 // point is drivable from a test: no real terminal, no real clock, no writes to the process streams.
 type runOpts struct {
@@ -361,12 +364,16 @@ func (o runOpts) runnerFactory(rc reviewContext) func(pipeline.RunnerSpec) pipel
 		return o.newRunner
 	}
 	runner, eo := executor.NewRunner(), o.opts.executorOpts(rc, o.clock)
-	claude, codex := executor.NewClaude(runner, eo), executor.NewCodex(runner, eo)
+	claude, codex, opencode := executor.NewClaude(runner, eo), executor.NewCodex(runner, eo), executor.NewOpenCode(runner, eo)
 	return func(spec pipeline.RunnerSpec) pipeline.Runner {
-		if spec.Executor == executorCodex {
+		switch spec.Executor {
+		case executorCodex:
 			return codex
+		case executorOpenCode:
+			return opencode
+		default:
+			return claude
 		}
-		return claude
 	}
 }
 

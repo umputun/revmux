@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # preflight.sh - verify revmux and the model CLIs a profile actually needs.
 #
-# revmux drives `claude` and `codex` as subprocesses, so a missing binary is a run that
+# revmux drives `claude`, `codex` and `opencode` as subprocesses, so a missing binary is a run that
 # starts, launches agents, and degrades every source before failing with exit 2. Checking
 # first turns that into one line of output.
 #

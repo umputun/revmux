@@ -54,6 +54,43 @@ func TestModel_statusTable_color(t *testing.T) {
 	})
 }
 
+func TestModel_statusTable_model(t *testing.T) {
+	withModel := []prompt.AgentSpec{
+		{Name: "bugs+impl", Model: "gpt-5.6-luna"},
+		{Name: "codex", Executor: "codex", Model: "gpt-5.6-sol"},
+	}
+
+	t.Run("shown when the roster resolved one", func(t *testing.T) {
+		m := New(ModelConfig{Roster: withModel})
+		rows := strings.Split(m.statusTable(), "\n")
+		assert.Contains(t, rows[2], "MODEL", "the column heading names the new column")
+		assert.Contains(t, rows[3], "gpt-5.6-luna")
+		assert.Contains(t, rows[4], "gpt-5.6-sol")
+	})
+
+	t.Run("absent when nothing in the roster resolved a model", func(t *testing.T) {
+		m := New(ModelConfig{Roster: roster()})
+		rows := strings.Split(m.statusTable(), "\n")
+		assert.NotContains(t, rows[2], "MODEL", "an empty column is chrome with nothing in it")
+	})
+
+	t.Run("a synthesis row carries no model and renders a blank cell", func(t *testing.T) {
+		m := feed(t, New(ModelConfig{Roster: withModel}),
+			event(pipeline.EventAgentStarted, "synthesis", ""))
+		rows := strings.Split(m.statusTable(), "\n")
+		synthesis := rows[len(rows)-2] // the derived row is appended after the roster
+		assert.Contains(t, synthesis, "synthesis")
+		assert.NotContains(t, synthesis, "gpt-5.6", "a derived process has no resolved model to show")
+	})
+
+	t.Run("dropped first when the pane is too narrow for it", func(t *testing.T) {
+		m := feed(t, New(ModelConfig{Roster: withModel}), tea.WindowSizeMsg{Width: 30, Height: 24})
+		rows := strings.Split(m.statusTable(), "\n")
+		assert.NotContains(t, rows[2], "MODEL")
+		assert.LessOrEqual(t, lipgloss.Width(rows[2]), 30)
+	})
+}
+
 func TestModel_statusTable_header(t *testing.T) {
 	tests := []struct {
 		name string

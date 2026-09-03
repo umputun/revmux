@@ -195,14 +195,15 @@ func (p *proc) readLines(ctx context.Context, r io.Reader, handler func(string))
 	return nil
 }
 
-// childEnv drops the variables that break or misroute a child model CLI. CLAUDECODE always goes:
-// revmux normally runs inside an AI coding session and the child refuses to start as a nested one.
+// childEnv drops the variables that break or misroute a child model CLI. CLAUDECODE and OPENCODE always
+// go: revmux normally runs inside an AI coding session and the child refuses to start as a nested one.
 func (p *proc) childEnv() []string {
 	src := os.Environ()
 	out := make([]string, 0, len(src))
 	for _, kv := range src {
 		switch name, _, _ := strings.Cut(kv, "="); {
 		case name == "CLAUDECODE":
+		case name == "OPENCODE":
 		case name == "ANTHROPIC_API_KEY" && !p.opts.PreserveAPIKey:
 		default:
 			out = append(out, kv)

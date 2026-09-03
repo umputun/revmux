@@ -1,8 +1,18 @@
 # revmux
 
+> **This is a fork.** [hackmajoris/revmux](https://github.com/hackmajoris/revmux) is a permanent, independently
+> maintained fork of [umputun/revmux](https://github.com/umputun/revmux) that adds an OpenCode executor
+> (see [Getting started with OpenCode](#getting-started-with-opencode)). It is not merged upstream and there
+> is no plan to send it as a pull request, so file OpenCode-related issues and PRs here, not against
+> upstream. Everything else in this document — install, profiles, task rounds, the archive — describes
+> upstream `revmux` unchanged; only the OpenCode sections below are specific to this fork.
+
 [![build](https://github.com/umputun/revmux/actions/workflows/ci.yml/badge.svg)](https://github.com/umputun/revmux/actions/workflows/ci.yml) [![Coverage Status](https://coveralls.io/repos/github/umputun/revmux/badge.svg?branch=master)](https://coveralls.io/github/umputun/revmux?branch=master)
 
 **[revmux.com](https://revmux.com)** · [Documentation](https://revmux.com/docs) · [Reference](https://revmux.com/reference) · [Releases](https://github.com/umputun/revmux/releases)
+
+The badges and links above point at upstream — this fork has no separate CI badge, docs site or release
+page of its own, and the two will drift as this fork's OpenCode work continues independently of upstream.
 
 revmux runs a structured multi-agent review. It spawns and supervises `claude --print` and `codex exec`
 subprocesses, then returns findings on stdout as JSON or markdown.
@@ -94,13 +104,15 @@ coding agent drives it. In Claude Code:
 /plugin install revmux@revmux
 ```
 
-For Codex CLI, copy the tree instead: `cp -r plugins/codex/skills/revmux ~/.codex/skills/revmux`. After
-either, ask for a review in words: revmux this branch, revmux pr 123, re-review after fixes. See
+For Codex CLI, copy the tree instead: `cp -r plugins/codex/skills/revmux ~/.codex/skills/revmux`. For
+OpenCode: `cp -r .opencode/skills/revmux ~/.config/opencode/skills/revmux`, or keep it project-local at
+`.opencode/skills/revmux/`, which OpenCode discovers on its own. After any of the three, ask for a review
+in words: revmux this branch, revmux pr 123, re-review after fixes. See
 [Agent skills](#agent-skills) for what it does.
 
 revmux drives the model CLIs as subprocesses, so whichever ones your profile names must already be installed
 and authenticated: both for `comprehensive`, `focused`, `final`, `grill-me`, `triage` and `expert`, claude
-alone for `claude-only`, codex alone for `codex-only`. `preflight.sh` in the shipped skill answers it for any
+alone for `claude-only`, codex alone for `codex-only`, opencode alone for `opencode-only`. `preflight.sh` in the shipped skill answers it for any
 profile and any invocation.
 
 `ANTHROPIC_API_KEY` is stripped from the child environment by default so `claude` uses interactive
@@ -260,6 +272,7 @@ codex mix inside one review.
 | `final` | `bugs+impl` plus the codex peer, nothing below major reported |
 | `claude-only` | the same four lens splits on claude, for a machine with no codex |
 | `codex-only` | the same splits on codex, and synthesis and verify with them |
+| `opencode-only` | the same splits on opencode, and synthesis and verify with them |
 | `grill-me` | two lens splits, each run once on claude and once on codex |
 | `expert` | two agents at the highest effort, each carrying all eight code lenses |
 | `triage` | a four-way panel over a filed item rather than a diff |
@@ -335,7 +348,7 @@ when the tty cannot be opened, the same events render as timestamped lines on st
 
 ## Agent skills
 
-revmux is built to be driven by a caller model, and this repository ships that caller as a skill for two
+revmux is built to be driven by a caller model, and this repository ships that caller as a skill for three
 harnesses. Ask for a review in words and the skill does the rest: it resolves what is being reviewed, runs the
 git commands, writes the round's `input/`, launches revmux, reads the JSON back, and opens a new round on the
 same task after fixes.
@@ -344,10 +357,119 @@ same task after fixes.
 |---|---|---|
 | Claude Code | `.claude-plugin/skills/revmux/` | `/plugin marketplace add umputun/revmux` then `/plugin install revmux@revmux` |
 | Codex CLI | `plugins/codex/skills/revmux/` | `cp -r plugins/codex/skills/revmux ~/.codex/skills/revmux` |
+| OpenCode | `.opencode/skills/revmux/` | project-local as shipped, or `cp -r .opencode/skills/revmux ~/.config/opencode/skills/revmux` for every project |
 
-Both carry the same reference material and the same scripts: `preflight.sh` checks the binaries an invocation
+All three carry the same reference material and the same scripts: `preflight.sh` checks the binaries an invocation
 needs, `task-state.sh` reports what a task holds, `launch-revmux.sh` runs revmux with its TUI in a terminal
 overlay, and `analyze-corpus.py` reads the archive back as numbers about the review itself.
+
+### Getting started with OpenCode
+
+The opencode executor lives on this fork ([hackmajoris/revmux](https://github.com/hackmajoris/revmux)) and
+has not shipped upstream yet, so the Homebrew cask and the release binaries do not have it. Build from the
+fork instead of installing the published binary.
+
+1. **Build revmux from the fork:**
+
+   ```
+   git clone https://github.com/hackmajoris/revmux.git
+   cd revmux
+   make build      # -> .bin/revmux
+   make install    # symlinks .bin/revmux -> /usr/local/bin/revmux
+   ```
+
+   `make install` links rather than copies, so a later `make build` (after `git pull`) is picked up without
+   reinstalling. Check `which revmux` resolves to this symlink rather than a stray Homebrew install.
+
+2. **Install opencode itself** and make sure it is authenticated: `opencode --version` should work.
+
+3. **Install the skill.** In this repo it is already project-local at `.opencode/skills/revmux/`, which
+   OpenCode discovers on its own. In any other repo:
+
+   ```
+   cp -r .opencode/skills/revmux ~/.config/opencode/skills/revmux
+   ```
+
+4. **Check the binaries a profile needs** before the first run:
+
+   ```
+   .opencode/skills/revmux/scripts/preflight.sh opencode-only
+   ```
+
+5. **Run opencode inside the repo whose branch you want reviewed**, and ask for the review in words. Say
+   "opencode only" explicitly — the default profile (`comprehensive`) wants claude and codex too, and the
+   skill maps that phrase onto the `opencode-only` profile:
+
+   ```
+   revmux this branch, opencode only, no claude or codex
+   ```
+
+   The skill detects the diff, opens a round with `revmux new`, writes `scope.md`, runs
+   `revmux --profile opencode-only`, and reads `findings.json` back.
+
+   On agterm (or tmux, Zellij, herdr, kitty, wezterm, cmux, ghostty, Emacs vterm), add "show me live" to
+   watch the TUI in a terminal overlay instead of a headless run:
+
+   ```
+   revmux this branch, opencode only, no claude or codex, show me live
+   ```
+
+6. **Re-review after fixes** with the same phrasing — the skill opens a new round on the same task and
+   revmux injects the prior round into every prompt itself:
+
+   ```
+   re-review after fixes
+   ```
+
+### Running different models under OpenCode
+
+There is no `--model` flag: model selection lives in the `model:` front-matter grammar
+(`<binary>[/<model>][:<effort>]`) inside a profile file, and the shipped `opencode-only.md` pins one model
+for the whole review. To pick between models at review time, define one profile file per model rather than
+editing that line each time — any `.md` under `prompts/profiles/` is a selectable profile by its filename:
+
+1. Materialize the prompt tree locally (once), so edits survive future `git pull`:
+
+   ```
+   revmux init
+   ```
+
+2. Copy `opencode-only.md` once per model, under `.revmux/prompts/profiles/`:
+
+   ```
+   cd .revmux/prompts/profiles
+   cp opencode-only.md opencode-fast.md
+   cp opencode-only.md opencode-deep.md
+   ```
+
+3. Change only the `description:` and `model:` line in each copy — the roster and body stay identical:
+
+   ```yaml
+   # opencode-fast.md
+   ---
+   description: opencode-only roster on a fast/cheap model
+   model: opencode/gpt-5.1:low
+   agents:
+     - {name: bugs+impl,    lenses: [bugs, impl]}
+     - {name: arch+quality, lenses: [architecture, quality]}
+     - {name: docs+tests,   lenses: [docs, tests, comments]}
+     - {name: adversarial,  lenses: [adversarial]}
+   ---
+   ```
+
+4. Confirm both resolved: `revmux config` lists every profile under `profiles[]` with its resolved
+   `model:` per agent.
+
+5. Run one by name directly:
+
+   ```
+   revmux --task pr-123 --run 01-initial --profile opencode-fast
+   ```
+
+   or from the skill, say the profile name outright: `revmux this branch, profile opencode-fast`. To have
+   the skill map a plainer word to it ("fast", "cheap"), add a row to the "the user says → profile" table
+   in `.opencode/skills/revmux/SKILL.md` — and mirror it into `.claude-plugin/skills/revmux/SKILL.md` and
+   `plugins/codex/skills/revmux/SKILL.md` to keep the three trees in sync.
 
 ## Development
 

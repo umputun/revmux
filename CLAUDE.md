@@ -74,22 +74,32 @@ If a note would be equally true of any Go project, it does not belong here.
 - `app/ui/` — bubbletea TUI, single `Model` with state grouped into sub-structs, files split by concern
 - `app/*/mocks/` — moq-generated, never edited by hand
 
-`.claude-plugin/` and `plugins/codex/` ship the **caller** as a skill, one tree per harness.
+`.claude-plugin/`, `plugins/codex/` and `.opencode/` ship the **caller** as a skill, one tree per harness.
 They contain no Go and are not built; they are documentation plus four shell scripts.
-The two trees carry duplicate copies of `references/` and `scripts/` on purpose — a plugin has to be
+All three trees carry duplicate copies of `references/` and `scripts/` on purpose — a plugin has to be
 self-contained once installed, so a shared directory is not available to them.
-**A change to one must be made to the other**, and every intended divergence is in `SKILL.md` and is a
+**A change to one must be made to the others**, and every intended divergence is in `SKILL.md` and is a
 capability one harness has and the other does not: script-path resolution, the harness's own way of
 asking a question, and whether round preparation is delegated.
-Both hand the git measuring, the task match and the context writing to one subagent, so a dozen tool
+All three hand the git measuring, the task match and the context writing to one subagent, so a dozen tool
 calls the user has no use for stay out of the session that reports the review — Claude Code through the
-Agent tool, codex through its own built-in `spawn_agent` subagents, which are on by default in 0.146.0 and
-work under `codex exec`.
+`Agent` tool, OpenCode through the `task` tool (`subagent_type: "general"`), codex through its own
+built-in `spawn_agent` subagents, which are on by default in 0.146.0 and work under `codex exec`.
 The codex text names no tool: which backend is live there is chosen by model metadata rather than by the
 `multi_agent_v2` feature flag, so it authorizes the workflow in words — "spawn one subagent", "wait", "use
 only its final summary" — and a hardcoded `collaboration.spawn_agent` would be wrong for half the models.
 Anything **not** rooted in such a capability is drift rather than divergence, and the review procedure —
-what gates, which profile a re-review picks, how a finding is presented — is the same text in both.
+what gates, which profile a re-review picks, how a finding is presented — is the same text in all three.
+
+The OpenCode tree lives at `.opencode/skills/revmux/` — the project-local path OpenCode discovers
+automatically.
+Its `SKILL.md` diverges from the Claude Code one in three places: `$SKILL_DIR` is resolved via a
+`git rev-parse` one-liner rather than `${CLAUDE_SKILL_DIR}`; round preparation is delegated via the
+`task` tool (`subagent_type: "general"`) rather than the `Agent` tool; user questions use the
+`question` tool rather than `AskUserQuestion`; and the headless progress feed is a background `tail -F`
+pipe rather than a `Monitor` + `TaskStop` pair (OpenCode has no file-monitor tool).
+Everything else — the workflow steps, the profile table, the archive rules, all references, all scripts
+— is identical to the Claude Code tree.
 
 `site/` is `revmux.com`: three hand-written HTML pages, one stylesheet, self-hosted fonts and images, and no
 build step. See the Website section below.
@@ -320,7 +330,7 @@ A roster entry also carries an optional `color` — an ANSI-16 name or `#RRGGBB`
 and handed to both renderers, so the TUI and `--no-tui` never color the same agent differently.
 
 **One `model:` string is the whole runner selection, and a profile's covers the whole review.**
-`<binary>[/<model>][:<effort>]` — `claude`, `claude/opus:high`, `codex/gpt-5.6-sol`. There is no `executor:`
+`<binary>[/<model>][:<effort>]` — `claude`, `claude/opus:high`, `codex/gpt-5.6-sol`, `opencode/gpt-5.1`. There is no `executor:`
 key and no `effort:` key in any prompt file.
 The three are one field because they are not independent: a model belongs to a binary, so separate keys let
 a file state a pairing that cannot run, and every layer that inherited one without the other recreated it —
@@ -523,33 +533,33 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
   that list to make a failing run pass is the mechanism the derived-from-`ProfileNames()` design exists to
   prevent, and the three that are there each name the review shape their bar is written for.
 - **The severity bar is duplicated in every profile body** and nothing composes it from one place:
-  `comprehensive`, `codex-only`, `claude-only`, `focused` and `grill-me` carry a byte-identical
+  `comprehensive`, `codex-only`, `claude-only`, `opencode-only`, `focused` and `grill-me` carry a byte-identical
   `## Severity bar` section, `final` carries a two-severity variant of the same text, `triage` carries
   a bar that is not a variant of it at all — its severities rate how much a point bears on the decision,
   because it reads a filed item and there is no runtime for anything to go wrong at — and `expert` carries
   a third shape, rating what goes wrong if the thing is built and run as written, because what it reviews
   may be a plan rather than a change.
-  A change to what a severity means is eight edits, and the five identical copies must stay identical —
+  A change to what a severity means is nine edits, and the six identical copies must stay identical —
   two profiles disagreeing about what `major` is means the same defect gates one review shape and not
   another, which reads as the model being inconsistent rather than the prompts being out of step.
   A code-review wording change stops at the five: propagating it into `triage` or `expert` is what the
   separate bars exist to prevent.
   `.claude/rules/prompts.md` calls the body "the shared preamble and severity bar"; shared across the
   agents of one run, not across profiles.
-  **`## What not to report` is the second such block**, byte-identical in six of the eight, and it is the
+  **`## What not to report` is the second such block**, byte-identical in seven of the nine, and it is the
   one a finder consults before writing anything down — so a rule added to one profile and not the others
   makes the same finding reportable under one review shape and suppressed under another.
   `triage` and `expert` are the exceptions and carry their own, since the shipped copy is written about
   diffs and defers to the linters and tests a review runs after: a panel reading an issue is doing
   neither, and `expert` may be reading a plan where nothing ran and no line was touched.
   `TestDefaults_WhatNotToReportContract` exempts both by name and asserts their blocks separately, exactly
-  as the severity contract does — the equality check over the other six is not weakened to accommodate
+  as the severity contract does — the equality check over the other seven is not weakened to accommodate
   either.
   **`grill-me`'s `## Stance` section is the third**, and it duplicates a *lens* rather than another
   profile: roughly half of `lenses/adversarial.md` is copied into it verbatim, including the "Work the
   seams" bullets and the two paragraphs on titling the mechanism.
   The copy exists because that profile puts the adversarial stance on all four agents, where it is
-  preamble rather than a lens — but the six profiles that name `adversarial` compose that file itself, so an
+  preamble rather than a lens — but the seven profiles that name `adversarial` compose that file itself, so an
   edit there leaves `grill-me` stale and the two shapes then instruct agents differently about severity
   inflation in the profile whose whole premise is pushing against that bar.
   What is deliberately **not** copied stays not copied: `adversarial.md` tells its agent not to repeat
@@ -559,7 +569,7 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
   snapshot is named once and read back by that name.
   No layout name is spelled anywhere else. What does not follow them
   is everything that *describes* the shape: `task.Paths` and its JSON field names, the round tree in README,
-  the two in this file, the round and archive trees on all three site pages, and both skill trees.
+  the two in this file, the round and archive trees on all three site pages, and all three skill trees.
   **Seven files draw an actual tree diagram**, and that is the set a new artifact has to appear in:
   this file, `README.md`, `site/index.html`, `site/docs.html`, `site/reference.html`, and
   `references/output.md` in **each** skill tree. That last pair is the one this bullet used to miss — it
@@ -577,10 +587,10 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
   "Entries carry" line, which is a second place inside a file the write step already put on the list.
   Then `scripts/task-state.sh`, in both its usage header and the hardcoded
   `for key in description url branch base meta_error rounds_error` loop.
-  The last four are in **both** skill trees.
+  The last four are in **all three** skill trees.
 - Anything the shipped skill documents — a flag, a profile, the JSON shape, an exit code, the task
-  directory layout — needs the same edit in **both** skill trees, since they hold duplicate copies of
-  `references/` and `scripts/`. A `diff -r` of the two `references/` and `scripts/` directories must
+  directory layout — needs the same edit in **all three** skill trees, since they hold duplicate copies of
+  `references/` and `scripts/`. A `diff -r` of each pair of `references/` and `scripts/` directories must
   come back empty; only `SKILL.md` differs.
   A **new** reference file additionally needs the `references/` line in `plugins/codex/README.md`, which
   enumerates them by name and goes stale silently — the `SKILL.md` pointer to it is what an agent
@@ -596,7 +606,7 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
   It states revmux's flags, profiles, JSON field names, exit codes and archive layout as fact, and an
   agent executes what it says without checking. A skill describing a flag that no longer behaves that way
   is worse than one that omits it: the caller acts on it confidently and has to recover afterwards.
-  Treat `.claude-plugin/skills/` and `plugins/codex/` as consumers of `app/config.go`, `app/finding/`
+  Treat `.claude-plugin/skills/`, `plugins/codex/` and `.opencode/skills/` as consumers of `app/config.go`, `app/finding/`
   and `app/archive/` the way `README.md` and `site/` are.
 - **How revmux is installed is stated in twelve places across eleven files**, and every one of them leads
   with Homebrew, since that is the path a reader should take.

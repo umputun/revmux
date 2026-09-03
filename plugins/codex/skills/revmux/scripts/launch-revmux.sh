@@ -92,7 +92,7 @@ if [ "$HAS_AUTO_EXIT" -eq 0 ] && [ "$AUTO_EXIT" != "0" ]; then
     REVMUX_CMD="$REVMUX_CMD $(sq "--auto-exit=$AUTO_EXIT")"
 fi
 
-# **revmux spawns claude and codex itself**, so resolving the revmux binary is not enough: the
+# **revmux spawns claude, codex and opencode itself**, so resolving the revmux binary is not enough: the
 # overlay shell needs a PATH that reaches those too. Overlay backends (agterm, tmux display-popup,
 # kitty @ launch, zellij run) start children from a server or app process whose environment predates
 # the user's shell rc files, so a Homebrew or ~/.local/bin claude is otherwise simply not found and

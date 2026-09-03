@@ -202,7 +202,7 @@ func (pr *progress) cols() int {
 		return n
 	}
 	if f, ok := pr.w.(*os.File); ok {
-		if n, _, err := term.GetSize(int(f.Fd())); err == nil && n >= minCols {
+		if n, _, err := term.GetSize(int(f.Fd())); err == nil && n >= minCols { //nolint:gosec // a process fd, far inside int range
 			return n
 		}
 	}

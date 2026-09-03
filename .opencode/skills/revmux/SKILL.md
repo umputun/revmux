@@ -1,13 +1,9 @@
 ---
 name: revmux
-description: >
-  Run supervised multi-agent reviews with the revmux CLI, report or act on findings, and re-review
-  fixes. Supports branches, commits, paths, fetched pull requests, visible overlay runs, review-fix
-  loops, and issue or discussion triage with grounding, thesis, antithesis, and cost panels. Also
-  analyzes archived rounds in self mode to tune local prompts and answers questions about profiles,
-  lenses, task directories, output, exit codes, and archives. Use when the user says revmux, supervised
-  review, multi-agent review, review with revmux, revmux a branch/commit/PR, show the review, triage an
-  issue, is this worth doing, revmux self, tune revmux, or asks about revmux behavior.
+description: Run a supervised multi-agent code review by composing a task directory and driving the revmux CLI, then report or act on the findings it returns. revmux spawns and watches parallel claude and codex subprocesses with stall detection, retry, per-agent progress and a full run archive; this skill is the caller that writes the review context, launches it, reads the JSON back, and re-runs it after fixes. It also triages a filed issue, proposal or discussion instead of a diff, running a four-way panel over it — grounding, the case for, the case against, and cost — and putting the maintainer's six answers to him with the arguments behind each. It also has a self mode that reads what past rounds produced and tells the user what the record says about the review itself — which stage is filtering, which lens rates hardest, whether rounds converge — then proposes one change to the local prompt text at a time, with the number behind it. It fetches a pull request into a throwaway worktree, reviews it there and cleans up after. Also answers questions about revmux itself — profiles, lenses, task directories, flags, the JSON shape, exit codes and the run archive. Activates on "revmux", "run revmux", "multi-agent review", "supervised review", "review with revmux", "revmux this branch", "revmux the last commit", "revmux pr 123", "revmux this PR", "review PR 123 with revmux", "run a revmux round", "re-review after fixes", "revmux it and show me", "revmux this, I want to watch", "run it visible", "show me the review", "triage this", "triage issue 123", "is this worth doing", "should we accept this", "should I close this", "revmux self", "self-improve revmux", "tune revmux", "revmux profiles", "revmux lenses", "what does revmux return", "revmux exit codes", "revmux task directory".
+compatibility: opencode
+metadata:
+  argument-hint: 'optional: what to review ("pr 123", "issue 123", a ref, a path), plus "show me" / "focused" / "final" / "triage" / "loop" / "lenses a,b"'
 ---
 
 # revmux — supervised multi-agent code review
@@ -24,6 +20,20 @@ It does no scope detection, no git, no PR fetching, no source modification. This
 | write `scope.md`, `goal.md`, `context/` | merge, dedupe, verify |
 | choose profile, lenses, flags | return findings on stdout |
 | read the JSON, present, fix, re-run | inject prior rounds |
+
+## Script path
+
+This skill's scripts live beside this file. Resolve the directory once before any step that calls a script:
+
+```bash
+# Project-local install (preferred):
+SKILL_DIR="$(git rev-parse --show-toplevel 2>/dev/null)/.opencode/skills/revmux"
+# Global install fallback:
+[ -d "$SKILL_DIR" ] || SKILL_DIR="$HOME/.config/opencode/skills/revmux"
+```
+
+**Expand `$SKILL_DIR` into every script path before handing the brief to a subagent.**
+Subagents do not have this skill loaded and cannot resolve it themselves.
 
 ## Activation triggers
 
@@ -90,7 +100,7 @@ the JSON unparseable.
 ### Step 0: Preflight
 
 ```bash
-~/.codex/skills/revmux/scripts/preflight.sh [profile] [--lenses]
+$SKILL_DIR/scripts/preflight.sh [profile] [--lenses]
 ```
 
 Checks revmux plus every binary the invocation needs. Exits `1` naming what is missing.
@@ -180,10 +190,10 @@ to read: it reads a diff and returns a shortstat, and a triage has neither. `ref
 writes the round, and hands back here at Step 5. A bare number goes through the probe in the table
 above first; a number that turns out to be a pull request is `pr.md`, whatever the user called it.
 
-Ask only when genuinely ambiguous; a feature branch with uncommitted work is the standard case. Use
-`request_user_input` when available, otherwise ask one concise question and stop. **The question is
-always this session's, never a subagent's**: a subagent cannot ask, and one that guesses reviews the
-wrong thing at full cost.
+Ask only when genuinely ambiguous — a feature branch with uncommitted work is the standard case. Use
+the `question` tool, here and at the headless-versus-overlay choice in Step 4. **The question is always
+this session's, never a subagent's**: a subagent cannot ask, and one that guesses reviews the wrong
+thing at full cost.
 
 ### Step 2: Prepare the round — in a subagent
 
@@ -198,7 +208,7 @@ at a flat rate across all eight — so what makes it slow is prose written and t
 latency. The budgets and the prohibitions in the brief are load-bearing for that, not tidiness.
 
 **Expand every path before handing the brief over.** The subagent does not have this skill loaded, so
-the parent skill directory is not inherited by a subagent, so substitute its resolved absolute path into the brief
+`$SKILL_DIR` means nothing in its shell — substitute the resolved absolute path into the brief's text
 rather than passing the variable through, or its `task-state.sh` step silently runs nothing.
 
 **Say one line first, then spawn it:** `Preparing the round for <what is being reviewed>…` — the
@@ -206,8 +216,8 @@ subject in the user's own terms, "the branch against master", "PR 123", "the las
 nothing further until the subagent returns: a delegated step the user was told about reads as work in
 progress, while an unannounced pause reads as a stall.
 
-Spawn **one** subagent with the collaboration tool, without overriding its model or reasoning effort.
-Hand it the resolved scope from Step 1 and this brief:
+Spawn **one** subagent using the `task` tool with `subagent_type: "general"`. Hand it the resolved
+scope from Step 1 and this brief:
 
 > Prepare a revmux review round. Write files; change no source, run no review, commit nothing.
 >
@@ -225,7 +235,7 @@ Hand it the resolved scope from Step 1 and this brief:
 >    against the subject in hand, and reuse the matched `id` verbatim. Derive one only when nothing
 >    matches: `pr-<number>`, `issue-<number>`, a branch name with `/` replaced by `-`,
 >    `since-<short-sha>`, or `wip-<branch>`. No path separators, no `..`, no leading dot, not absolute.
-> 3. Run `<the absolute path this session resolved for scripts/task-state.sh> <task-id>`. It takes the
+> 3. Run `<the absolute path resolved for scripts/task-state.sh> <task-id>`. It takes the
 >    id as its one argument and exits 1 with a usage line without it. It validates the id and reports the
 >    `task.md` anchors, every round, and each round's `input/` state — `prepared` (never reviewed),
 >    `claimed` (a review started and never finished) or `ran`. That is the inventory; do not `ls` the
@@ -340,7 +350,7 @@ Both return the same report on stdout and the same exit code.
 revmux --task <id> --run <name> --no-tui > /tmp/revmux-<id>-<run>.json 2> /tmp/revmux-<id>-<run>.log
 ```
 
-Launch as a yielded command session, keep its session id, and wait on that same session until it exits.
+Launch in the background, wait for the notification.
 
 Reviewing a fetched pull request adds `--workdir <worktree>` and changes nothing else — including that
 the command is still run from the main checkout, which is what keeps the archive out of the directory
@@ -355,17 +365,20 @@ the cleanup deletes. `references/pr.md` has the reasoning.
 On a status request, read the tail of the stderr log and `events.jsonl` in the round directory. Report
 the stage, which agents are active, and elapsed. Never guess.
 
-**Then arm the progress feed, before yielding — headless only.** Start a second yielded command session
-over the round's own `events.jsonl`:
+**Then arm the progress feed, before yielding — headless only.** Poll `events.jsonl` in a background
+loop, filtering for milestone events:
 
 ```bash
 tail -n +1 -F <round_dir>/events.jsonl \
-  | grep -E --line-buffered '"kind":"(stage|agent_started|agent_done|agent_retried|agent_degraded|dropped|rate_limit)"'
+  | grep -E --line-buffered '"kind":"(stage|agent_started|agent_done|agent_retried|agent_degraded|dropped|rate_limit)"' \
+  >> /tmp/revmux-<id>-<run>.events &
+EVENTS_PID=$!
 ```
 
-Use `write_stdin` to read new output with waits no longer than 60 seconds. When the review session exits,
-send Ctrl-C to the tail session because `tail -F` never ends by itself. `references/invocation.md` says
-why those seven kinds are used instead of the log.
+Read `/tmp/revmux-<id>-<run>.events` on each status check the user requests. When the report file
+lands (i.e. the revmux process exits), kill the tail: `kill $EVENTS_PID 2>/dev/null`.
+
+`references/invocation.md` explains why those seven kinds and not the log.
 
 **Speak at most once a minute, and only about what happened.** Fold every event since the last relay
 into one short line — the stage that opened, the agents that started or finished — rather than one
@@ -375,7 +388,6 @@ it arrives instead of waiting for the minute; those change what the user would d
 
 **Never report a quiet interval.** No heartbeat, no "no change since the last check", no restating a
 milestone already relayed — a feed that speaks when nothing happened is the one the user turns off.
-The monitor is woken by the file, so silence costs nothing and needs no announcing.
 
 **The feed belongs to this form alone.** It exists because a headless run says nothing for ten minutes
 and the user has no other signal. An overlay run is that signal, on screen, live.
@@ -383,7 +395,7 @@ and the user has no other signal. An overlay run is that signal, on screen, live
 **Overlay — when the user wants to watch:**
 
 ```bash
-~/.codex/skills/revmux/scripts/launch-revmux.sh --task <id> --run <name> [any revmux flag]
+$SKILL_DIR/scripts/launch-revmux.sh --task <id> --run <name> [any revmux flag]
 ```
 
 Detects the terminal (agterm, tmux, zellij, herdr, kitty, wezterm/kaku, cmux, ghostty, iTerm2, Emacs
@@ -391,11 +403,10 @@ vterm), runs revmux with its TUI in an overlay, returns the report on stdout. Un
 panel at 80% of the pane, or a pane overlay when the session is split, which leaves the sibling pane
 live. Either shape is tinted blue. Do not pass `--no-tui`; the script rejects it.
 
-- it blocks for the whole review, so launch it as a yielded command session and wait on that same session
-- **no progress feed, and none of the three-things announcement.** The TUI is the progress feed: a
-  second tail session here narrates in prose what the user is already watching render, once a minute, and the
-  three lines about `tail -f` point at a log he does not need. Say what is running in one line and
-  yield.
+- it blocks for the whole review, so background it and wait for the report file to land
+- **no progress feed for overlay.** The TUI is the progress feed: a polling loop here narrates in
+  prose what the user is already watching render, and the three lines about `tail -f` point at a log he
+  does not need. Say what is running in one line and yield.
 - **its exit codes: `0`/`1`/`2` are revmux's, `3` is a launcher failure, `127` is revmux not
   installed.** A `3` means no review happened — that is the one to retry.
 - overrides: `REVMUX_AGTERM_PERCENT` (80, and forces the floating panel in a split),
@@ -468,8 +479,7 @@ Recommend the option that fits the outcome:
 
 Rows are tried in order and the first match wins, so a degraded run outranks whatever it did report.
 
-Ask with `request_user_input` when available, putting the recommendation first and marking it
-`(Recommended)`. Otherwise ask one concise question and stop.
+Put it as a `question` tool call, the recommendation first and marked `(Recommended)`.
 
 **Never start fixing because the findings look clear.** A review produces findings; editing is a
 separate decision, and this is where the user makes it.
@@ -563,8 +573,7 @@ Documentation is the one surface a re-review does **not** widen to cover. Every 
 round before never looked at; a doc fix is a sentence this loop just wrote, and running the `docs` lens
 over it produces a finding about that sentence round after round while the code stands still.
 
-Ask with `request_user_input` when available, putting the matching row first and marking it
-`(Recommended)`. Otherwise ask one concise question and stop.
+Put it as a `question` tool call, the matching row first and marked `(Recommended)`.
 Never narrow the roster silently: a user who does not notice gets a smaller review than the one he
 thinks he asked for. Skip the question when he named a profile himself.
 
@@ -588,8 +597,7 @@ The proposal is oldest first by `last_run`, whole tasks, and never the task this
 task whose rounds never completed ahead of ones that did. Order those by `id` after the dated ones, and
 say in the option that they carry no completed round.
 
-Use one `request_user_input` call before anything is removed. If the tool is unavailable, ask one
-concise question and stop:
+Put it as one `question` tool call before anything is removed:
 
 - the oldest tasks that together get under ~10MB as the first option, marked `(Recommended)`
 - the single largest task as a second option, when the first is not already just that task
@@ -637,7 +645,7 @@ rounds produced and proposes changes to the review configuration itself.
 ### Step S1: Run the analysis
 
 ```bash
-~/.codex/skills/revmux/scripts/analyze-corpus.py
+$SKILL_DIR/scripts/analyze-corpus.py
 ```
 
 It walks the archive and prints numbered conclusions with the numbers behind each, then the tables they
@@ -701,8 +709,7 @@ One. The most supported, with:
 2. **the number behind it** — the one the script printed, quoted
 3. **how you would know it worked** — the measurement that moves if it did, on the next round
 
-Then use `request_user_input`: apply it, skip it, or stop. If unavailable, ask one concise question and
-stop. Act on the answer, then offer the next one the same
+Then use the `question` tool: apply it, skip it, or stop. Act on the answer, then offer the next one the same
 way. Stop when he says stop or the conclusions run out. Never batch edits, never apply one unasked.
 
 **A conclusion is not automatically a change.** Several are worth knowing and not worth acting on —
@@ -716,11 +723,11 @@ User: "revmux this branch"
 → git branch --show-current + git status --short → on tui-rework, clean
 → git diff master...HEAD --shortstat → 22 files, +840/-310, handed to the brief as the scale
 → "Preparing the round for the branch against master…"
-→ one subagent: reads the diff once, matches no existing task, derives `tui-rework`, opens
-  01-initial, writes task.md/scope/goal → returns round_dir, wrote[3]
+→ one subagent (task tool, subagent_type: "general"): reads the diff once, matches no existing task,
+  derives `tui-rework`, opens 01-initial, writes task.md/scope/goal → returns round_dir, wrote[3]
 → revmux --task tui-rework --run 01-initial --no-tui > /tmp/…json  (background)
 → tell user: ~9 min, tail -f /tmp/…log for live progress
-→ yielded tail session on <round_dir>/events.jsonl, milestone kinds only; one folded line a minute
+→ tail -F events.jsonl | grep … >> /tmp/…events &  (background events feed)
 → exit 1, sources 4/4, degraded []
 → 6 findings: 1 major, 5 minor; 2 corroborated across bugs+impl and adversarial
 ```
@@ -740,7 +747,7 @@ User: "revmux the branch, I want to watch it"
 → subagent prepares 01-initial and returns its paths
 → launch-revmux.sh --task tui-rework --run 01-initial > /tmp/…json  (background)
 → agterm: split session, so a pane overlay on the agent's own pane, TUI live, self-closes 30s after the report
-→ no tail session and no status lines: he is watching it
+→ no events feed and no status lines: he is watching it
 → same JSON, same exit code, Step 5 onward identical
 ```
 
@@ -771,5 +778,5 @@ User: "revmux self"
 → revmux config → the roster actually running; revmux init → the paths an edit would go to
 → propose one: the adversarial lens's severity text, quoting the 61%, measurable by whether the
   demotion count falls next round
-→ request_user_input: apply / skip / stop. Then the next one, or stop.
+→ question tool: apply / skip / stop. Then the next one, or stop.
 ```

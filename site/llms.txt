@@ -1,8 +1,8 @@
 # revmux
 
-> Supervised multi-agent review driven by your coding agent: spawns claude and codex subprocesses, watches them, returns verified findings as JSON
+> Supervised multi-agent review driven by your coding agent: spawns claude, codex and opencode subprocesses, watches them, returns verified findings as JSON
 
-revmux runs a structured multi-agent review by spawning and supervising `claude --print` and `codex exec` subprocesses, then returning findings on stdout. It is normally launched by a coding agent rather than typed by a user: the shipped skill resolves what is under review, writes the context to disk, runs revmux and reads the report back, so revmux is a black box with a stable contract, context in and a verified report out. The subject need not be code. A branch, a pull request, a design document, an implementation plan, a proposal or a filed issue all go in the same way. It exists because agent fan-out driven from inside an AI coding session is unobservable and unrecoverable: agents go quiet for minutes, sometimes never return, and the caller has no timeout, no kill, no retry and no progress. A subprocess does not make the model faster. What it buys is control: a watchdog that notices a stall, a kill and retry the caller owns, a live view of every agent, per-agent token counts, and a run archive that can be audited afterwards.
+revmux runs a structured multi-agent review by spawning and supervising `claude --print`, `codex exec` and `opencode run` subprocesses, then returning findings on stdout. It is normally launched by a coding agent rather than typed by a user: the shipped skill resolves what is under review, writes the context to disk, runs revmux and reads the report back, so revmux is a black box with a stable contract, context in and a verified report out. The subject need not be code. A branch, a pull request, a design document, an implementation plan, a proposal or a filed issue all go in the same way. It exists because agent fan-out driven from inside an AI coding session is unobservable and unrecoverable: agents go quiet for minutes, sometimes never return, and the caller has no timeout, no kill, no retry and no progress. A subprocess does not make the model faster. What it buys is control: a watchdog that notices a stall, a kill and retry the caller owns, a live view of every agent, per-agent token counts, and a run archive that can be audited afterwards.
 
 revmux runs a review and returns findings, and does nothing else. It performs no scope detection, no git operations, no PR fetching and no source modification, and it has zero VCS dependency. All review context is written to disk by the caller as a task round and passed in with `--task` and `--run`.
 
@@ -11,16 +11,16 @@ revmux runs a review and returns findings, and does nothing else. It performs no
 - Three fixed stages: parallel find across a roster of lens agents, one synthesis call that dedupes and boosts corroborated findings, then parallel verification grouped so no verifier anchors on a neighbour
 - Supervision: per-finder idle and hard timeouts, one automatic retry, and degrade-rather-than-abort with the missing source named in the report; verification is single-attempt and leaves a failed group `unverified` rather than dropping its findings
 - Cross-source confidence: a source is a process, never a lens, so an agent cannot corroborate itself; revmux stamps the attribution itself and no schema exposes it to the model
-- Profiles and lenses are files resolved per file across project, user and embedded layers; the eight shipped profiles are starting points, and adding a file under `prompts/profiles/` or `lenses/` is all it takes to have your own
+- Profiles and lenses are files resolved per file across project, user and embedded layers; the nine shipped profiles are starting points, and adding a file under `prompts/profiles/` or `lenses/` is all it takes to have your own
 - A profile composes any number of agents, each with its own lens set and optionally its own binary, model and effort, and the two stages choose separately, so one review can mix vendors and effort levels
 - Checked into `.revmux/`, that tree is the project's review standard: versioned, diffable, and run by everyone who clones the repository, so a contributor gets the review a maintainer would have run
-- One `model:` string per agent or stage selects binary, model and effort together, so claude and codex mix inside one review
+- One `model:` string per agent or stage selects binary, model and effort together, so claude, codex and opencode mix inside one review
 - Run archive per round: composed prompts, verbatim agent output, per-stage findings, an event log of stalls and retries, and a manifest recording prompt provenance and requested vs actual model
 - Task rounds: a review, some fixes, another round, with prior rounds injected into every prompt along with an instruction to judge them independently
 - Terminal UI with a per-process status table and a findings browser, or timestamped stderr lines with `--no-tui`
 - JSON on stdout by default with `--markdown` as the alternative, and exit codes 0, 1, 2 that callers script against
 - Issue triage as a second job: point it at an issue, proposal or discussion and the `triage` profile runs a four-way panel (is the claim true of the code today, how comparable asks were decided before, the case for, the case against, what the work reaches into), returning arguments for a maintainer to weigh rather than a verdict
-- Caller shipped as an agent skill for Claude Code and Codex CLI, including a launcher that runs the TUI in a terminal overlay
+- Caller shipped as an agent skill for Claude Code, Codex CLI and OpenCode, including a launcher that runs the TUI in a terminal overlay
 
 ## Docs
 

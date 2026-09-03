@@ -211,7 +211,10 @@ make install      <span class="c-dim"># and symlinks it to /usr/local/bin/revmux
 /plugin install revmux@revmux</pre>
         <p>
           For Codex CLI, copy the tree instead:
-          <code>cp -r plugins/codex/skills/revmux ~/.codex/skills/revmux</code>. After either, ask for a
+          <code>cp -r plugins/codex/skills/revmux ~/.codex/skills/revmux</code>. For OpenCode:
+          <code>cp -r .opencode/skills/revmux ~/.config/opencode/skills/revmux</code>, or keep it
+          project-local at <code>.opencode/skills/revmux/</code>, which OpenCode discovers on its own.
+          After any of the three, ask for a
           review in words and the skill does the rest. <a href="#skills">What it does</a> is further down.
         </p>
 
@@ -227,6 +230,7 @@ make install      <span class="c-dim"># and symlinks it to /usr/local/bin/revmux
           </li>
           <li><code>claude-only</code>: claude alone</li>
           <li><code>codex-only</code>: codex alone</li>
+          <li><code>opencode-only</code>: opencode alone</li>
         </ul>
         <p>
           <code>preflight.sh</code> in the shipped skill answers it for any profile and any invocation,
@@ -505,7 +509,7 @@ Reviewing the token exchange path after the provider swap.</pre>
 ├── prompts/
 │   ├── profiles/
 │   │   ├── comprehensive.md  roster front matter + shared preamble + severity bar
-│   │   ├── focused.md  final.md  claude-only.md  codex-only.md
+│   │   ├── focused.md  final.md  claude-only.md  codex-only.md  opencode-only.md
 │   │   └── grill-me.md  expert.md  triage.md
 │   ├── synthesis.md
 │   └── verify.md
@@ -560,14 +564,14 @@ agents:
         <h3>The model string</h3>
         <p>
           One <code>model</code> string selects the binary, the model and the effort together. The binary leads
-          and is mandatory, either <code>claude</code> or <code>codex</code>, so a value validates itself and
-          revmux never has to guess which CLI runs <code>gpt-5.6-sol</code> from a catalog of model names that
-          would go stale.
+          and is mandatory — <code>claude</code>, <code>codex</code> or <code>opencode</code> — so a value validates
+          itself and revmux never has to guess which CLI runs a model name from a catalog that would go stale.
         </p>
         <pre class="code">claude                   claude, its own default model and effort
 claude/opus:high         fully specified
 codex/gpt-5.6-sol        effort falls back to the profile's, then the binary's
-codex:high               codex's default model at high effort</pre>
+codex:high               codex's default model at high effort
+opencode/gpt-5.1         opencode CLI with a specific model</pre>
         <p>
           The three travel together because they are not independent: <code>opus</code> means nothing to codex.
           A file cannot state a pairing that will not run, and an entry naming a different binary than the
@@ -624,6 +628,12 @@ codex:high               codex's default model at high effort</pre>
                 <td>codex-only</td>
                 <td class="prose">
                   the same four lens splits on codex, and synthesis and verify with them, no claude anywhere
+                </td>
+              </tr>
+              <tr>
+                <td>opencode-only</td>
+                <td class="prose">
+                  the same four lens splits on opencode, and synthesis and verify with them, no claude or codex anywhere
                 </td>
               </tr>
               <tr>
@@ -1225,7 +1235,7 @@ receives, including what counts as critical, major and minor here.</pre>
         <h2 id="skills">Agent skills <a class="anchor" href="#skills">#</a></h2>
         <p>
           revmux is built to be driven by a caller model, and the repository ships that caller as a skill for
-          two harnesses. Ask for a review in words and the skill does the rest: it resolves what is being
+          three harnesses. Ask for a review in words and the skill does the rest: it resolves what is being
           reviewed, runs the git commands, writes the round's <code>input/</code>, launches revmux, reads the
           JSON back, and opens a new round on the same task after fixes.
         </p>
@@ -1247,6 +1257,14 @@ receives, including what counts as critical, major and minor here.</pre>
                 <td>Codex CLI</td>
                 <td><code>plugins/codex/skills/revmux/</code></td>
                 <td class="prose"><code>cp -r plugins/codex/skills/revmux ~/.codex/skills/revmux</code></td>
+              </tr>
+              <tr>
+                <td>OpenCode</td>
+                <td><code>.opencode/skills/revmux/</code></td>
+                <td class="prose">
+                  project-local as shipped, or
+                  <code>cp -r .opencode/skills/revmux ~/.config/opencode/skills/revmux</code> for every project
+                </td>
               </tr>
             </tbody>
           </table>

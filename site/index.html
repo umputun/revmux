@@ -649,9 +649,13 @@ roster receives, including what counts as critical, major and minor here.</pre>
                   <td class="prose">the same four lens splits on claude, for a machine with no codex</td>
                 </tr>
                 <tr>
-                  <td>codex-only</td>
-                  <td class="prose">the same splits on codex, both stages with them, no claude anywhere</td>
-                </tr>
+                   <td>codex-only</td>
+                   <td class="prose">the same splits on codex, both stages with them, no claude anywhere</td>
+                 </tr>
+                 <tr>
+                   <td>opencode-only</td>
+                   <td class="prose">the same splits on opencode, both stages with them, no claude or codex anywhere</td>
+                 </tr>
                 <tr>
                   <td>grill-me</td>
                   <td class="prose">
@@ -849,8 +853,17 @@ roster receives, including what counts as critical, major and minor here.</pre>
               <h3>Copy the skill</h3>
               <p><code>cp -r plugins/codex/skills/revmux ~/.codex/skills/revmux</code></p>
               <p class="small" style="margin-top: 14px">
-                Same reference material and the same scripts. Both trees carry <code>preflight.sh</code>,
+                Same reference material and the same scripts. All three trees carry <code>preflight.sh</code>,
                 <code>task-state.sh</code>, <code>launch-revmux.sh</code> and <code>analyze-corpus.py</code>.
+              </p>
+            </div>
+            <div class="card">
+              <span class="eyebrow">opencode</span>
+              <h3>Copy the skill</h3>
+              <p><code>cp -r .opencode/skills/revmux ~/.config/opencode/skills/revmux</code></p>
+              <p class="small" style="margin-top: 14px">
+                Or keep it project-local at <code>.opencode/skills/revmux/</code>, which OpenCode discovers
+                on its own.
               </p>
             </div>
           </div>
@@ -920,7 +933,10 @@ go install github.com/umputun/revmux/app@latest
 <b>/plugin install revmux@revmux</b>
 
 <span class="c-dim"># or for codex cli</span>
-cp -r plugins/codex/skills/revmux ~/.codex/skills/revmux</pre>
+cp -r plugins/codex/skills/revmux ~/.codex/skills/revmux
+
+<span class="c-dim"># or for opencode</span>
+cp -r .opencode/skills/revmux ~/.config/opencode/skills/revmux</pre>
               <p class="small">
                 <a href="/docs#install">Full install notes</a>, including building from a clone and how
                 authentication is passed to the model CLIs. <a href="#skills">What the skill does</a> is the

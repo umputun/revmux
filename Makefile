@@ -51,13 +51,15 @@ lint-go:
 lint-scripts:
 	find . -name '*.sh' -not -path './.git/*' -not -path './vendor/*' -print0 | xargs -0 shellcheck
 
-# the two skill trees ship to different harnesses and each must be self-contained once installed, so
-# plugins/codex/ is a hand-maintained copy rather than a link. What must not diverge is the content:
-# an edit to one tree's references/ or scripts/ that never reached the other is a skill that behaves
-# one way under claude and another under codex.
+# the three skill trees ship to different harnesses and each must be self-contained once installed, so
+# plugins/codex/ and .opencode/ are hand-maintained copies rather than links. What must not diverge is
+# the content: an edit to one tree's references/ or scripts/ that never reached the others is a skill
+# that behaves one way under one harness and another under a different one.
 check-plugins:
 	diff -r .claude-plugin/skills/revmux/references plugins/codex/skills/revmux/references
 	diff -r .claude-plugin/skills/revmux/scripts plugins/codex/skills/revmux/scripts
+	diff -r .claude-plugin/skills/revmux/references .opencode/skills/revmux/references
+	diff -r .claude-plugin/skills/revmux/scripts .opencode/skills/revmux/scripts
 	@echo "plugin trees agree"
 
 fmt:

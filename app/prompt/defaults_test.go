@@ -65,8 +65,8 @@ func TestDefaults_EveryProfileResolvesItsRoster(t *testing.T) {
 	set, err := Load(LoadOpts{})
 	require.NoError(t, err)
 	known := set.LensNames()
-	require.Len(t, set.ProfileNames(), 8,
-		"the shipped set is comprehensive, focused, final, claude-only, codex-only, grill-me, triage and expert")
+	require.Len(t, set.ProfileNames(), 9,
+		"the shipped set is comprehensive, focused, final, claude-only, codex-only, opencode-only, grill-me, triage and expert")
 
 	for _, name := range set.ProfileNames() {
 		p, err := set.Profile(name)
@@ -149,6 +149,34 @@ func TestDefaults_CodexOnlyRunsEveryStageOnCodex(t *testing.T) {
 		require.NoError(t, stErr)
 		assert.Equal(t, "claude", st.Executor, "%s: the mirror profile names no override and keeps the file's own", stage)
 	}
+}
+
+// opencode-only is the mirror of codex-only: every agent and both stages must run on opencode
+func TestDefaults_OpenCodeOnlyRunsEveryStageOnOpenCode(t *testing.T) {
+	set, err := Load(LoadOpts{})
+	require.NoError(t, err)
+	p, err := set.Profile("opencode-only")
+	require.NoError(t, err)
+
+	specs, err := p.Roster(nil, set.LensNames())
+	require.NoError(t, err)
+	for _, spec := range specs {
+		assert.Equal(t, "opencode", spec.Executor, spec.Name)
+	}
+
+	for _, stage := range []string{"synthesis", "verify"} {
+		st, stErr := p.Stage(set, stage)
+		require.NoError(t, stErr)
+		assert.Equal(t, "opencode", st.Executor, stage)
+		assert.Equal(t, "github-copilot/gpt-5.6-luna", st.Model, "%s inherits the profile's own model", stage)
+		assert.Equal(t, "xhigh", st.Effort, "%s inherits the profile's own effort", stage)
+	}
+
+	override, err := p.Roster([]string{"bugs"}, set.LensNames())
+	require.NoError(t, err)
+	require.Len(t, override, 1)
+	assert.Equal(t, "opencode", override[0].Executor)
+	assert.Equal(t, "github-copilot/gpt-5.6-luna", override[0].Model)
 }
 
 func TestDefaults_ComprehensiveRoster(t *testing.T) {

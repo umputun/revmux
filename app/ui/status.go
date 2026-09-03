@@ -9,13 +9,16 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// statusTable is one row per agent — name, state, elapsed, last activity — under the run header and
-// a column heading, all of it inside a full-width rule.
+// statusTable is one row per agent — name, state, elapsed, model, last activity — under the run header
+// and a column heading, all of it inside a full-width rule. MODEL is dropped first when the pane is too
+// narrow, the same way the header degrades: it is resolved once for the whole table rather than per row,
+// or two rows in the same run could disagree about whether the column exists.
 func (m Model) statusTable() string {
+	showModel := m.showModel()
 	rows := make([]string, 0, len(m.agents)+4)
-	rows = append(rows, m.clip(m.header()), m.rule(), m.clip(m.columns()))
+	rows = append(rows, m.clip(m.header()), m.rule(), m.clip(m.columns(showModel)))
 	for _, a := range m.agents {
-		rows = append(rows, m.clip(m.agentRow(a)))
+		rows = append(rows, m.clip(m.agentRow(a, showModel)))
 	}
 	rows = append(rows, m.rule())
 	return strings.Join(rows, "\n")
@@ -30,19 +33,49 @@ func (m Model) nameWidth() int {
 	return width
 }
 
+// modelWidth is the widest resolved model string among the roster. A process the roster does not name —
+// synthesis, verify, a verify group — carries no model here, so it does not enter the width and renders
+// as a blank cell rather than widening the column for a value nothing in it will ever show.
+func (m Model) modelWidth() int {
+	width := 0
+	for _, a := range m.agents {
+		width = max(width, lipgloss.Width(a.spec.Model))
+	}
+	return width
+}
+
+// showModel reports whether the MODEL column fits. It fits nothing to show if no agent resolved a model
+// at all — an empty column is chrome with no information in it — and it is dropped the same way the
+// header degrades: measured against the column heading, since that is the fixed part of the row, while
+// ACTIVITY is free-width and already clipped by the caller.
+func (m Model) showModel() bool {
+	if m.modelWidth() == 0 {
+		return false
+	}
+	return lipgloss.Width(m.columns(true)) <= m.view.width()
+}
+
 // columns labels the table. Muted, because it is chrome a reader stops seeing after the first glance.
-func (m Model) columns() string {
+func (m Model) columns(showModel bool) string {
+	if showModel {
+		return m.style.muted.Render(fmt.Sprintf("%-*s  %-9s  %7s  %-*s  %s",
+			m.nameWidth(), "AGENT", "STATE", "TIME", m.modelWidth(), "MODEL", "ACTIVITY"))
+	}
 	return m.style.muted.Render(fmt.Sprintf("%-*s  %-9s  %7s  %s", m.nameWidth(), "AGENT", "STATE", "TIME", "ACTIVITY"))
 }
 
 // agentRow is one agent's line. Each cell is painted separately and padded before it is painted: a
 // color sequence has no display width, so padding a painted string counts the escape bytes as if they
 // did and the columns drift apart by exactly the length of the sequence.
-func (m Model) agentRow(a *agentState) string {
+func (m Model) agentRow(a *agentState, showModel bool) string {
 	name := a.spec.Paint(a.spec.Name + strings.Repeat(" ", m.nameWidth()-lipgloss.Width(a.spec.Name)))
 	state := m.stateStyle(a.state).Render(fmt.Sprintf("%-9s", a.state))
 	elapsed := m.style.muted.Render(fmt.Sprintf("%7s", a.runtime(m.now)))
-	return name + "  " + state + "  " + elapsed + "  " + a.last
+	if !showModel {
+		return name + "  " + state + "  " + elapsed + "  " + a.last
+	}
+	model := m.style.muted.Render(fmt.Sprintf("%-*s", m.modelWidth(), a.spec.Model))
+	return name + "  " + state + "  " + elapsed + "  " + model + "  " + a.last
 }
 
 // header names the run and what it is doing. The findings count is the one number worth finding at a

@@ -315,6 +315,40 @@ Codex is a peer executor, not a special case in the pipeline — but the executo
   and hands `classify` a line that can carry a limit pattern the run never hit.
 - `--sandbox read-only` always. revmux never lets an agent write.
 
+### OpenCode differences
+
+OpenCode is a third peer executor. It is closer to claude than to codex on the stream and closer to codex
+than to claude on the output contract, so it shares neither one's shortcuts.
+
+- **Its stdout is a JSON-line stream, so there is no rollout file and nothing to tail.**
+  `opencode run --format json` emits one JSON object per line while it works, and `parseStream` reads four
+  of the types: `text` becomes `EventActivity`, `tool_use` becomes `EventProgress` carrying the tool name,
+  `step_finish` carries the token counts, and `error` goes out as `EventInfo`.
+  A line that fails to decode is skipped rather than failing the run: a truncated stream degrades to a
+  partial `Result`, which is the same choice the other two make.
+- **`--auto` is mandatory, not a convenience.** Without it opencode asks for permission before a tool call
+  and waits for an answer nobody is there to give, so the run stalls until the idle watchdog kills it and
+  the retry stalls into the same wall. It is the counterpart of codex's `--sandbox read-only`, minus the
+  sandbox: opencode has no read-only mode of its own, so the prompt is what keeps an agent from writing.
+- **Effort is `--variant`, not an effort flag.** The `model:` grammar is the same
+  `<binary>[/<model>][:<effort>]` every executor parses, and `opencode/gpt-5.1:high` reaches the CLI as
+  `--model gpt-5.1 --variant high`. Both are omitted when the request does not set them, so opencode's own
+  configured default is what runs.
+- **No `--json-schema`, so the schema is appended to the prompt as text**, exactly as codex does it, through
+  the exported `OpenCodeOutputContract`. It is exported for the same reason codex's is: `Run` appends it
+  after the caller has archived the composed prompt, and an archived prompt missing the contract describes a
+  run that did not happen.
+  The answer therefore arrives as the last `text` event rather than as a typed field, and `extract` scans it
+  for the first `{` that decodes — opencode may fence the object or put prose around it. Nothing parsing
+  cleanly returns nil and the pipeline degrades that source.
+- **Tokens come from `step_finish`, summed across steps** — input plus output — and not from stderr. In
+  `--format json` mode opencode reports errors as stdout `error` events, so `Run` sets no `stderrLine` at
+  all; `proc.drainStderr` still drains the pipe with a nil callback, which is what keeps the child from
+  blocking on a full one.
+- **opencode does not echo the resolved model anywhere**, so `Result.ActualModel` is set to the requested
+  name. Requested and actual therefore always agree in `manifest.json` for an opencode agent, which is a
+  gap in the record rather than a guarantee: a model the CLI silently substituted is invisible here.
+
 ### Error and limit patterns
 
 claude gets its rate-limit signal from the typed `rate_limit_event`, so string matching is only needed for codex.

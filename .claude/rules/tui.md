@@ -60,11 +60,21 @@ program returns.
 
 ### Layout
 
-A status table on top, one row per supervised process: name, state, elapsed, last activity.
+A status table on top, one row per supervised process: name, state, elapsed, model, last activity.
 The roster fills it first and `Model.agent` opens a row for any other name an event carries, so the
 synthesis and verify processes appear as they start — the table shows what is running, not only what the
 profile named.
 Below it, one focused detail pane, switched with tab and number keys.
+
+**MODEL is the roster's already-resolved `AgentSpec.Model`, not a live read-back.** It is known before the
+process even launches — the same string `find` hands the executor — so the column costs nothing to fill for
+a roster agent. A process the roster does not name — synthesis, verify, a verify group — is a `DerivedSpec`
+carrying no model, and renders a blank cell rather than a guess; showing its actual resolved model would
+need threading the stage's `Runner` through `ModelConfig`, which nothing does today.
+The whole column is dropped, never shown half-empty, when no agent in the roster resolved one at all — an
+empty column is chrome with nothing in it — and it is the first thing given up on a narrow pane, ahead of
+clipping, the same way the header degrades: `showModel` compares the column heading's width against
+`m.view.width()` once per render, so every row in one frame agrees about whether the column exists.
 
 **The header's findings total is not the sum of those rows.**
 A roster agent adds to it and a stage process replaces it, because synthesis merges what the finders already

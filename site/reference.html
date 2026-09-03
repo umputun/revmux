@@ -301,6 +301,7 @@ claude                   claude, its own default model and effort
 claude/opus:high         fully specified
 codex/gpt-5.6-sol        effort falls back to the profile's, then the binary's
 codex:high               codex's default model at high effort
+opencode/gpt-5.1         opencode CLI with a specific model
 claude/                  <span class="c-crimson">refused: a second spelling of `claude`</span>
 claude/opus:hgih         <span class="c-crimson">refused: not an effort</span></pre>
         <div class="scroll-x">
@@ -309,7 +310,7 @@ claude/opus:hgih         <span class="c-crimson">refused: not an effort</span></
               <tr><th>vocabulary</th><th>values</th></tr>
             </thead>
             <tbody>
-              <tr><td>executors</td><td class="prose"><code>claude</code>, <code>codex</code></td></tr>
+              <tr><td>executors</td><td class="prose"><code>claude</code>, <code>codex</code>, <code>opencode</code></td></tr>
               <tr><td>efforts</td><td class="prose"><code>low</code>, <code>medium</code>, <code>high</code>, <code>xhigh</code>, <code>max</code></td></tr>
             </tbody>
           </table>
@@ -334,6 +335,7 @@ claude/opus:hgih         <span class="c-crimson">refused: not an effort</span></
               <tr><td>final</td><td>both</td><td class="prose"><code>bugs+impl</code> plus the codex peer, nothing below major reported</td></tr>
               <tr><td>claude-only</td><td>claude</td><td class="prose">the four lens splits on claude alone</td></tr>
               <tr><td>codex-only</td><td>codex</td><td class="prose">the four lens splits on codex, both stages with them</td></tr>
+              <tr><td>opencode-only</td><td>opencode</td><td class="prose">the four lens splits on opencode, both stages with them</td></tr>
               <tr><td>grill-me</td><td>both</td><td class="prose">two lens splits, each run once on claude and once on codex</td></tr>
               <tr><td>expert</td><td>both</td><td class="prose">two agents at the highest effort, each carrying all eight code lenses</td></tr>
               <tr><td>triage</td><td>both</td><td class="prose">a four-way panel over a filed item; wants <code>--no-synthesis</code></td></tr>

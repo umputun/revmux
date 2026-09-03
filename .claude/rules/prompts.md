@@ -12,7 +12,7 @@ and get the same review, and change a timeout without touching a prompt.
 ### Layout
 
 ```
-prompts/profiles/comprehensive.md   focused.md   final.md   claude-only.md   codex-only.md   grill-me.md
+prompts/profiles/comprehensive.md   focused.md   final.md   claude-only.md   codex-only.md   opencode-only.md   grill-me.md
 prompts/profiles/expert.md
 prompts/profiles/triage.md
 prompts/synthesis.md   prompts/verify.md
@@ -60,6 +60,7 @@ claude                   the binary's own default model and effort
 claude/opus:high         fully specified
 codex/gpt-5.6-sol        effort falls back to the profile's, then the binary's
 codex:high               the binary's default model at high effort
+opencode/gpt-5.1         opencode CLI with a specific model
 ```
 
 **The binary leads and is mandatory, which is what makes the value validate itself.**
@@ -395,7 +396,7 @@ the `revmux config` payload, where an untagged field would emit `URL` rather tha
 - every lens named by a roster entry exists
 - every stage named by a profile's `stages:` block is one the pipeline dispatches — `synthesis` or
   `verify`, not merely a `prompts/*.md` that loaded
-- every `model:` parses: the binary is `claude` or `codex`, and an effort suffix is one of `low`,
+- every `model:` parses: the binary is `claude`, `codex` or `opencode`, and an effort suffix is one of `low`,
   `medium`, `high`, `xhigh`, `max`. `parseRunner` is the only way a runner is built, so it is the only
   place either vocabulary is checked — a second check elsewhere is unreachable code pretending to guard
 - `color`, when present, is an ANSI-16 name (`red`, `bright-blue`, …) or `#RRGGBB`

@@ -24,9 +24,9 @@ const (
 	ansiDefaultFg = "\x1b[39m"
 )
 
-// the two accepted vocabularies, checked by validate and reported verbatim by `revmux config`.
+// the accepted vocabularies, checked by validate and reported verbatim by `revmux config`.
 var (
-	executors = []string{executorClaude, "codex"}
+	executors = []string{executorClaude, "codex", "opencode"}
 	efforts   = []string{"low", "medium", "high", "xhigh", "max"}
 )
 
