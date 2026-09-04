@@ -1,6 +1,6 @@
 {
   "name": "revmux",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Run a supervised multi-agent code review or triage a filed issue with parallel claude and codex subprocesses, and act on what comes back",
   "author": {
     "name": "umputun",

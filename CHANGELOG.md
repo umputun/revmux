@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.2.1
+
+**Improvements**
+- trim reviewer context, and give the loop an exit for an excluded scope #25 @umputun
+- scope the confirming-round rule to gating findings a35fe92
+- note that the plugin version is maintainer work bf196ea
+- bump github.com/stretchr/testify from 1.11.1 to 1.12.1 #17 @dependabot
+
+**Bug Fixes**
+- wait before an agent's retry so it does not hit the same window #23 @umputun
+- forward CLAUDE_CONFIG_DIR to the overlay child #24 @umputun
+- end the rollout liveness case on the tail's own touch 4b87635
+- use strings.Cut where only the first field is read 64b4fe3
+
 ## v0.2.0
 
 **New Features**
