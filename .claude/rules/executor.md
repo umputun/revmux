@@ -101,9 +101,18 @@ claude --print --output-format stream-json --verbose
   A roster entry with a bare `claude` runner therefore gets the CLI's own default model and effort
   rather than the user's saved ones. Every shipped profile names both explicitly, so shipped reviews are
   unaffected, and `manifest.json` records requested against actual either way.
-  Model alias remaps set in the user layer's `env` — `ANTHROPIC_DEFAULT_SONNET_MODEL` and its siblings —
-  stop reaching the child too, so `claude/sonnet` in a user roster resolves to the CLI's sonnet. A shell
-  export still reaches it, since that is the process environment rather than a settings layer.
+  **`env` is the exception, and which way it falls depends on how revmux was launched.** The flag drops
+  the user layer's `env` *block*, but a variable already in revmux's own process environment is
+  inherited: `proc.childEnv` passes everything through but `CLAUDECODE` and `ANTHROPIC_API_KEY`, and
+  `--setting-sources` selects settings layers rather than the environment. So a model alias remap like
+  `ANTHROPIC_DEFAULT_SONNET_MODEL` still reaches the child on the **headless** path, where a Claude Code
+  session has already promoted its own settings `env` into the environment revmux inherits — measured on
+  this machine. On the **overlay** path it does not: `launch-revmux.sh` runs revmux under `/usr/bin/env`
+  with an explicit variable list, from a backend whose environment predates the user's shell.
+  A maintainer reading an unexpected `actual_model` in `manifest.json` needs that split; the flag alone
+  does not explain it.
+  **`apiKeyHelper` has no such route** — it is a settings key rather than a variable, so the user layer's
+  copy is dropped on both paths. A setup whose headless authentication lives only there loses it.
 - The allowlist is what removes the edit tools from the agent's context — revmux never modifies source —
   and it removes `Task`, so a reviewer cannot fan out into subagents of its own.
   There is no `--disallowedTools`: naming `Edit,Write` in a denylist beside an allowlist that omits them

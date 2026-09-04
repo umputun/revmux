@@ -515,7 +515,8 @@ skips `minor`" is not answered by adding one more case to the switch.
 Then run the tests and the linter. A fix that breaks the build is not committed.
 3. Open the next round on the same task and write its own `scope` — the fixes and the range they land
    in. **That is Step 2's subagent again**, with the same one-line announcement, the task id it
-   already returned and a fresh `--shortstat` for the fixes, so a re-review costs the session no more
+   already returned, every exclusion the earlier rounds carried, and a fresh `--shortstat` for the
+   fixes, so a re-review costs the session no more
    output than the first round did — and the brief's step 2 is skipped outright, since the id is not in
    question on a round of a task that already has rounds. Then run it:
 
