@@ -102,7 +102,9 @@ func TestClaude_args(t *testing.T) {
 	want := []string{
 		"--print", "--output-format", "stream-json", "--verbose",
 		"--permission-mode", "auto",
-		"--disallowedTools", "Edit,Write",
+		"--tools=Bash,Read,Grep,Glob,WebFetch,WebSearch",
+		"--strict-mcp-config",
+		"--setting-sources", "project",
 		"--disable-slash-commands",
 		"--no-session-persistence",
 		"--include-partial-messages",
@@ -112,6 +114,8 @@ func TestClaude_args(t *testing.T) {
 	}
 	assert.Equal(t, want, call.Args)
 	assert.NotContains(t, call.Args, "--bare", "--bare forces api-key auth and drops project instructions")
+	assert.NotContains(t, call.Args, "--tools", "--tools is variadic and must stay one argv element")
+	assert.NotContains(t, call.Args, "--mcp-config", "--strict-mcp-config with no --mcp-config is what drops every server")
 }
 
 func TestClaude_args_optionalFlagsOmitted(t *testing.T) {
@@ -129,6 +133,10 @@ func TestClaude_args_optionalFlagsOmitted(t *testing.T) {
 	assert.Contains(t, args, "--disable-slash-commands")
 	assert.Contains(t, args, "--include-partial-messages",
 		"the watchdog's only liveness while the model composes a large StructuredOutput call")
+	assert.Contains(t, args, "--tools=Bash,Read,Grep,Glob,WebFetch,WebSearch",
+		"the allowlist is what removes Edit, Write and Task from the agent's context")
+	assert.Contains(t, args, "--strict-mcp-config")
+	assert.NotContains(t, args, "--disallowedTools", "the allowlist already excludes the edit tools")
 }
 
 func TestClaude_Run_clean(t *testing.T) {

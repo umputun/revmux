@@ -59,7 +59,13 @@ func ClaudeNarrationContract(schema json.RawMessage) string {
 		"- One line at a time, under a dozen words, and never a summary of what you already said.\n"
 }
 
-// args builds the invocation. --include-partial-messages is there for the idle watchdog rather than for
+// args builds the invocation. The three context-trimming flags — the --tools allowlist,
+// --strict-mcp-config with no --mcp-config, and --setting-sources project — cut what a reviewer
+// carries before it reads anything, and they reach only this child. --tools is variadic, so it must
+// be one argv element or a later positional is swallowed; it also drops Edit and Write, which is why
+// no --disallowedTools follows, and Task, so a reviewer cannot fan out into subagents of its own.
+// The numbers and what the child stops inheriting are in .claude/rules/executor.md.
+// --include-partial-messages is there for the idle watchdog rather than for
 // anything revmux decodes: without it the whole StructuredOutput tool call arrives as one line written
 // after it is complete, so a large answer puts the stream past the idle timeout with the agent working —
 // measured killing synthesis twice at 120s while it merged 39 findings. The deltas are the only liveness
@@ -70,7 +76,9 @@ func (c *Claude) args(req Request) []string {
 		"--output-format", "stream-json",
 		"--verbose",
 		"--permission-mode", "auto",
-		"--disallowedTools", "Edit,Write",
+		"--tools=Bash,Read,Grep,Glob,WebFetch,WebSearch",
+		"--strict-mcp-config",
+		"--setting-sources", "project",
 		"--disable-slash-commands",
 		"--no-session-persistence",
 		"--include-partial-messages",

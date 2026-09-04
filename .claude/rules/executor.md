@@ -59,7 +59,9 @@ Measured directly against the real CLI. Do not re-derive, and do not assume any 
 claude --print --output-format stream-json --verbose
        --model <m> --effort <e>
        --permission-mode auto
-       --disallowedTools "Edit,Write"
+       --tools=Bash,Read,Grep,Glob,WebFetch,WebSearch
+       --strict-mcp-config
+       --setting-sources project
        --disable-slash-commands
        --no-session-persistence
        --include-partial-messages
@@ -74,10 +76,51 @@ claude --print --output-format stream-json --verbose
   themselves. The agent does not fail: it says "Bash is denied in this mode" and reads files instead,
   so a diff-scoped review silently becomes a whole-tree review with the delta guessed. Measured
   directly: `dontAsk` with no allowlist denies, `auto` allows.
-- `--disallowedTools` removes the edit tools from the agent's context — revmux never modifies source.
+- **The three context-trimming flags exist to cut what a reviewer carries before it reads anything**,
+  and they reach only this child — a developer's own interactive claude session is untouched.
+  `--tools` filters the built-in tool set down to the six a reviewer uses.
+  `--strict-mcp-config` with **no** `--mcp-config` drops every MCP server the user configured, along
+  with the connect time each agent spent on them; no shipped prompt names an MCP tool.
+  `--setting-sources project` drops the user and local `settings.json` layers.
+  **How much each saves is a property of the config, not of the flag**, so do not carry a per-flag
+  breakdown here — on a config with no MCP servers the middle one saves nothing at all.
+  One headline number, reproducible: 54,814 prompt tokens to 38,322 on the revmux tree, this machine's
+  config, claude 2.1.260, 2026-09-04.
+  **`--setting-sources` does less than its name suggests**: it selects `settings.json` layers, and a
+  `CLAUDE.md` is a memory file rather than a setting, so the agent still loads both the project and the
+  user one. That is most of what remains after the trim.
+  **`--tools` is variadic, so it must be passed as one argv element.** `--tools A,B` followed by a
+  positional swallows the positional; revmux sends the prompt on stdin, so nothing is exposed today,
+  and the `=` form is what keeps it that way. `--setting-sources` takes a single value and needs none.
+  **The floor this sets is claude 2.1.162.** Below it, `Grep` and `Glob` named in `--tools` are silently
+  ignored on native builds, so a reviewer runs without them and nothing reports it. An unrecognised flag
+  is the loud case instead — exit 1 before any model call, which degrades through the normal path.
+- **`--setting-sources project` also decides what the child stops inheriting, and that is the part someone
+  debugging a reviewer needs.** The user layer carries `model`, `effortLevel`, `env`, `sandbox`,
+  `permissions`, `hooks` and `enabledPlugins`, and none of them reach the agent now.
+  A roster entry with a bare `claude` runner therefore gets the CLI's own default model and effort
+  rather than the user's saved ones. Every shipped profile names both explicitly, so shipped reviews are
+  unaffected, and `manifest.json` records requested against actual either way.
+  **`env` is the exception, and which way it falls depends on how revmux was launched.** The flag drops
+  the user layer's `env` *block*, but a variable already in revmux's own process environment is
+  inherited: `proc.childEnv` passes everything through but `CLAUDECODE` and, unless
+  `--preserve-anthropic-api-key` is set, `ANTHROPIC_API_KEY`; `--setting-sources` selects settings
+  layers rather than the environment. So a model alias remap like
+  `ANTHROPIC_DEFAULT_SONNET_MODEL` still reaches the child on the **headless** path, where a Claude Code
+  session has already promoted its own settings `env` into the environment revmux inherits — measured on
+  this machine. On the **overlay** path it does not: `launch-revmux.sh` runs revmux under `/usr/bin/env`
+  with an explicit variable list, from a backend whose environment predates the user's shell.
+  A maintainer reading an unexpected `actual_model` in `manifest.json` needs that split; the flag alone
+  does not explain it.
+  **`apiKeyHelper` has no such route** — it is a settings key rather than a variable, so the user layer's
+  copy is dropped on both paths. A setup whose headless authentication lives only there loses it.
+- The allowlist is what removes the edit tools from the agent's context — revmux never modifies source —
+  and it removes `Task`, so a reviewer cannot fan out into subagents of its own.
+  There is no `--disallowedTools`: naming `Edit,Write` in a denylist beside an allowlist that omits them
+  states the same thing twice.
   This is best-effort, not a sandbox; the prompt must state the constraint too, and every shipped
   profile and stage prompt does.
-  **Keep this list to the edit tools. Do not grow it into a Bash denylist.**
+  **Do not add a `--disallowedTools` Bash denylist beside the allowlist.**
   `auto` was measured allowing `echo ... > main.go` and `rm -f main.go` to delete a tracked file, so
   the exposure is real — but a shell can write through a redirect, which is syntax rather than a
   command and cannot be denied by name at all, so a Bash denylist buys a fraction of a guarantee while

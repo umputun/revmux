@@ -213,6 +213,8 @@ Hand it the resolved scope from Step 1 and this brief:
 >
 > The scope is: `<the row resolved in Step 1, with its ref range>`, and its scale is
 > `<the shortstat Step 1 printed>`. Take the scale as given rather than measuring it again.
+> Exclusions the user has stated: `<list them, or "none">` — write these under the scope's
+> explicit exclusions. They are decisions already taken, and the diff cannot show you one.
 >
 > 1. Read the change: the diff for that range, once, and the file list. That is the whole of the
 >    exploration. Do not read source files in full, do not grep the tree, and do not run a further diff
@@ -520,7 +522,8 @@ skips `minor`" is not answered by adding one more case to the switch.
 Then run the tests and the linter. A fix that breaks the build is not committed.
 3. Open the next round on the same task and write its own `scope` — the fixes and the range they land
    in. **That is Step 2's subagent again**, with the same one-line announcement, the task id it
-   already returned and a fresh `--shortstat` for the fixes, so a re-review costs the session no more
+   already returned, every exclusion the earlier rounds carried, and a fresh `--shortstat` for the
+   fixes, so a re-review costs the session no more
    output than the first round did — and the brief's step 2 is skipped outright, since the id is not in
    question on a round of a task that already has rounds. Then run it:
 

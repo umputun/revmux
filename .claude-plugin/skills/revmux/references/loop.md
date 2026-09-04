@@ -23,6 +23,13 @@ Gating is `critical` and `major` in `findings`. Nothing else:
 - `minor` never gates — it is what the loop is expected to leave behind.
 - `immaterial`, `pre_existing` and `open_questions` are not in `findings` and never gate. An open
   question is a decision for the user, so the loop must not edit code to resolve one.
+- **A finding restating a scope the round's own `scope.md` or `goal.md` puts outside the change does not
+  gate.** The loop cannot overturn that decision by editing code, so the same finding returns unchanged
+  on every round and no confirming round can ever clear it. Report it in full and treat the round as
+  clean on it. **The exclusion has to be written in the round's input**, not recalled from the
+  conversation: keyed on memory this becomes "he ruled that out" for any inconvenient major, which is
+  silent suppression wearing the exemption's clothes. Written down, each round's brief carries it and
+  the finding usually stops recurring at the source.
 - A `degraded` run gates nothing either way: it is not evidence. Stop and report it.
 
 **A round in which you fixed something is never a clean exit.** Clean means a *review* came back with
@@ -45,7 +52,8 @@ zero gating findings. After fixing, always run the confirming round.
 3. Commit locally. **Never push** — that stays the user's decision, and it is what makes the whole loop
    revertible.
 4. Open the next round and run it. Its `scope` is the cumulative diff from the starting commit, not just
-   this round's fixes.
+   this round's fixes, and it repeats every exclusion the earlier rounds carried — a round that drops one
+   is a round the excluded finding gates again.
 
 Profile per round follows Step 7: `final` when the fixes stayed inside what the last round flagged,
 `comprehensive` when they spilled into tests or structure.
@@ -103,8 +111,14 @@ worded — because the fix did not answer it and the next one will not either. N
 cap.** Say so in the round report — "round 3: 2 gating again, both new, continuing" — or the user reads a
 flat number as a stall. The five-round cap is the bound on that case and it does not need a second one.
 
-On a clean exit with minors left, ask **once** whether to sweep them. Fix them if so and stop either
-way — no review round runs after that question.
+On a clean exit with findings left, ask **once** what to do with them, as a single question offering
+three courses: fix the shortlist, fix every minor, or leave them all. **The shortlist goes inside the
+question**, not only in the report above it — at most five, ranked, each with its mechanism and what
+leaving it costs, since that is what he decides against. Fix what he picks and stop either way; no
+review round runs after that question.
+
+The shortlist is what the option buys. Offered only a blanket sweep, an unranked pile of minors gets
+taken or dropped wholesale, and the two or three that were worth the round go either way with the rest.
 
 ## While it runs
 
