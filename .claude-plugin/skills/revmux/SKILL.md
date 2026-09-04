@@ -207,6 +207,8 @@ Spawn **one** `general-purpose` agent. Hand it the resolved scope from Step 1 an
 >
 > The scope is: `<the row resolved in Step 1, with its ref range>`, and its scale is
 > `<the shortstat Step 1 printed>`. Take the scale as given rather than measuring it again.
+> Exclusions the user has stated: `<list them, or "none">` — write these under the scope's
+> explicit exclusions. They are decisions already taken, and the diff cannot show you one.
 >
 > 1. Read the change: the diff for that range, once, and the file list. That is the whole of the
 >    exploration. Do not read source files in full, do not grep the tree, and do not run a further diff

@@ -71,7 +71,8 @@ What is being reviewed, and how to get at it. Not intent — that is `goal.md`.
 2. **The commands to see it** — revmux runs no git; agents run these themselves
 3. **Scale** — so the reviewer can trade breadth against depth
 4. **Which files to read in full**, and why each matters
-5. **Explicit exclusions** — vendored code, generated files
+5. **Explicit exclusions** — vendored code, generated files, and any approach the user has already
+   ruled out, so a review does not keep re-proposing what he decided against
 
 ````markdown
 # Scope
