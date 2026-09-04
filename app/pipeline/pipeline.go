@@ -100,6 +100,7 @@ type Config struct {
 	NoVerify    bool
 
 	StaggerDelay  time.Duration
+	RetryDelay    time.Duration // waited out before an agent's one retry, jittered; non-positive relaunches at once
 	MaxParallel   int
 	VerifyGroups  int
 	VerifyGroupBy string // "dir", the default, or "source" to key verifier groups by the agent that raised the finding

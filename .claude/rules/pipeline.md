@@ -136,14 +136,32 @@ The verifier is the authority anyway; dropping is only a cost optimization.
 
 ### Degrade policy
 
-Stall or crash → kill → retry **once** → second failure marks the source `degraded` and the pipeline **continues**.
+Stall or crash → kill → wait → retry **once** → second failure marks the source `degraded` and the pipeline **continues**.
 Never abort the whole run because one agent died — one flaky agent would waste every other agent's work and tokens.
+
+**The wait is what makes the retry a second chance rather than a second copy of the first.**
+`finder.retryPause` sleeps `Config.RetryDelay` plus a jitter of up to that again before relaunching, on the
+Clock, so a transient condition has time to clear and agents that failed together do not relaunch in
+lockstep into the same collision — a colliding `codex exec` launch is the reported instance of both.
+It is one interval and not a curve because `maxAttempts` allows exactly one retry.
+**It runs before `EventAgentRetried` is emitted**, because `app/archive` counts those entries as this
+agent's retries — `SourceStat.Retries`, read from `events.jsonl` and from nowhere else — so a cancellation
+during the wait must degrade the source without recording a retry that never relaunched.
+The delay is injected rather than constant so the retry path is testable without waiting one out, and
+non-positive means relaunch at once — the same convention the stagger reads its timeout under.
+Synthesis retries without one; see below.
 
 **Every source degrading is the one exception.** A run with zero reporting sources has no review to report,
 so it is a tool error and exits `2`, not a clean report with an empty findings list.
 See `.claude/rules/config.md` on exit codes.
 
 **Synthesis retries once and then fails the run — it is the one stage with no degrade path, deliberately.**
+Its relaunch is immediate, and that is a scope decision rather than an impossibility.
+Synthesis can collide the same way: the collision is host-wide — another `codex exec` from any caller,
+a second revmux instance — and `codex-only` runs synthesis on codex like everything else in it.
+What is missing is evidence: the reported failure is the find stage's, where a roster launches together,
+and a wait added to the one call whose second failure exits `2` would be added on a hunch.
+Whether synthesis wants one is its own question, on its own evidence.
 It is a single call standing between every finder's completed work and the report, so `synthesizer.dispatch`
 gives it the same one-launch-plus-one-retry the find stage gives an agent: a transient `529` must not
 discard a find stage that already ran for minutes.
