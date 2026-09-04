@@ -32,9 +32,11 @@ const executorCodex = "codex"
 // agentRetryDelay is the floor an agent waits before its one retry, which the pipeline jitters up to
 // twice that. A relaunch in the same millisecond band as the failure meets whatever transient condition
 // killed it — a colliding codex launch is the reported one — and degrades a source a wait of seconds
-// would have kept. It is a constant rather than a flag because there is nothing here to tune: the wait
-// is short beside a review, and only a run already failing ever pays it.
-const agentRetryDelay = 2 * time.Second
+// would have kept. It is sized against that collision rather than against a launch-side fault, which
+// clears in well under a second: the report puts the hazardous window at 10-20s, so the wait errs long,
+// since too short degrades a source silently while too long costs seconds on a run already failing.
+// It is a constant rather than a flag because there is nothing here a caller can calibrate better.
+const agentRetryDelay = 5 * time.Second
 
 // runOpts is what run needs from its surroundings. Every one of them is injected so the whole entry
 // point is drivable from a test: no real terminal, no real clock, no writes to the process streams.

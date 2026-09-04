@@ -501,7 +501,9 @@ func TestFinder_retryPause(t *testing.T) {
 		assert.Equal(t, []EventKind{EventAgentStarted, EventAgentRetried, EventFindings, EventAgentDone}, kinds)
 	})
 
-	t.Run("jitter separates agents that failed together", func(t *testing.T) {
+	// one draw cannot tell [d, 2d) from a bound that is wrong half the time, so both the spread and the
+	// bounds are asserted over samples
+	t.Run("every draw lands in the band and the draws differ", func(t *testing.T) {
 		h := newHarness(t)
 		h.cfg.RetryDelay = time.Second
 		f := h.finder(func(Event) {})
@@ -517,6 +519,8 @@ func TestFinder_retryPause(t *testing.T) {
 				},
 			}
 			require.NoError(t, f.retryPause(context.Background()))
+			require.GreaterOrEqual(t, d, h.cfg.RetryDelay, "the configured delay is the floor of every draw")
+			require.Less(t, d, 2*h.cfg.RetryDelay, "and the jitter adds at most another of it")
 			seen[d] = true
 		}
 		assert.Greater(t, len(seen), 1, "a fixed delay would relaunch every agent into the same window")

@@ -145,8 +145,9 @@ Clock, so a transient condition has time to clear and agents that failed togethe
 lockstep into the same collision — a colliding `codex exec` launch is the reported instance of both.
 It is one interval and not a curve because `maxAttempts` allows exactly one retry.
 **It runs before `EventAgentRetried` is emitted**, because `app/archive` counts those entries as this
-agent's retries — `SourceStat.Retries`, read from `events.jsonl` and from nowhere else — so a cancellation
-during the wait must degrade the source without recording a retry that never relaunched.
+agent's retries — `agentStats.Retries` in `app/archive/stats.go`, read from `events.jsonl` and from
+nowhere else, since no stage snapshot records a relaunch — so a cancellation during the wait must degrade
+the source without recording a retry that never relaunched.
 The delay is injected rather than constant so the retry path is testable without waiting one out, and
 non-positive means relaunch at once — the same convention the stagger reads its timeout under.
 Synthesis retries without one; see below.
