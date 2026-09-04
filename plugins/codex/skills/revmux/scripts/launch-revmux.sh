@@ -103,7 +103,7 @@ fi
 # process argv where any `ps` can read it. revmux strips that variable from its children by default
 # anyway, so overlay runs use interactive subscription auth. Use headless mode for key-based auth.
 ENV_PREFIX=" $(sq "PATH=$PATH")"
-for _name in HOME XDG_CONFIG_HOME CODEX_HOME TMPDIR; do
+for _name in HOME XDG_CONFIG_HOME CLAUDE_CONFIG_DIR CODEX_HOME TMPDIR; do
     if [ "${!_name+x}" = x ]; then
         ENV_PREFIX="$ENV_PREFIX $(sq "${_name}=${!_name}")"
     fi

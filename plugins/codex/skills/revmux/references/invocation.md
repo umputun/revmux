@@ -147,8 +147,8 @@ revmux spawns `claude` and `codex` itself, and overlay backends start children f
 whose environment predates the user's shell rc files. Without forwarding, every agent degrades on a
 binary that is plainly installed and the run exits `2`.
 
-`HOME`, `XDG_CONFIG_HOME`, `CODEX_HOME` and `TMPDIR` are forwarded for the same reason — they decide
-where the CLIs and revmux look for configuration and auth.
+`HOME`, `XDG_CONFIG_HOME`, `CLAUDE_CONFIG_DIR`, `CODEX_HOME` and `TMPDIR` are forwarded for the same
+reason — they decide where the CLIs and revmux look for configuration and auth.
 
 `ANTHROPIC_API_KEY` is **not** forwarded. An `env KEY=VAL` prefix places the value in the process
 argv, where any `ps` on the machine can read it. revmux strips that variable from its children by
