@@ -341,6 +341,16 @@ func TestRun_review(t *testing.T) {
 		assert.Equal(t, "above the bar", rep.Findings[0].Title)
 	})
 
+	t.Run("the retry delay reaches the pipeline", func(t *testing.T) {
+		require.Positive(t, agentRetryDelay, "a zero constant is a retry with no wait at all")
+		ro := newRunOpts(t, base(t)).opts()
+		ro.retryDelay = agentRetryDelay
+
+		review, err := ro.pipelineConfig()
+		require.NoError(t, err)
+		assert.Equal(t, agentRetryDelay, review.pipeline.RetryDelay)
+	})
+
 	t.Run("the verify grouping mode reaches the pipeline", func(t *testing.T) {
 		o := base(t)
 		o.VerifyGroupBy = "source"

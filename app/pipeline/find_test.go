@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/umputun/revmux/app/executor"
+	emocks "github.com/umputun/revmux/app/executor/mocks"
 	"github.com/umputun/revmux/app/finding"
 	"github.com/umputun/revmux/app/pipeline/mocks"
 	"github.com/umputun/revmux/app/prompt"
@@ -453,6 +454,127 @@ func TestFinder_retry(t *testing.T) {
 		res := f.runAgent(ctx, h.cfg.Roster[0], 0)
 		require.False(t, res.ok())
 		assert.Equal(t, int64(1), attempts.Load(), "retrying into a canceled context buys nothing")
+	})
+}
+
+func TestFinder_retryPause(t *testing.T) {
+	// a failing first attempt and a delivering second, so every case here reaches the pause
+	retryThenDeliver := func(attempts *atomic.Int64) func(RunnerSpec) Runner {
+		return func(RunnerSpec) Runner {
+			return &mocks.RunnerMock{RunFunc: func(context.Context, executor.Request, executor.EventSink) (executor.Result, error) {
+				if attempts.Add(1) == 1 {
+					return executor.Result{ExitCode: 1}, nil
+				}
+				return executor.Result{StructuredOutput: findingsJSON(
+					`{"file":"a.go","line":1,"severity":"major","confidence":85,"title":"survived"}`)}, nil
+			}}
+		}
+	}
+
+	t.Run("the retry waits out the delay before it relaunches", func(t *testing.T) {
+		h := newHarness(t)
+		var attempts atomic.Int64
+		h.cfg.NewRunner = retryThenDeliver(&attempts)
+		h.cfg.RetryDelay = 2 * time.Second
+
+		var armed []time.Duration
+		var waited atomic.Int64
+		h.cfg.Clock = &emocks.ClockMock{
+			NowFunc: func() time.Time { return time.Date(2026, 7, 26, 16, 2, 11, 0, time.UTC) },
+			AfterFuncFunc: func(d time.Duration, fire func()) executor.Timer {
+				armed = append(armed, d)
+				waited.Store(attempts.Load())
+				fire()
+				return &emocks.TimerMock{StopFunc: func() bool { return true }, ResetFunc: func(time.Duration) bool { return true }}
+			},
+		}
+
+		var kinds []EventKind
+		f := h.finder(func(ev Event) { kinds = append(kinds, ev.Kind) })
+		res := f.runAgent(context.Background(), h.cfg.Roster[0], 0)
+		require.True(t, res.ok())
+		assert.Equal(t, int64(2), attempts.Load())
+		assert.Equal(t, int64(1), waited.Load(), "the wait falls between the two launches")
+		require.Len(t, armed, 1, "one retry, one wait")
+		assert.GreaterOrEqual(t, armed[0], h.cfg.RetryDelay, "the configured delay is the floor")
+		assert.Less(t, armed[0], 2*h.cfg.RetryDelay, "and the jitter adds at most another of it")
+		assert.Equal(t, []EventKind{EventAgentStarted, EventAgentRetried, EventFindings, EventAgentDone}, kinds)
+	})
+
+	// one draw cannot tell [d, 2d) from a bound that is wrong half the time, so both the spread and the
+	// bounds are asserted over samples
+	t.Run("every draw lands in the band and the draws differ", func(t *testing.T) {
+		h := newHarness(t)
+		h.cfg.RetryDelay = time.Second
+		f := h.finder(func(Event) {})
+
+		seen := map[time.Duration]bool{}
+		for range 50 {
+			var d time.Duration
+			f.cfg.Clock = &emocks.ClockMock{
+				AfterFuncFunc: func(got time.Duration, fire func()) executor.Timer {
+					d = got
+					fire()
+					return &emocks.TimerMock{StopFunc: func() bool { return true }, ResetFunc: func(time.Duration) bool { return true }}
+				},
+			}
+			require.NoError(t, f.retryPause(context.Background()))
+			require.GreaterOrEqual(t, d, h.cfg.RetryDelay, "the configured delay is the floor of every draw")
+			require.Less(t, d, 2*h.cfg.RetryDelay, "and the jitter adds at most another of it")
+			seen[d] = true
+		}
+		assert.Greater(t, len(seen), 1, "a fixed delay would relaunch every agent into the same window")
+	})
+
+	t.Run("a non-positive delay relaunches without arming anything", func(t *testing.T) {
+		h := newHarness(t)
+		var attempts atomic.Int64
+		h.cfg.NewRunner = retryThenDeliver(&attempts)
+
+		clk := &emocks.ClockMock{
+			NowFunc: func() time.Time { return time.Date(2026, 7, 26, 16, 2, 11, 0, time.UTC) },
+			AfterFuncFunc: func(time.Duration, func()) executor.Timer {
+				return &emocks.TimerMock{StopFunc: func() bool { return true }, ResetFunc: func(time.Duration) bool { return true }}
+			},
+		}
+		h.cfg.Clock = clk
+
+		f := h.finder(func(Event) {})
+		res := f.runAgent(context.Background(), h.cfg.Roster[0], 0)
+		require.True(t, res.ok())
+		assert.Equal(t, int64(2), attempts.Load())
+		assert.Empty(t, clk.AfterFuncCalls(), "nothing to wait on, so nothing armed")
+	})
+
+	t.Run("a cancellation while waiting stops the retry and reports none", func(t *testing.T) {
+		h := newHarness(t)
+		var attempts atomic.Int64
+		h.cfg.NewRunner = retryThenDeliver(&attempts)
+		h.cfg.RetryDelay = time.Hour
+
+		ctx, cancel := context.WithCancel(context.Background())
+		var stopped atomic.Int64
+		h.cfg.Clock = &emocks.ClockMock{
+			NowFunc: func() time.Time { return time.Date(2026, 7, 26, 16, 2, 11, 0, time.UTC) },
+			AfterFuncFunc: func(time.Duration, func()) executor.Timer {
+				cancel() // the wait is armed, so this is the run being torn down mid-pause
+				return &emocks.TimerMock{
+					StopFunc:  func() bool { stopped.Add(1); return true },
+					ResetFunc: func(time.Duration) bool { return true },
+				}
+			},
+		}
+
+		var kinds []EventKind
+		f := h.finder(func(ev Event) { kinds = append(kinds, ev.Kind) })
+		res := f.runAgent(ctx, h.cfg.Roster[0], 0)
+		cancel()
+		require.False(t, res.ok(), "the first attempt's fault is what degraded the source")
+		require.ErrorContains(t, res.err, "exited 1")
+		assert.Equal(t, int64(1), attempts.Load(), "the second launch never happened")
+		assert.Equal(t, int64(1), stopped.Load(), "the abandoned timer is stopped")
+		assert.Equal(t, []EventKind{EventAgentStarted, EventAgentDegraded}, kinds,
+			"app/archive counts agent_retried entries as retries, so one that never relaunched must not be recorded")
 	})
 }
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand/v2"
 	"path"
 	"slices"
 	"strconv"
@@ -85,7 +86,8 @@ func (f *finder) run(ctx context.Context) ([]sourceResult, error) {
 }
 
 // runAgent runs one roster entry, retrying once when the first launch fails in a way a second might
-// survive. A second failure degrades this source alone and the run continues.
+// survive, after a jittered pause so the retry does not land in the same window that killed the launch.
+// A second failure degrades this source alone and the run continues.
 func (f *finder) runAgent(ctx context.Context, spec prompt.AgentSpec, index int) sourceResult {
 	res := sourceResult{spec: spec, stat: finding.SourceStat{
 		Name: spec.Name, Lenses: spec.Lenses, Executor: spec.Executor,
@@ -122,6 +124,11 @@ func (f *finder) runAgent(ctx context.Context, spec prompt.AgentSpec, index int)
 			if ctx.Err() != nil || opts.n == maxAttempts-1 {
 				break
 			}
+			// the wait comes before the event because app/archive counts agent_retried entries as
+			// retries: a cancellation while waiting would otherwise record one that never relaunched
+			if pauseErr := f.retryPause(ctx); pauseErr != nil {
+				break
+			}
 			f.emit(Event{Kind: EventAgentRetried, Agent: spec.Name, Text: fault.Error()})
 			continue
 		}
@@ -135,6 +142,29 @@ func (f *finder) runAgent(ctx context.Context, spec prompt.AgentSpec, index int)
 		return res
 	}
 	return f.degrade(res, fault)
+}
+
+// retryPause waits out Config.RetryDelay before a relaunch, so whatever transient condition killed the
+// launch has time to clear: a retry firing in the same millisecond band reproduces the timing that
+// killed the first attempt. The jitter separates agents that failed together and would otherwise
+// relaunch in lockstep into the same collision. There is no growth factor because maxAttempts allows a
+// single retry, so there is only ever one interval. A non-positive delay relaunches at once, the same
+// convention the stagger reads a non-positive timeout under.
+func (f *finder) retryPause(ctx context.Context) error {
+	d := f.cfg.RetryDelay
+	if d <= 0 {
+		return nil
+	}
+	done := make(chan struct{})
+	//nolint:gosec // the jitter separates colliding relaunches, it guards nothing
+	timer := f.cfg.Clock.AfterFunc(d+rand.N(d), func() { close(done) })
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		timer.Stop()
+		return fmt.Errorf("wait before retry: %w", ctx.Err())
+	}
 }
 
 // attempt runs one process under its own cancellable context, so a retry tears the stalled attempt's

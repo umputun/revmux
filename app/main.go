@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jessevdk/go-flags"
@@ -28,16 +29,28 @@ var revision = "unknown"
 // executorCodex is the one roster executor that is not claude, which is also the default.
 const executorCodex = "codex"
 
+// agentRetryDelay is the floor an agent waits before its one retry, which the pipeline jitters up to
+// twice that. A relaunch in the same millisecond band as the failure meets whatever transient condition
+// killed it — a colliding codex launch is the reported one — and degrades a source a wait of seconds
+// would have kept. It is sized against that collision rather than against a launch-side fault, which
+// clears in well under a second: the report puts the hazardous window at 10-20s, so the wait errs long,
+// since too short degrades a source silently while too long costs seconds on a run already failing.
+// It is a constant rather than a flag because there is nothing here a caller can calibrate better.
+const agentRetryDelay = 5 * time.Second
+
 // runOpts is what run needs from its surroundings. Every one of them is injected so the whole entry
 // point is drivable from a test: no real terminal, no real clock, no writes to the process streams.
 type runOpts struct {
-	opts      options
-	clock     executor.Clock
-	stdout    io.Writer
-	stderr    io.Writer
-	openTTY   func() (*os.File, error)
-	newRunner func(pipeline.RunnerSpec) pipeline.Runner
-	snapshot  func(reviewContext) []ui.InputDocument
+	opts  options
+	clock executor.Clock
+	// retryDelay is injected rather than read from agentRetryDelay so a test drives the retry path
+	// without waiting one out; only main supplies the production value.
+	retryDelay time.Duration
+	stdout     io.Writer
+	stderr     io.Writer
+	openTTY    func() (*os.File, error)
+	newRunner  func(pipeline.RunnerSpec) pipeline.Runner
+	snapshot   func(reviewContext) []ui.InputDocument
 }
 
 // configuredReview is everything one review resolved before it starts. Keeping the context beside the
@@ -62,7 +75,7 @@ func main() {
 	}
 
 	os.Exit(run(runOpts{
-		opts: o, clock: executor.NewClock(),
+		opts: o, clock: executor.NewClock(), retryDelay: agentRetryDelay,
 		stdout: os.Stdout, stderr: os.Stderr, openTTY: openTTY,
 	}))
 }
@@ -201,7 +214,7 @@ func (o runOpts) pipelineConfig() (configuredReview, error) {
 		Set:       set, Profile: profile, Roster: roster, Vars: rc.vars(), History: history,
 		Task: o.opts.Task, Run: o.opts.Run, ScopePath: rc.Scope,
 		NoSynthesis: o.opts.NoSynthesis, NoVerify: o.opts.NoVerify,
-		StaggerDelay: o.opts.StaggerDelay, MaxParallel: o.opts.MaxParallel,
+		StaggerDelay: o.opts.StaggerDelay, RetryDelay: o.retryDelay, MaxParallel: o.opts.MaxParallel,
 		VerifyGroups: o.opts.VerifyGroups, VerifyGroupBy: o.opts.VerifyGroupBy,
 	}
 	return configuredReview{pipeline: cfg, archive: arc, context: rc}, nil
