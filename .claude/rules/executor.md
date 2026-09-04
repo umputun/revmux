@@ -103,8 +103,9 @@ claude --print --output-format stream-json --verbose
   unaffected, and `manifest.json` records requested against actual either way.
   **`env` is the exception, and which way it falls depends on how revmux was launched.** The flag drops
   the user layer's `env` *block*, but a variable already in revmux's own process environment is
-  inherited: `proc.childEnv` passes everything through but `CLAUDECODE` and `ANTHROPIC_API_KEY`, and
-  `--setting-sources` selects settings layers rather than the environment. So a model alias remap like
+  inherited: `proc.childEnv` passes everything through but `CLAUDECODE` and, unless
+  `--preserve-anthropic-api-key` is set, `ANTHROPIC_API_KEY`; `--setting-sources` selects settings
+  layers rather than the environment. So a model alias remap like
   `ANTHROPIC_DEFAULT_SONNET_MODEL` still reaches the child on the **headless** path, where a Claude Code
   session has already promoted its own settings `env` into the environment revmux inherits — measured on
   this machine. On the **overlay** path it does not: `launch-revmux.sh` runs revmux under `/usr/bin/env`
