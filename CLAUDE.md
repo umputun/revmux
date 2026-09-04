@@ -598,6 +598,11 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
   is worse than one that omits it: the caller acts on it confidently and has to recover afterwards.
   Treat `.claude-plugin/skills/` and `plugins/codex/` as consumers of `app/config.go`, `app/finding/`
   and `app/archive/` the way `README.md` and `site/` are.
+- **The plugin version is maintainer work, never a contributor's.**
+  It is stated twice — `version:` in `.claude-plugin/plugin.json` and in the `plugins` entry of
+  `.claude-plugin/marketplace.json` — and the two must match.
+  A contributor's PR carries whatever version its base had, so a rebase leaves it stale rather than wrong;
+  bump it after merging rather than asking him to.
 - **How revmux is installed is stated in twelve places across eleven files**, and every one of them leads
   with Homebrew, since that is the path a reader should take.
   The README's install section; `site/index.html` twice, in the hero copy line and in the install section;
