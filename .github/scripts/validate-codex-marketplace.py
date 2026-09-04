@@ -8,24 +8,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 MARKETPLACE = ROOT / ".agents" / "plugins" / "marketplace.json"
 PLUGIN_ROOT = ROOT / "plugins" / "codex"
-EXPECTED_FILES = {
-    ".codex-plugin/plugin.json",
+# entry files nothing else checks: the manifest and SKILL.md fail their own reads above, and
+# `make check-plugins` diffs references/ and scripts/ against the Claude tree
+ENTRY_FILES = (
     "README.md",
-    "skills/revmux/SKILL.md",
     "skills/revmux/agents/openai.yaml",
-    "skills/revmux/references/invocation.md",
-    "skills/revmux/references/loop.md",
-    "skills/revmux/references/output.md",
-    "skills/revmux/references/pr.md",
-    "skills/revmux/references/present.md",
-    "skills/revmux/references/task-dir.md",
-    "skills/revmux/references/triage.md",
-    "skills/revmux/scripts/agentdeck-window.sh",
-    "skills/revmux/scripts/analyze-corpus.py",
-    "skills/revmux/scripts/launch-revmux.sh",
-    "skills/revmux/scripts/preflight.sh",
-    "skills/revmux/scripts/task-state.sh",
-}
+)
 
 
 def load_json(path: Path) -> dict:
@@ -74,14 +62,8 @@ def main() -> None:
         "Codex skill hard-codes the legacy direct-install path"
     )
 
-    packaged_files = {
-        str(path.relative_to(PLUGIN_ROOT))
-        for path in PLUGIN_ROOT.rglob("*")
-        if path.is_file()
-    }
-    assert packaged_files == EXPECTED_FILES, (
-        f"unexpected Codex payload: {sorted(packaged_files ^ EXPECTED_FILES)}"
-    )
+    for relative in ENTRY_FILES:
+        assert (PLUGIN_ROOT / relative).is_file(), f"Codex payload is missing {relative}"
 
     print("Codex marketplace manifest is valid")
 

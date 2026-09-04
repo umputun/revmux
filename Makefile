@@ -55,7 +55,7 @@ lint-scripts:
 # plugins/codex/ is a hand-maintained copy rather than a link. What must not diverge is the content:
 # an edit to one tree's references/ or scripts/ that never reached the other is a skill that behaves
 # one way under claude and another under codex. The validator also pins the marketplace source, policy,
-# manifest version and complete Codex payload so a partial package cannot pass CI.
+# manifest version and the payload's entry files, which the two diffs above do not cover.
 check-plugins:
 	diff -r .claude-plugin/skills/revmux/references plugins/codex/skills/revmux/references
 	diff -r .claude-plugin/skills/revmux/scripts plugins/codex/skills/revmux/scripts
