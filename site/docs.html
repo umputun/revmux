@@ -204,14 +204,19 @@ make install      <span class="c-dim"># and symlinks it to /usr/local/bin/revmux
 
         <h3>The agent skill</h3>
         <p>
-          The binary runs a review; the skill is what asks for one. Install it in Claude Code with two slash
-          commands, and the repository becomes a plugin marketplace of one:
+          The binary runs a review; the skill is what asks for one. The repository is a plugin marketplace of
+          one, and both harnesses install from it:
         </p>
-        <pre class="code">/plugin marketplace add umputun/revmux
-/plugin install revmux@revmux</pre>
+        <pre class="code"><span class="c-dim"># Claude Code</span>
+claude plugin marketplace add umputun/revmux
+claude plugin install revmux@revmux
+
+<span class="c-dim"># Codex</span>
+codex plugin marketplace add umputun/revmux
+codex plugin add revmux@revmux</pre>
         <p>
-          For Codex CLI, copy the tree instead:
-          <code>cp -r plugins/codex/skills/revmux ~/.codex/skills/revmux</code>. After either, ask for a
+          Install through one marketplace only. If you previously copied or symlinked the Codex skill into
+          <code>~/.codex/skills/revmux</code>, remove that copy after installing the plugin. Then ask for a
           review in words and the skill does the rest. <a href="#skills">What it does</a> is further down.
         </p>
 
@@ -1240,14 +1245,17 @@ receives, including what counts as critical, major and minor here.</pre>
                 <td>Claude Code</td>
                 <td><code>.claude-plugin/skills/revmux/</code></td>
                 <td class="prose">
-                  <code>/plugin marketplace add umputun/revmux</code> then
-                  <code>/plugin install revmux@revmux</code>
+                  <code>claude plugin marketplace add umputun/revmux</code> then
+                  <code>claude plugin install revmux@revmux</code>
                 </td>
               </tr>
               <tr>
                 <td>Codex CLI</td>
                 <td><code>plugins/codex/skills/revmux/</code></td>
-                <td class="prose"><code>cp -r plugins/codex/skills/revmux ~/.codex/skills/revmux</code></td>
+                <td class="prose">
+                  <code>codex plugin marketplace add umputun/revmux</code> then
+                  <code>codex plugin add revmux@revmux</code>
+                </td>
               </tr>
             </tbody>
           </table>
