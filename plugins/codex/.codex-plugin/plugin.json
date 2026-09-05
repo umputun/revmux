@@ -1,6 +1,6 @@
 {
   "name": "revmux",
-  "version": "0.4.3",
+  "version": "0.5.1",
   "description": "Run supervised multi-agent code reviews and issue triage from Codex",
   "author": {
     "name": "Umputun",
