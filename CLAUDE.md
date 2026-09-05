@@ -590,6 +590,9 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
   A **new script** needs the same listing, the script sentence in README's skill section, the script list in
   `site/docs.html`, and a line under
   `plugins/codex/README.md`'s requirements when it needs anything the other scripts do not.
+  `ENTRY_FILES` in `.github/scripts/validate-codex-marketplace.py` is deliberately **not** one of these
+  sites: it pins only the codex payload's entry files, since `diff -r` already covers `references/` and
+  `scripts/`, and the manifest and `SKILL.md` fail their own reads above it.
   **A script exists so the knowledge in it is not re-derived per session.** `analyze-corpus.py` is the
   case that made the rule: the readings it encodes were each got wrong by hand first, and ad-hoc `jq`
   over the archive reproduces those mistakes. Anything the skill would otherwise work out from the
@@ -601,10 +604,10 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
   Treat `.claude-plugin/skills/` and `plugins/codex/` as consumers of `app/config.go`, `app/finding/`
   and `app/archive/` the way `README.md` and `site/` are.
 - **The plugin version is maintainer work, never a contributor's.**
-  It is stated twice — `version:` in `.claude-plugin/plugin.json` and in the `plugins` entry of
-  `.claude-plugin/marketplace.json` — and the two must match.
-  A contributor's PR carries whatever version its base had, so a rebase leaves it stale rather than wrong;
-  bump it after merging rather than asking him to.
+  It is stated three times — `version:` in `.claude-plugin/plugin.json`, in the `plugins` entry of
+  `.claude-plugin/marketplace.json`, and in `plugins/codex/.codex-plugin/plugin.json` — and all three must
+  match, which `make check-plugins` asserts.
+  Bump it after merging a contributor's PR rather than asking him to.
 - **How revmux is installed is stated in twelve places across eleven files**, and every one of them leads
   with Homebrew, since that is the path a reader should take.
   The README's install section; `site/index.html` twice, in the hero copy line and in the install section;

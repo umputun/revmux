@@ -7,6 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 MARKETPLACE = ROOT / ".agents" / "plugins" / "marketplace.json"
+CLAUDE_MARKETPLACE = ROOT / ".claude-plugin" / "marketplace.json"
 PLUGIN_ROOT = ROOT / "plugins" / "codex"
 # entry files nothing else checks: the manifest and SKILL.md fail their own reads above, and
 # `make check-plugins` diffs references/ and scripts/ against the Claude tree
@@ -51,6 +52,16 @@ def main() -> None:
     assert manifest["name"] == plugin["name"]
     assert manifest["version"] == claude_manifest["version"], (
         "Codex and Claude plugin versions differ"
+    )
+
+    # the version is stated in three files and a bump that misses one is invisible otherwise
+    claude_marketplace = load_json(CLAUDE_MARKETPLACE)
+    claude_entries = [
+        entry for entry in claude_marketplace["plugins"] if entry["name"] == manifest["name"]
+    ]
+    assert len(claude_entries) == 1, "revmux is not a single entry in the Claude marketplace"
+    assert claude_entries[0]["version"] == claude_manifest["version"], (
+        "Claude marketplace and plugin manifest versions differ"
     )
     assert manifest["skills"] == "./skills/"
     assert manifest["interface"]["category"] == plugin["category"]
