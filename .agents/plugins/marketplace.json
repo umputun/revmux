@@ -1,0 +1,20 @@
+{
+  "name": "revmux",
+  "interface": {
+    "displayName": "Revmux"
+  },
+  "plugins": [
+    {
+      "name": "revmux",
+      "source": {
+        "source": "local",
+        "path": "./plugins/codex"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

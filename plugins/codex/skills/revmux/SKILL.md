@@ -17,6 +17,13 @@ stalls, retries what hangs, and returns findings on stdout.
 
 It does no scope detection, no git, no PR fetching, no source modification. This skill does that half.
 
+## Script path resolution
+
+The bundled scripts live in `scripts/` beside this `SKILL.md`. Resolve each one's absolute path from this
+skill's `SKILL.md` entry in the available-skills catalogue, and write that path, in double quotes, in place of
+the `<the absolute path this session resolved for scripts/…>` placeholder wherever a command below carries it.
+Marketplace plugins live in a versioned cache, not `~/.codex/skills/`, so no fixed path can be written here.
+
 | this skill | revmux |
 |---|---|
 | resolve what is under review | supervise, stagger, retry, degrade |
@@ -90,7 +97,7 @@ the JSON unparseable.
 ### Step 0: Preflight
 
 ```bash
-~/.codex/skills/revmux/scripts/preflight.sh [profile] [--lenses]
+"<the absolute path this session resolved for scripts/preflight.sh>" [profile] [--lenses]
 ```
 
 Checks revmux plus every binary the invocation needs. Exits `1` naming what is missing.
@@ -197,9 +204,9 @@ Measured over eight archived rounds it ran 65 to 156 seconds, and the wall-clock
 at a flat rate across all eight — so what makes it slow is prose written and turns taken, not tool
 latency. The budgets and the prohibitions in the brief are load-bearing for that, not tidiness.
 
-**Expand every path before handing the brief over.** The subagent does not have this skill loaded, so
-the parent skill directory is not inherited by a subagent, so substitute its resolved absolute path into the brief
-rather than passing the variable through, or its `task-state.sh` step silently runs nothing.
+**Expand every path before handing the brief over.** The subagent does not have this skill loaded and
+cannot resolve the skill directory itself, so substitute the resolved absolute path into the brief's text,
+or its `task-state.sh` step silently runs nothing.
 
 **Say one line first, then spawn it:** `Preparing the round for <what is being reviewed>…` — the
 subject in the user's own terms, "the branch against master", "PR 123", "the last 3 commits". Then
@@ -383,7 +390,7 @@ and the user has no other signal. An overlay run is that signal, on screen, live
 **Overlay — when the user wants to watch:**
 
 ```bash
-~/.codex/skills/revmux/scripts/launch-revmux.sh --task <id> --run <name> [any revmux flag]
+"<the absolute path this session resolved for scripts/launch-revmux.sh>" --task <id> --run <name> [any revmux flag]
 ```
 
 Detects the terminal (agterm, tmux, zellij, herdr, kitty, wezterm/kaku, cmux, ghostty, iTerm2, Emacs
@@ -638,7 +645,7 @@ rounds produced and proposes changes to the review configuration itself.
 ### Step S1: Run the analysis
 
 ```bash
-~/.codex/skills/revmux/scripts/analyze-corpus.py
+"<the absolute path this session resolved for scripts/analyze-corpus.py>"
 ```
 
 It walks the archive and prints numbered conclusions with the numbers behind each, then the tables they

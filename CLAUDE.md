@@ -75,6 +75,8 @@ If a note would be equally true of any Go project, it does not belong here.
 - `app/*/mocks/` — moq-generated, never edited by hand
 
 `.claude-plugin/` and `plugins/codex/` ship the **caller** as a skill, one tree per harness.
+`.claude-plugin/marketplace.json` publishes the Claude Code package; `.agents/plugins/marketplace.json`
+publishes the Codex package from `plugins/codex/`, whose `.codex-plugin/plugin.json` declares its skill tree.
 They contain no Go and are not built; they are documentation plus four shell scripts.
 The two trees carry duplicate copies of `references/` and `scripts/` on purpose — a plugin has to be
 self-contained once installed, so a shared directory is not available to them.
