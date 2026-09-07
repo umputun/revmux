@@ -261,16 +261,19 @@ func (a AgentSpec) checkName() error {
 // output show one agent in one color. It emits raw SGR rather than going through lipgloss: a nested
 // lipgloss render ends in a full reset that kills the enclosing pane's background.
 func (a AgentSpec) Paint(s string) string {
-	seq := a.sgr()
+	seq := a.SGR()
 	if seq == "" || s == "" {
 		return s
 	}
 	return seq + s + ansiDefaultFg
 }
 
-// sgr renders the resolved color as a foreground sequence. An index picks the color out of the
-// reader's own terminal theme; a hex value asks for that exact shade and ignores the theme.
-func (a AgentSpec) sgr() string {
+// SGR is the foreground sequence Paint opens with, for a renderer that has to re-open the color
+// itself: after an inline span closed it, or at the start of a wrapped row. It is empty when the
+// agent has no usable color, and Paint then returns its argument unchanged. An index picks the
+// color out of the reader's own terminal theme; a hex value asks for that exact shade and ignores
+// the theme.
+func (a AgentSpec) SGR() string {
 	if strings.HasPrefix(a.Color, "#") {
 		rgb, err := strconv.ParseUint(a.Color[1:], 16, 32)
 		if err != nil {

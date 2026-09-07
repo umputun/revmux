@@ -376,6 +376,28 @@ func TestAgentSpec_Paint(t *testing.T) {
 	})
 }
 
+func TestAgentSpec_SGR(t *testing.T) {
+	tests := []struct {
+		name  string
+		color string
+		want  string
+	}{
+		{"an index", "6", "\x1b[36m"},
+		{"a bright index", "12", "\x1b[94m"},
+		{"hex", "#ff8800", "\x1b[38;2;255;136;0m"},
+		{"no color", "", ""},
+		{"an unresolvable color", "chartreuse", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spec := AgentSpec{Name: "bugs", Color: tt.color}
+			assert.Equal(t, tt.want, spec.SGR())
+			assert.True(t, strings.HasPrefix(spec.Paint("bugs"), tt.want), "it is the sequence Paint opens with")
+		})
+	}
+}
+
 func TestProfile_Roster_LensOverride(t *testing.T) {
 	known := map[string]struct{}{"bugs": {}, "adversarial": {}}
 	_, p := loadProfile(t, `model: claude/opus:high

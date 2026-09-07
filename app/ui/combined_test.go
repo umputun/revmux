@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -183,5 +184,105 @@ func TestModel_combinedLines_wrap(t *testing.T) {
 		require.Greater(t, len(lines), 1)
 		assert.Contains(t, strings.Join(strings.Fields(strings.Join(lines, "")), ""), unbroken,
 			"it has no space to break on, so it is cut at the column and continues")
+	})
+}
+
+func colored(t *testing.T, width int) Model {
+	t.Helper()
+	m := New(ModelConfig{Roster: roster()})
+	m.style.profile = termenv.ANSI
+	return feed(t, m, tea.WindowSizeMsg{Width: width, Height: 24})
+}
+
+func TestModel_combinedLines_paintsTextInTheAgentColor(t *testing.T) {
+	m := feed(t, colored(t, 76),
+		event(pipeline.EventAgentActivity, "bugs+impl", "reading proc.go"),
+		event(pipeline.EventAgentActivity, "codex", "tool: Grep"),
+		pipeline.Event{Kind: pipeline.EventStage, Stage: "verify", At: at},
+	)
+
+	lines := m.combinedLines()
+	require.Len(t, lines, 3)
+	assert.Equal(t, "16:02:11 "+roster()[0].Paint("bugs+impl")+"  "+roster()[0].Paint("reading proc.go"), lines[0],
+		"the text is painted like the name, opened after the prefix and closed at the row end")
+	assert.Equal(t, "16:02:11 "+roster()[1].Paint("codex")+"      "+roster()[1].Paint("tool: Grep"), lines[1],
+		"a hex color paints the text too")
+	assert.NotContains(t, lines[2], roster()[0].SGR(), "a stage band keeps its own style")
+	assert.NotContains(t, lines[2], roster()[1].SGR())
+
+	t.Run("a terminal reporting no color leaves the text plain", func(t *testing.T) {
+		plain := feed(t, New(ModelConfig{Roster: roster()}), event(pipeline.EventAgentActivity, "bugs+impl", "reading proc.go"))
+		assert.Equal(t, "16:02:11 "+roster()[0].Paint("bugs+impl")+"  reading proc.go", plain.combinedLines()[0],
+			"the name keeps the raw paint it always had, and nothing new is emitted")
+	})
+
+	t.Run("an inline code span re-opens the agent color after it", func(t *testing.T) {
+		m := feed(t, colored(t, 76), event(pipeline.EventAgentActivity, "codex", "reading `proc.go` again"))
+		seq := roster()[1].SGR()
+		assert.Contains(t, m.combinedLines()[0], seq+"reading "+ansiCodeOn+"proc.go"+ansiCodeOff+seq+" again"+ansiCodeOff)
+	})
+
+	t.Run("leading spaces stay ahead of the paint", func(t *testing.T) {
+		m := feed(t, colored(t, 76), event(pipeline.EventAgentActivity, "codex", "   indented"))
+		assert.Contains(t, m.combinedLines()[0], "      "+"   "+roster()[1].Paint("indented"),
+			"the wrapper measures the indent on the plain text, so the color opens after it")
+	})
+}
+
+func TestModel_combinedLines_paintsEveryWrappedRow(t *testing.T) {
+	long := "Bash git diff master..HEAD -- app/pipeline/ app/config.go app/main.go ':!vendor'"
+	m := feed(t, colored(t, 76), event(pipeline.EventAgentProgress, "bugs+impl", long))
+	seq := roster()[0].SGR()
+
+	lines := m.combinedLines()
+	require.Len(t, lines, 2, "one row could not hold it")
+	for i, l := range lines {
+		assert.True(t, strings.HasSuffix(l, ansiCodeOff), "row %d closes the color it opened: %q", i, l)
+		assert.LessOrEqual(t, lipgloss.Width(l), 76, "no row runs past the terminal")
+	}
+	col := strings.Index(stripColor(lines[0]), "Bash")
+	require.Positive(t, col)
+	assert.True(t, strings.HasPrefix(lines[1], strings.Repeat(" ", col)+seq),
+		"the continuation row opens the agent color after its indent: %q", lines[1])
+
+	joined := strings.Join(strings.Fields(stripColor(strings.Join(lines, " "))), " ")
+	assert.Contains(t, joined, long, "every word survives the wrap")
+
+	t.Run("a code span broken by the wrap keeps its own color on the next row", func(t *testing.T) {
+		text := "reading `app/pipeline/find.go app/pipeline/synthesis.go app/pipeline/verify.go` now"
+		m := feed(t, colored(t, 60), event(pipeline.EventAgentProgress, "codex", text))
+		hex := roster()[1].SGR()
+
+		lines := m.combinedLines()
+		require.Len(t, lines, 3, "one path per row")
+		assert.Contains(t, lines[0], hex+"reading "+ansiCodeOn+"app/pipeline/find.go", "the span opens on the first row")
+		for i, l := range lines[:2] {
+			assert.True(t, strings.HasSuffix(l, ansiCodeOff), "row %d closes before the span does: %q", i, l)
+		}
+		for i, l := range lines[1:] {
+			rest := strings.TrimLeft(l, " ")
+			assert.True(t, strings.HasPrefix(rest, ansiCodeOn), "row %d re-opens the span, not the agent color: %q", i+1, rest)
+		}
+		assert.True(t, strings.HasSuffix(lines[2], ansiCodeOff+hex+" now"+ansiCodeOff), "the agent color returns once the span closes")
+	})
+
+	t.Run("a word longer than the column is painted on every piece", func(t *testing.T) {
+		unbroken := strings.Repeat("x", 200)
+		m := feed(t, colored(t, 76), event(pipeline.EventAgentProgress, "bugs+impl", unbroken))
+		lines := m.combinedLines()
+		require.Greater(t, len(lines), 1)
+		for i, l := range lines {
+			assert.Contains(t, l, seq+"xxx", "row %d opens the color", i)
+			assert.True(t, strings.HasSuffix(l, ansiCodeOff), "row %d closes it", i)
+		}
+		assert.Contains(t, strings.Join(strings.Fields(stripColor(strings.Join(lines, ""))), ""), unbroken)
+	})
+
+	t.Run("a terminal too narrow to wrap into still closes the clipped row", func(t *testing.T) {
+		m := feed(t, colored(t, 24), event(pipeline.EventAgentProgress, "bugs+impl", long))
+		lines := m.combinedLines()
+		require.Len(t, lines, 1)
+		assert.True(t, strings.HasSuffix(lines[0], ansiCodeOff), "%q", lines[0])
+		assert.LessOrEqual(t, lipgloss.Width(lines[0]), 24)
 	})
 }

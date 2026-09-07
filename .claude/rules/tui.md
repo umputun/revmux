@@ -79,6 +79,12 @@ cover both.
   unreachable, and only on a run with enough panes to get that far. One character always: a two-digit
   token costs a column on every tab and reads as two numbers beside a name that may end in one.
   It is deliberately compact: tool calls, state transitions and findings emitted, one line each, agent-prefixed and colored.
+  The text is painted in the agent's color too, not only the prefix, so a wrapped entry stays attributable
+  on its continuation rows and one agent can be followed through the interleaving without reading names.
+  It is opened and closed on every row, since `ansi.Wrap` leaves a sequence open across the rows it
+  produces and a continuation row at the top of a scrolled pane reaches the screen alone; a row ending
+  inside a code span re-opens the span, which is the same fix `findings.rowLines` applies to a wrapped title.
+  The paint is skipped on an Ascii profile, so a terminal reporting no color sees what it saw before.
   The color arrives on the agent's spec — `color` front matter, or a palette entry by roster position when
   it is omitted (`.claude/rules/prompts.md`). This package never picks one, or the plain `--no-tui`
   renderer would color the same agent differently.
