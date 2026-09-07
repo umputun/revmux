@@ -9,9 +9,10 @@ func (m Model) agentLinesAt(tab int) []string {
 		return []string{"waiting for " + a.spec.Name + "..."}
 	}
 
-	// wrapped and rendered exactly as the combined log is. A model writes markdown into its prose and
-	// the lines it writes are long; a forensic view that clips them is the one place a reader has gone
-	// looking for the detail, so it is the last place to throw the end of it away.
+	// wrapped and markdown-rendered as the combined log is, but left unpainted: one agent's pane has
+	// nothing to attribute a row to. A model writes markdown into its prose and the lines it writes are
+	// long; a forensic view that clips them is the one place a reader has gone looking for the detail,
+	// so it is the last place to throw the end of it away.
 	out := make([]string, 0, len(a.lines))
 	for _, e := range a.lines {
 		head := m.style.muted.Render(e.at.Format(timeFormat)) + " "

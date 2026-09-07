@@ -34,8 +34,8 @@ func (c *combinedState) push(e combinedEntry) {
 
 // combinedLines renders the compact log in arrival order, each line prefixed with its agent and
 // painted, prefix and text alike, in the agent's own color: with several agents interleaving, a
-// block in one color is what lets a reader follow one of them without reading names. An entry from
-// an agent the roster never named keeps the default foreground.
+// block in one color is what lets a reader follow one of them without reading names. A process the
+// roster does not name — a stage, a verify group — is painted the same way in its derived color.
 func (m Model) combinedLines() []string {
 	if len(m.combined.entries) == 0 {
 		return []string{"waiting for the first agent..."}
@@ -86,9 +86,10 @@ func (m Model) textRows(head, agent, text string) []string {
 	return rows
 }
 
-// textColor is the sequence an agent's log text is painted in, empty when the text stays plain: on
-// a surface that reports no color, painting is left to the name alone rather than spread over every
-// row, and an agent the roster never named has no color to paint with.
+// textColor is the sequence an agent's log text is painted in, the same one its name is painted in,
+// derived or rostered alike. It is empty on a surface that reports no color, where painting is left
+// to the name alone rather than spread over every row; the empty return for a name with no state at
+// all is a guard, since every entry pushed to the log carries the name of a state that exists.
 func (m Model) textColor(agent string) string {
 	if m.style.profile == termenv.Ascii {
 		return ""

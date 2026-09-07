@@ -14,6 +14,7 @@ import (
 
 	"github.com/umputun/revmux/app/finding"
 	"github.com/umputun/revmux/app/pipeline"
+	"github.com/umputun/revmux/app/prompt"
 )
 
 func TestModel_combinedLines(t *testing.T) {
@@ -209,6 +210,15 @@ func TestModel_combinedLines_paintsTextInTheAgentColor(t *testing.T) {
 		"a hex color paints the text too")
 	assert.NotContains(t, lines[2], roster()[0].SGR(), "a stage band keeps its own style")
 	assert.NotContains(t, lines[2], roster()[1].SGR())
+
+	t.Run("a process the roster does not name paints in its derived color", func(t *testing.T) {
+		m := feed(t, colored(t, 76), event(pipeline.EventAgentStarted, "synthesis", "merging 9 findings"))
+		derived := prompt.DerivedSpec("synthesis")
+		require.NotEmpty(t, derived.SGR())
+		assert.Contains(t, m.combinedLines()[0], derived.Paint("synthesis"))
+		assert.True(t, strings.HasSuffix(m.combinedLines()[0], derived.Paint("started [merging 9 findings]")),
+			"the text takes the same derived color as the name: %q", m.combinedLines()[0])
+	})
 
 	t.Run("a terminal reporting no color leaves the text plain", func(t *testing.T) {
 		plain := feed(t, New(ModelConfig{Roster: roster()}), event(pipeline.EventAgentActivity, "bugs+impl", "reading proc.go"))
