@@ -672,19 +672,16 @@ if [ -n "${ITERM_SESSION_ID:-}" ] && command -v osascript >/dev/null 2>&1; then
     trap 'rm -f "$REPORT_FILE" "$STDERR_FILE" "$SENTINEL" "$SENTINEL.tmp" "$SENTINEL.pid" "$LAUNCH_SCRIPT" || true' EXIT
     cat > "$LAUNCH_SCRIPT" <<LAUNCHER
 #!/bin/sh
-cd "\$1" && $REVMUX_CMD; rc=\$?; printf "%s" "\$rc" > "\$2.tmp" && mv -f "\$2.tmp" "\$2"
+cd $(sq "$CWD") && $(write_rc_cmd "$SENTINEL")
 LAUNCHER
     chmod +x "$LAUNCH_SCRIPT"
 
     # ITERM_SESSION_ID is "w0t0p0:UUID"; the AppleScript session id is the UUID part
     ITERM_UUID="${ITERM_SESSION_ID##*:}"
-    ITERM_NEW_SESSION=$(osascript - "$ITERM_UUID" "$LAUNCH_SCRIPT" "$CWD" "$SENTINEL" <<'APPLESCRIPT' 2>&1
+    ITERM_NEW_SESSION=$(osascript - "$ITERM_UUID" "$LAUNCH_SCRIPT" <<'APPLESCRIPT' 2>&1
 on run argv
     set targetId to item 1 of argv
-    set launchScript to item 2 of argv
-    set cwd to item 3 of argv
-    set sentinel to item 4 of argv
-    set cmd to quoted form of launchScript & " " & quoted form of cwd & " " & quoted form of sentinel
+    set cmd to quoted form of (item 2 of argv)
     tell application id "com.googlecode.iterm2"
         repeat with w in windows
             repeat with t in tabs of w
