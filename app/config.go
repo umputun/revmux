@@ -55,6 +55,7 @@ type options struct {
 	NoTUI          bool     `long:"no-tui" no-ini:"true" description:"disable the terminal UI"`
 	Markdown       bool     `long:"markdown" no-ini:"true" description:"write the report as markdown instead of JSON"`
 	PreserveAPIKey bool     `long:"preserve-anthropic-api-key" no-ini:"true" description:"pass ANTHROPIC_API_KEY to the model CLIs"`
+	PreserveMCP    bool     `long:"preserve-mcp" no-ini:"true" description:"let the model CLIs load MCP servers from the caller's config"`
 
 	IdleTimeout   time.Duration `long:"idle-timeout" ini-name:"idle-timeout" default:"2m" description:"kill and retry an agent after this long with no output"`
 	HardTimeout   time.Duration `long:"hard-timeout" ini-name:"hard-timeout" default:"20m" description:"kill an agent after this long, per attempt"`
@@ -310,6 +311,7 @@ func (o options) executorOpts(rc reviewContext, clk executor.Clock) executor.Opt
 		HardTimeout:    o.HardTimeout,
 		WorkDir:        rc.WorkDir,
 		PreserveAPIKey: o.PreserveAPIKey,
+		PreserveMCP:    o.PreserveMCP,
 		Clock:          clk,
 	}
 }

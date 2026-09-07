@@ -69,6 +69,7 @@ type Opts struct {
 	HardTimeout    time.Duration
 	WorkDir        string
 	PreserveAPIKey bool
+	PreserveMCP    bool
 	Clock          Clock
 }
 

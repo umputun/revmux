@@ -566,11 +566,11 @@ func TestOptions_checkNames(t *testing.T) {
 
 func TestOptions_executorOpts(t *testing.T) {
 	clk := &mocks.ClockMock{}
-	o := options{IdleTimeout: time.Minute, HardTimeout: time.Hour, PreserveAPIKey: true, WorkDir: "/ignored"}
+	o := options{IdleTimeout: time.Minute, HardTimeout: time.Hour, PreserveAPIKey: true, PreserveMCP: true, WorkDir: "/ignored"}
 
 	got := o.executorOpts(reviewContext{WorkDir: "/resolved"}, clk)
 	assert.Equal(t, executor.Opts{IdleTimeout: time.Minute, HardTimeout: time.Hour,
-		WorkDir: "/resolved", PreserveAPIKey: true, Clock: clk}, got,
+		WorkDir: "/resolved", PreserveAPIKey: true, PreserveMCP: true, Clock: clk}, got,
 		"the subprocess runs where {{WORKDIR}} points, never where the raw flag does")
 }
 

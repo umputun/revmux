@@ -108,6 +108,7 @@ func TestClaude_args(t *testing.T) {
 		"--disable-slash-commands",
 		"--no-session-persistence",
 		"--include-partial-messages",
+		"--strict-mcp-config",
 		"--model", "opus",
 		"--effort", "high",
 		"--json-schema", `{"type":"object"}`,
@@ -137,6 +138,18 @@ func TestClaude_args_optionalFlagsOmitted(t *testing.T) {
 		"the allowlist is what removes Edit, Write and Task from the agent's context")
 	assert.Contains(t, args, "--strict-mcp-config")
 	assert.NotContains(t, args, "--disallowedTools", "the allowlist already excludes the edit tools")
+}
+
+func TestClaude_args_preserveMCP(t *testing.T) {
+	path := writeFixture(t, cleanCapture(t))
+	runner := fakeRunner("emit", path)
+	c := executor.NewClaude(runner, executor.Opts{PreserveMCP: true})
+
+	_, err := c.Run(context.Background(), executor.Request{Prompt: "x"}, discardSink())
+	require.NoError(t, err)
+
+	assert.NotContains(t, runner.CommandCalls()[0].Args, "--strict-mcp-config",
+		"the escape hatch is the only way a finder reaches an MCP server")
 }
 
 func TestClaude_Run_clean(t *testing.T) {
