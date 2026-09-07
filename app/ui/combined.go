@@ -57,9 +57,11 @@ func (m Model) combinedLines() []string {
 // textRows lays one entry out under its head with the text in the agent's color on every row. The
 // color is opened and closed per row rather than once around the text: the wrapper leaves a sequence
 // open across the rows it produces, and a continuation row at the top of a scrolled pane reaches the
-// screen alone. A row that ends inside a code span re-opens the span rather than the agent, since
-// the span's own close is what hands the color back. Leading whitespace stays ahead of the paint so
-// the wrapper still measures it on the plain text.
+// screen alone. A code span is underlined rather than colored: the span color is cyan, which is also
+// the first roster color in every shipped profile, so a colored span vanishes into exactly the agent
+// that writes the most of them. A row that ends inside a span closes the underline and the next row
+// re-opens it. Leading whitespace stays ahead of the paint so the wrapper still measures it on the
+// plain text.
 func (m Model) textRows(head, agent, text string) []string {
 	seq := m.textColor(agent)
 	if seq == "" {
@@ -67,7 +69,8 @@ func (m Model) textRows(head, agent, text string) []string {
 	}
 	body := strings.TrimLeftFunc(text, unicode.IsSpace)
 	lead := text[:len(text)-len(body)]
-	rows := Wrap(head, lead+seq+markdownWithin(body, seq)+ansiCodeOff, m.view.width())
+	painted := inline{codeOn: ansiUnderlineOn, codeOff: ansiUnderlineOff}.render(body)
+	rows := Wrap(head, lead+seq+painted+ansiCodeOff, m.view.width())
 	indent := strings.Repeat(" ", lipgloss.Width(head))
 	open := seq
 	for i, r := range rows {
@@ -75,8 +78,8 @@ func (m Model) textRows(head, agent, text string) []string {
 			r = indent + open + strings.TrimPrefix(r, indent)
 		}
 		open = seq
-		if strings.LastIndex(r, ansiCodeOn) > strings.LastIndex(r, ansiCodeOff) {
-			open = ansiCodeOn
+		if strings.LastIndex(r, ansiUnderlineOn) > strings.LastIndex(r, ansiUnderlineOff) {
+			open, r = seq+ansiUnderlineOn, r+ansiUnderlineOff
 		}
 		if !strings.HasSuffix(r, ansiCodeOff) {
 			r += ansiCodeOff

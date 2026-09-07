@@ -226,10 +226,23 @@ func TestModel_combinedLines_paintsTextInTheAgentColor(t *testing.T) {
 			"the name keeps the raw paint it always had, and nothing new is emitted")
 	})
 
-	t.Run("an inline code span re-opens the agent color after it", func(t *testing.T) {
+	t.Run("an inline code span is underlined and the agent color holds through it", func(t *testing.T) {
 		m := feed(t, colored(t, 76), event(pipeline.EventAgentActivity, "codex", "reading `proc.go` again"))
 		seq := roster()[1].SGR()
-		assert.Contains(t, m.combinedLines()[0], seq+"reading "+ansiCodeOn+"proc.go"+ansiCodeOff+seq+" again"+ansiCodeOff)
+		assert.Contains(t, m.combinedLines()[0], seq+"reading "+ansiUnderlineOn+"proc.go"+ansiUnderlineOff+" again"+ansiCodeOff)
+		assert.NotContains(t, m.combinedLines()[0], ansiCodeOn, "the span takes no color of its own")
+	})
+
+	t.Run("a cyan agent's code span is still told apart from its line", func(t *testing.T) {
+		require.Equal(t, ansiCodeOn, roster()[0].SGR(), "the first shipped roster color is the span color")
+		m := feed(t, colored(t, 76), event(pipeline.EventAgentActivity, "bugs+impl", "reading `proc.go` again"))
+		assert.Contains(t, m.combinedLines()[0], ansiUnderlineOn+"proc.go"+ansiUnderlineOff)
+	})
+
+	t.Run("emphasis keeps the agent color", func(t *testing.T) {
+		m := feed(t, colored(t, 76), event(pipeline.EventAgentActivity, "codex", "this is **not** reachable"))
+		seq := roster()[1].SGR()
+		assert.Contains(t, m.combinedLines()[0], seq+"this is "+ansiBoldOn+"not"+ansiBoldOff+" reachable"+ansiCodeOff)
 	})
 
 	t.Run("leading spaces stay ahead of the paint", func(t *testing.T) {
@@ -258,22 +271,22 @@ func TestModel_combinedLines_paintsEveryWrappedRow(t *testing.T) {
 	joined := strings.Join(strings.Fields(stripColor(strings.Join(lines, " "))), " ")
 	assert.Contains(t, joined, long, "every word survives the wrap")
 
-	t.Run("a code span broken by the wrap keeps its own color on the next row", func(t *testing.T) {
+	t.Run("a code span broken by the wrap is closed and re-opened on every row", func(t *testing.T) {
 		text := "reading `app/pipeline/find.go app/pipeline/synthesis.go app/pipeline/verify.go` now"
 		m := feed(t, colored(t, 60), event(pipeline.EventAgentProgress, "codex", text))
 		hex := roster()[1].SGR()
 
 		lines := m.combinedLines()
 		require.Len(t, lines, 3, "one path per row")
-		assert.Contains(t, lines[0], hex+"reading "+ansiCodeOn+"app/pipeline/find.go", "the span opens on the first row")
+		assert.Contains(t, lines[0], hex+"reading "+ansiUnderlineOn+"app/pipeline/find.go", "the span opens on the first row")
 		for i, l := range lines[:2] {
-			assert.True(t, strings.HasSuffix(l, ansiCodeOff), "row %d closes before the span does: %q", i, l)
+			assert.True(t, strings.HasSuffix(l, ansiUnderlineOff+ansiCodeOff), "row %d closes the span and the color: %q", i, l)
 		}
 		for i, l := range lines[1:] {
 			rest := strings.TrimLeft(l, " ")
-			assert.True(t, strings.HasPrefix(rest, ansiCodeOn), "row %d re-opens the span, not the agent color: %q", i+1, rest)
+			assert.True(t, strings.HasPrefix(rest, hex+ansiUnderlineOn), "row %d re-opens the color and the span: %q", i+1, rest)
 		}
-		assert.True(t, strings.HasSuffix(lines[2], ansiCodeOff+hex+" now"+ansiCodeOff), "the agent color returns once the span closes")
+		assert.True(t, strings.HasSuffix(lines[2], ansiUnderlineOff+" now"+ansiCodeOff), "the span closes on the last row")
 	})
 
 	t.Run("a word longer than the column is painted on every piece", func(t *testing.T) {
