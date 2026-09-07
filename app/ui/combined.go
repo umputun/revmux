@@ -59,9 +59,9 @@ func (m Model) combinedLines() []string {
 // open across the rows it produces, and a continuation row at the top of a scrolled pane reaches the
 // screen alone. A code span is underlined rather than colored: the span color is cyan, which is also
 // the first roster color in every shipped profile, so a colored span vanishes into exactly the agent
-// that writes the most of them. A row that ends inside a span closes the underline and the next row
-// re-opens it. Leading whitespace stays ahead of the paint so the wrapper still measures it on the
-// plain text.
+// that writes the most of them. A row that ends inside a span, code or emphasis, closes the span's
+// attribute and the next row re-opens it. Leading whitespace stays ahead of the paint so the wrapper
+// still measures it on the plain text.
 func (m Model) textRows(head, agent, text string) []string {
 	seq := m.textColor(agent)
 	if seq == "" {
@@ -78,8 +78,10 @@ func (m Model) textRows(head, agent, text string) []string {
 			r = indent + open + strings.TrimPrefix(r, indent)
 		}
 		open = seq
-		if strings.LastIndex(r, ansiUnderlineOn) > strings.LastIndex(r, ansiUnderlineOff) {
-			open, r = seq+ansiUnderlineOn, r+ansiUnderlineOff
+		for _, span := range [][2]string{{ansiUnderlineOn, ansiUnderlineOff}, {ansiBoldOn, ansiBoldOff}} {
+			if strings.LastIndex(r, span[0]) > strings.LastIndex(r, span[1]) {
+				open, r = open+span[0], r+span[1]
+			}
 		}
 		if !strings.HasSuffix(r, ansiCodeOff) {
 			r += ansiCodeOff

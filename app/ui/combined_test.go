@@ -289,6 +289,18 @@ func TestModel_combinedLines_paintsEveryWrappedRow(t *testing.T) {
 		assert.True(t, strings.HasSuffix(lines[2], ansiUnderlineOff+" now"+ansiCodeOff), "the span closes on the last row")
 	})
 
+	t.Run("emphasis broken by the wrap is closed and re-opened on every row", func(t *testing.T) {
+		text := "**Bash git diff master..HEAD -- app/pipeline/ app/config.go app/main.go ':!vendor'** done"
+		m := feed(t, colored(t, 76), event(pipeline.EventAgentProgress, "bugs+impl", text))
+
+		lines := m.combinedLines()
+		require.Len(t, lines, 2)
+		assert.True(t, strings.HasSuffix(lines[0], ansiBoldOff+ansiCodeOff), "the first row closes bold and the color: %q", lines[0])
+		rest := strings.TrimLeft(lines[1], " ")
+		assert.True(t, strings.HasPrefix(rest, seq+ansiBoldOn), "the continuation re-opens bold: %q", rest)
+		assert.True(t, strings.HasSuffix(lines[1], ansiBoldOff+" done"+ansiCodeOff), "%q", lines[1])
+	})
+
 	t.Run("a word longer than the column is painted on every piece", func(t *testing.T) {
 		unbroken := strings.Repeat("x", 200)
 		m := feed(t, colored(t, 76), event(pipeline.EventAgentProgress, "bugs+impl", unbroken))

@@ -86,7 +86,7 @@ cover both.
   same fix `findings.rowLines` applies to a wrapped title.
   A code span inside painted text is underlined rather than cyan: cyan is the first roster color in
   every shipped profile, so a cyan span vanishes into the agent that writes the most of them. A row
-  ending inside a span closes the underline and the next row re-opens it.
+  ending inside a span, code or emphasis, closes its attribute and the next row re-opens it.
   The paint is skipped on an Ascii profile, so a terminal reporting no color sees what it saw before.
   The color arrives on the agent's spec — `color` front matter, or a palette entry by roster position when
   it is omitted (`.claude/rules/prompts.md`). This package never picks one, or the plain `--no-tui`
