@@ -48,8 +48,11 @@ lint-go:
 # golangci-lint is Go-only, so the shipped shell scripts have their own CI job and would otherwise be
 # checked by nothing local. The command is copied from .github/workflows/ci.yml verbatim: that job
 # pipes shellcheck through xargs, so ANY output fails it, info-level findings included.
+# the helper check is not something shellcheck can express: a backend that hand-rolls its inner command
+# is valid shell, and both trees carry the copy, so the linter and check-plugins both pass it.
 lint-scripts:
 	find . -name '*.sh' -not -path './.git/*' -not -path './vendor/*' -print0 | xargs -0 shellcheck
+	sh .github/scripts/check-sentinel-helpers.sh
 
 # the two skill trees ship to different harnesses and each must be self-contained once installed, so
 # plugins/codex/ is a hand-maintained copy rather than a link. What must not diverge is the content:
