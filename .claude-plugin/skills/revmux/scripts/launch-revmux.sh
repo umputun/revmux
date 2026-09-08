@@ -115,15 +115,37 @@ REVMUX_CMD="/usr/bin/env$ENV_PREFIX $REVMUX_CMD"
 # while the TUI keeps rendering to the tty
 REVMUX_CMD="$REVMUX_CMD > $(sq "$REPORT_FILE") 2> $(sq "$STDERR_FILE")"
 
+# the directory part of the inner command, for the backends whose own launcher cannot set it. It is
+# built here rather than prefixed by the caller because the order matters: `cd X && <publish pid>`
+# loses the pid whenever the cd fails, and await_sentinel then waits out the whole grace period while
+# revmux runs on in whatever directory the overlay happened to start in. Publishing the pid first
+# means a failed cd is recorded within a second, and its own message reaches the launcher through the
+# stderr file print_report_and_exit already surfaces.
+#
+# The failure arm restates RC_LAUNCH_FAIL rather than letting `cd`'s own status through, because that
+# status is not the launcher's to give away: dash exits 2 for a failed cd and bash exits 1, and 2 is
+# revmux's "tool error" - print_report_and_exit passes it on untouched, so a directory the launcher
+# could not enter would be reported as revmux itself failing, on a run where revmux never started.
+run_in() {
+    local cwd="${1:-}"
+    if [ -z "$cwd" ]; then
+        printf '%s' "$REVMUX_CMD"
+        return
+    fi
+    printf 'if cd %s 2> %s; then %s; else (exit %s); fi' \
+        "$(sq "$cwd")" "$(sq "$STDERR_FILE")" "$REVMUX_CMD" "$RC_LAUNCH_FAIL"
+}
+
 # the inner command every sentinel-based backend runs: publish pid, run revmux, write the exit code.
 # The pid is what lets await_sentinel bound its wait - a closed overlay kills the inner shell by
 # SIGHUP before it can write the sentinel, so waiting on the file alone never returns.
+# The optional second argument is the directory to run in; see run_in for why it is not a caller prefix.
 write_rc_cmd() {
     local sentinel="$1"
     # single-quoted format keeps $$/$?/$rc literal for the generated inner script
     # shellcheck disable=SC2016
     printf 'printf "%%s" "$$" > %s.pid; %s; rc=$?; printf "%%s" "$rc" > %s.tmp && mv -f %s.tmp %s' \
-        "$(sq "$sentinel")" "$REVMUX_CMD" "$(sq "$sentinel")" "$(sq "$sentinel")" "$(sq "$sentinel")"
+        "$(sq "$sentinel")" "$(run_in "${2:-}")" "$(sq "$sentinel")" "$(sq "$sentinel")" "$(sq "$sentinel")"
 }
 
 # same as write_rc_cmd, plus the trailing `exit` the emacs launcher needs. The write-then-rename is not
@@ -134,7 +156,27 @@ write_fifo_rc_cmd() {
     local sentinel="$1"
     # shellcheck disable=SC2016
     printf 'printf "%%s" "$$" > %s.pid; %s; rc=$?; printf "%%s" "$rc" > %s.tmp && mv -f %s.tmp %s; exit' \
-        "$(sq "$sentinel")" "$REVMUX_CMD" "$(sq "$sentinel")" "$(sq "$sentinel")" "$(sq "$sentinel")"
+        "$(sq "$sentinel")" "$(run_in "${2:-}")" "$(sq "$sentinel")" "$(sq "$sentinel")" "$(sq "$sentinel")"
+}
+
+# claim this round's sentinel path and arm the cleanup for every artifact the round creates. Every
+# sentinel backend opens with this, so the set of files a round makes and the set its trap removes are
+# stated once rather than eight times - which is how the iTerm2 trap came to name a .pid file nothing
+# on that path ever wrote. LAUNCH_SCRIPT is cleared here so the trap is safe under `set -u` for the
+# backends that never make one, and so it cannot outlive the round that did.
+new_sentinel() {
+    LAUNCH_SCRIPT=""
+    SENTINEL=$(mktemp "$TMPBASE/revmux-done-XXXXXX")
+    rm -f "$SENTINEL"
+    trap 'rm -f "$REPORT_FILE" "$STDERR_FILE" "$SENTINEL" "$SENTINEL.tmp" "$SENTINEL.pid" "$LAUNCH_SCRIPT" || true' EXIT
+}
+
+# write the executable that the backends whose launcher takes a path, rather than a command string,
+# hand to their terminal. Called after new_sentinel, whose trap already covers the file.
+new_launch_script() {
+    LAUNCH_SCRIPT=$(mktemp "$TMPBASE/revmux-launch-XXXXXX")
+    printf '#!/bin/sh\n%s\n' "$1" > "$LAUNCH_SCRIPT"
+    chmod +x "$LAUNCH_SCRIPT"
 }
 
 read_rc() {
@@ -460,15 +502,8 @@ fi
 
 # zellij: floating pane with a sentinel file for blocking
 if [ -n "${ZELLIJ:-}" ] && command -v zellij >/dev/null 2>&1; then
-    SENTINEL=$(mktemp "$TMPBASE/revmux-done-XXXXXX")
-    rm -f "$SENTINEL"
-    LAUNCH_SCRIPT=$(mktemp "$TMPBASE/revmux-launch-XXXXXX")
-    trap 'rm -f "$REPORT_FILE" "$STDERR_FILE" "$SENTINEL" "$SENTINEL.tmp" "$SENTINEL.pid" "$LAUNCH_SCRIPT" || true' EXIT
-    cat > "$LAUNCH_SCRIPT" <<LAUNCHER
-#!/bin/sh
-$(write_rc_cmd "$SENTINEL")
-LAUNCHER
-    chmod +x "$LAUNCH_SCRIPT"
+    new_sentinel
+    new_launch_script "$(write_rc_cmd "$SENTINEL")"
 
     ZELLIJ_ORIG_TAB_ID=""
     if [ -n "${ZELLIJ_PANE_ID:-}" ] && command -v jq >/dev/null 2>&1; then
@@ -495,15 +530,8 @@ fi
 # herdr: a new fullscreen tab via the herdr CLI. Must precede kitty - inside herdr-in-kitty
 # KITTY_LISTEN_ON is set, so the kitty branch would otherwise open a window herdr cannot composite.
 if [ "${HERDR_ENV:-}" = "1" ] && command -v herdr >/dev/null 2>&1; then
-    SENTINEL=$(mktemp "$TMPBASE/revmux-done-XXXXXX")
-    rm -f "$SENTINEL"
-    LAUNCH_SCRIPT=$(mktemp "$TMPBASE/revmux-launch-XXXXXX")
-    trap 'rm -f "$REPORT_FILE" "$STDERR_FILE" "$SENTINEL" "$SENTINEL.tmp" "$SENTINEL.pid" "$LAUNCH_SCRIPT" || true' EXIT
-    cat > "$LAUNCH_SCRIPT" <<LAUNCHER
-#!/bin/sh
-$(write_rc_cmd "$SENTINEL")
-LAUNCHER
-    chmod +x "$LAUNCH_SCRIPT"
+    new_sentinel
+    new_launch_script "$(write_rc_cmd "$SENTINEL")"
 
     # pin the tab to the caller's workspace: without --workspace, herdr targets the server's focused
     # workspace, which is whatever the user is looking at rather than where the review belongs
@@ -548,13 +576,11 @@ fi
 # kitty: overlay window with a sentinel file for blocking
 KITTY_SOCK="${KITTY_LISTEN_ON:-}"
 if [ -n "$KITTY_SOCK" ] && command -v kitty >/dev/null 2>&1; then
-    SENTINEL=$(mktemp "$TMPBASE/revmux-done-XXXXXX")
-    rm -f "$SENTINEL"
-    trap 'rm -f "$REPORT_FILE" "$STDERR_FILE" "$SENTINEL" "$SENTINEL.tmp" "$SENTINEL.pid" || true' EXIT
+    new_sentinel
 
     KITTY_ARGS=(kitty @ --to "$KITTY_SOCK" launch --type=overlay --title="$OVERLAY_TITLE" --cwd=current)
     [ -n "${KITTY_WINDOW_ID:-}" ] && KITTY_ARGS+=(--match "window_id:${KITTY_WINDOW_ID}")
-    KITTY_ARGS+=(sh -c "cd $(sq "$CWD") && $(write_rc_cmd "$SENTINEL")")
+    KITTY_ARGS+=(sh -c "$(write_rc_cmd "$SENTINEL" "$CWD")")
     "${KITTY_ARGS[@]}" >/dev/null 2>&1
 
     await_sentinel "$SENTINEL" || print_report_and_exit "$RC_LAUNCH_FAIL"
@@ -572,9 +598,7 @@ if [ -n "${WEZTERM_PANE:-}" ]; then
     fi
 
     if [ ${#WEZTERM_CLI[@]} -gt 0 ]; then
-        SENTINEL=$(mktemp "$TMPBASE/revmux-done-XXXXXX")
-        rm -f "$SENTINEL"
-        trap 'rm -f "$REPORT_FILE" "$STDERR_FILE" "$SENTINEL" "$SENTINEL.tmp" "$SENTINEL.pid" || true' EXIT
+        new_sentinel
 
         WEZTERM_PCT="${REVMUX_POPUP_HEIGHT:-90%}"
         WEZTERM_PCT="${WEZTERM_PCT%%%}"
@@ -593,15 +617,8 @@ if is_cmux_session; then
         echo "error: cmux session detected but cmux CLI not found" >&2
         exit "$RC_LAUNCH_FAIL"
     fi
-    SENTINEL=$(mktemp "$TMPBASE/revmux-done-XXXXXX")
-    rm -f "$SENTINEL"
-    LAUNCH_SCRIPT=$(mktemp "$TMPBASE/revmux-launch-XXXXXX")
-    trap 'rm -f "$REPORT_FILE" "$STDERR_FILE" "$SENTINEL" "$SENTINEL.tmp" "$SENTINEL.pid" "$LAUNCH_SCRIPT" || true' EXIT
-    cat > "$LAUNCH_SCRIPT" <<LAUNCHER
-#!/bin/sh
-$(write_rc_cmd "$SENTINEL")
-LAUNCHER
-    chmod +x "$LAUNCH_SCRIPT"
+    new_sentinel
+    new_launch_script "$(write_rc_cmd "$SENTINEL")"
 
     CMUX_NEW=$(cmux new-split down 2>&1) || true
     CMUX_SURF=$(echo "$CMUX_NEW" | grep -o 'surface:[0-9]*' | head -1 || true)
@@ -620,15 +637,8 @@ fi
 
 # ghostty: split pane via AppleScript (macOS, Ghostty 1.3.0+)
 if [ "${TERM_PROGRAM:-}" = "ghostty" ] && command -v osascript >/dev/null 2>&1; then
-    SENTINEL=$(mktemp "$TMPBASE/revmux-done-XXXXXX")
-    rm -f "$SENTINEL"
-    LAUNCH_SCRIPT=$(mktemp "$TMPBASE/revmux-launch-XXXXXX")
-    trap 'rm -f "$REPORT_FILE" "$STDERR_FILE" "$SENTINEL" "$SENTINEL.tmp" "$SENTINEL.pid" "$LAUNCH_SCRIPT" || true' EXIT
-    cat > "$LAUNCH_SCRIPT" <<LAUNCHER
-#!/bin/sh
-$(write_rc_cmd "$SENTINEL")
-LAUNCHER
-    chmod +x "$LAUNCH_SCRIPT"
+    new_sentinel
+    new_launch_script "$(write_rc_cmd "$SENTINEL")"
 
     if ! GHOSTTY_TERM_ID=$(osascript - "$LAUNCH_SCRIPT" "$CWD" <<'APPLESCRIPT'
 on run argv
@@ -666,15 +676,8 @@ fi
 
 # iterm2: split pane via AppleScript (macOS)
 if [ -n "${ITERM_SESSION_ID:-}" ] && command -v osascript >/dev/null 2>&1; then
-    SENTINEL=$(mktemp "$TMPBASE/revmux-done-XXXXXX")
-    rm -f "$SENTINEL"
-    LAUNCH_SCRIPT=$(mktemp "$TMPBASE/revmux-launch-XXXXXX")
-    trap 'rm -f "$REPORT_FILE" "$STDERR_FILE" "$SENTINEL" "$SENTINEL.tmp" "$SENTINEL.pid" "$LAUNCH_SCRIPT" || true' EXIT
-    cat > "$LAUNCH_SCRIPT" <<LAUNCHER
-#!/bin/sh
-cd $(sq "$CWD") && $(write_rc_cmd "$SENTINEL")
-LAUNCHER
-    chmod +x "$LAUNCH_SCRIPT"
+    new_sentinel
+    new_launch_script "$(write_rc_cmd "$SENTINEL" "$CWD")"
 
     # ITERM_SESSION_ID is "w0t0p0:UUID"; the AppleScript session id is the UUID part
     ITERM_UUID="${ITERM_SESSION_ID##*:}"
@@ -736,15 +739,8 @@ fi
 
 # emacs vterm: a new vterm buffer via emacsclient
 if [ "${INSIDE_EMACS:-}" = "vterm" ] && command -v emacsclient >/dev/null 2>&1; then
-    SENTINEL=$(mktemp "$TMPBASE/revmux-done-XXXXXX")
-    rm -f "$SENTINEL"
-    LAUNCH_SCRIPT=$(mktemp "$TMPBASE/revmux-launch-XXXXXX")
-    trap 'rm -f "$REPORT_FILE" "$STDERR_FILE" "$SENTINEL" "$SENTINEL.tmp" "$SENTINEL.pid" "$LAUNCH_SCRIPT" || true' EXIT
-    cat > "$LAUNCH_SCRIPT" <<LAUNCHER
-#!/bin/sh
-cd $(sq "$CWD") && $(write_fifo_rc_cmd "$SENTINEL")
-LAUNCHER
-    chmod +x "$LAUNCH_SCRIPT"
+    new_sentinel
+    new_launch_script "$(write_fifo_rc_cmd "$SENTINEL" "$CWD")"
 
     # find the calling vterm shell PID (a direct child of Emacs) to tag the caller's frame
     EMACS_PID=$(emacsclient --eval '(emacs-pid)' 2>/dev/null | tr -d '"')
