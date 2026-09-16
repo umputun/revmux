@@ -222,7 +222,7 @@ will not read, and an unwritable `./.revmux/` under `revmux init`.
 | `claude-only` | `bugs+impl`, `arch+quality`, `docs+tests`, `adversarial` — all on claude | codex is unavailable or unwanted |
 | `codex-only` | the same four splits on codex, synthesis and verify included — no claude anywhere | claude is unavailable or unwanted |
 | `grill-me` | `bugs+impl` and `architecture+quality`, each run once on claude and once on codex, every agent reading against the change | the user asked to be grilled; corroboration between two vendors on one lens pair is the point |
-| `expert` | two agents at the highest effort — codex `gpt-5.6-sol:xhigh` and claude `fable:xhigh` — each carrying all eight lenses, both stages on fable | a plan, or a change nobody wants to get wrong. Both agents read everything, so agreement between them is real corroboration rather than two halves of one review |
+| `expert` | two agents at xhigh — codex `gpt-6-astra:xhigh` and claude `fable:xhigh` — each carrying all eight lenses, both stages on fable | a plan, or a change nobody wants to get wrong. Both agents read everything, so agreement between them is real corroboration rather than two halves of one review |
 | `triage` | `facts` (grounding + precedent), `thesis`, `antithesis` on claude, plus `cost` on codex | the subject is a filed item rather than a diff — an issue, a proposal, a discussion |
 
 `--profile <name>`. The default is `comprehensive` and is itself a config knob.

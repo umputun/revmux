@@ -266,7 +266,7 @@ codex mix inside one review.
 | `claude-only` | the same four lens splits on claude, for a machine with no codex |
 | `codex-only` | the same splits on codex, and synthesis and verify with them |
 | `grill-me` | two lens splits, each run once on claude and once on codex |
-| `expert` | two agents at the highest effort, each carrying all eight code lenses |
+| `expert` | two agents at xhigh, each carrying all eight code lenses |
 | `triage` | a four-way panel over a filed item rather than a diff |
 
 **The eight are starting points, not the menu.** A profile is a file under `prompts/profiles/`, so dropping
