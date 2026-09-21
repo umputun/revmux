@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"sync"
 )
@@ -99,8 +100,19 @@ func (p *proc) run(ctx context.Context, req Request, spec runSpec) (Result, erro
 		spec.shareTouch(touch)
 	}
 
-	// stderr is drained alongside stdout: reading it after the parse would let a chatty child fill the
-	// pipe and block, and cmd.Wait closes both once it returns.
+	defer run.stdout.Close()
+	defer run.stderr.Close()
+
+	// Observe the direct child independently of pipe EOF: descendants may retain either writer.
+	finished := make(chan struct{})
+	var exitCode int
+	var finishErr error
+	go func() {
+		defer close(finished)
+		exitCode, finishErr = run.finish()
+	}()
+
+	// Drain both streams concurrently; their owned readers stay open across cmd.Wait.
 	stderrDone := make(chan struct{})
 	go func() {
 		defer close(stderrDone)
@@ -111,9 +123,11 @@ func (p *proc) run(ctx context.Context, req Request, spec runSpec) (Result, erro
 	tee := &teeReader{src: run.stdout, dst: p.rawSink(&raw, req.RawOutput), touch: touch}
 
 	res := spec.parse(runCtx, tee)
+	_, _ = io.Copy(io.Discard, tee)
 	<-stderrDone
+	<-finished
 	res.Raw = raw.String()
-	res.ExitCode = run.finish()
+	res.ExitCode = exitCode
 	// only a non-zero exit is worth a line. "exit 0" says nothing the pipeline's own done event does
 	// not already say, and it lands as the last thing a reader sees under an agent that just finished
 	if res.ExitCode != 0 {
@@ -125,6 +139,9 @@ func (p *proc) run(ctx context.Context, req Request, spec runSpec) (Result, erro
 	}
 	if runCtx.Err() != nil {
 		res.IdleTimedOut = true
+	}
+	if finishErr != nil {
+		return res, finishErr
 	}
 	if tee.err != nil {
 		return res, tee.err
@@ -141,25 +158,37 @@ func (p *proc) rawSink(buf *strings.Builder, extra io.Writer) io.Writer {
 }
 
 func (p *proc) start(ctx context.Context, argv []string, prompt string) (*procRun, error) {
+	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" && runtime.GOOS != "windows" {
+		return nil, fmt.Errorf("child exit observation is unsupported on %s", runtime.GOOS)
+	}
 	cmd := p.runner.Command(ctx, p.bin, argv...)
 	cmd.Env = p.childEnv()
 	cmd.Dir = p.opts.WorkDir
 	cmd.Stdin = strings.NewReader(prompt)
 
-	stdout, err := cmd.StdoutPipe()
+	stdout, stdoutWriter, err := os.Pipe()
 	if err != nil {
 		return nil, fmt.Errorf("stdout pipe for %s: %w", p.bin, err)
 	}
-	stderr, err := cmd.StderrPipe()
+	defer stdoutWriter.Close()
+	stderr, stderrWriter, err := os.Pipe()
 	if err != nil {
+		_ = stdout.Close()
 		return nil, fmt.Errorf("stderr pipe for %s: %w", p.bin, err)
 	}
+	defer stderrWriter.Close()
+	started := false
+	defer func() {
+		if !started {
+			_ = stdout.Close()
+			_ = stderr.Close()
+		}
+	}()
+	cmd.Stdout, cmd.Stderr = stdoutWriter, stderrWriter
 
 	p.setupProcessGroup(cmd)
 	instance, err := p.opts.ProcessProof.prepare()
 	if err != nil {
-		_ = stdout.Close()
-		_ = stderr.Close()
 		return nil, err
 	}
 	if err := cmd.Start(); err != nil {
@@ -172,6 +201,7 @@ func (p *proc) start(ctx context.Context, argv []string, prompt string) (*procRu
 		_ = cleanup.wait()
 		return nil, err
 	}
+	started = true
 	return &procRun{cmd: cmd, stdout: stdout, stderr: stderr, cleanup: cleanup, proof: p.opts.ProcessProof, instance: instance}, nil
 }
 
@@ -236,22 +266,21 @@ func (p *proc) emit(sink EventSink, ev Event) {
 	sink.Emit(ev)
 }
 
-// finish waits for the process, then kills its group even on a normal exit — that is what reaps the
-// subagents and MCP servers a model CLI leaves behind.
-func (r *procRun) finish() int {
-	if r.proof != nil {
-		// Keep the direct child unreaped until signaling ends, reserving its PID against reuse.
-		r.cleanup.killProcessGroup()
-	}
-	_ = r.cleanup.wait() // the exit status is read off ProcessState below
+// finish observes exit without reaping, reserving the leader PID until group signaling ends.
+func (r *procRun) finish() (int, error) {
+	err := waitForProcessExit(r.cmd.Process.Pid)
 	r.cleanup.killProcessGroup()
+	_ = r.cleanup.wait()
 	if r.proof != nil {
 		r.proof.completed(r.instance, observeProcessGroupExit(r.cmd.Process.Pid))
 	}
-	if r.cmd.ProcessState == nil {
-		return -1
+	if err != nil {
+		err = fmt.Errorf("observe child exit: %w", err)
 	}
-	return r.cmd.ProcessState.ExitCode()
+	if r.cmd.ProcessState == nil {
+		return -1, err
+	}
+	return r.cmd.ProcessState.ExitCode(), err
 }
 
 // teeReader copies every byte to the archive before it is parsed and touches the idle watchdog on each

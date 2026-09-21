@@ -48,7 +48,7 @@ func Capabilities() map[string]any {
 	return map[string]any{
 		"protocol": "plan-exec-revmux", "version": 1,
 		"executionLifetime":    map[string]any{"version": 1, "flag": "--execution-lifetime", "modes": []string{"unbounded", "bounded"}},
-		"processTerminalProof": map[string]any{"version": 1, "scope": "process-groups", "escapedDescendants": "unsupported", "supported": runtime.GOOS != "windows"},
+		"processTerminalProof": map[string]any{"version": 1, "scope": "process-groups", "escapedDescendants": "unsupported", "supported": runtime.GOOS == "linux" || runtime.GOOS == "darwin"},
 	}
 }
 
@@ -58,8 +58,8 @@ func NewProcessProof(path string) (*ProcessProof, error) {
 	if !filepath.IsAbs(path) {
 		return nil, errors.New("process proof path must be absolute")
 	}
-	if runtime.GOOS == "windows" {
-		return nil, errors.New("process-group proof is unsupported on Windows")
+	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
+		return nil, fmt.Errorf("process-group proof is unsupported on %s", runtime.GOOS)
 	}
 	id := instanceID()
 	p := &ProcessProof{path: path, document: proofDocument{Version: 1, Scope: "process-groups", State: "pending", RunnerProcessInstanceID: id,

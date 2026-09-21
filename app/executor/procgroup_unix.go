@@ -27,7 +27,7 @@ func (pg *processGroupCleanup) killProcessGroup() {
 			return
 		}
 		pgid := pg.cmd.Process.Pid
-		// a group that is already gone needs no grace delay, and every normal exit takes this path
+		// A group that is already gone needs no grace delay.
 		if err := syscall.Kill(-pgid, syscall.SIGTERM); errors.Is(err, syscall.ESRCH) {
 			return
 		}
