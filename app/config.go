@@ -70,6 +70,8 @@ type options struct {
 	ConfigDir    string `long:"config-dir" no-ini:"true" description:"directory holding the config file and the prompt tree"`
 	Init         bool   `long:"init" no-ini:"true" description:"materialize the resolved prompt tree and a config template into ./.revmux/"`
 	DumpDefaults string `long:"dump-defaults" no-ini:"true" description:"extract the embedded prompt tree into a directory"`
+	Capabilities bool   `long:"capabilities" no-ini:"true" description:"print machine-readable runtime capabilities"`
+	ProcessProof string `long:"process-proof" no-ini:"true" description:"write a versioned process-group lifecycle proof to an absolute path"`
 	Version      bool   `long:"version" no-ini:"true" description:"show version and exit"`
 
 	Config  configCmd  `command:"config" description:"print the resolved configuration as JSON"`

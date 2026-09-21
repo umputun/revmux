@@ -50,10 +50,12 @@ func newProc(bin string, runner CommandRunner, opts Opts) proc {
 
 // procRun is one live process. start returns it rather than stashing it on proc.
 type procRun struct {
-	cmd     *exec.Cmd
-	stdout  io.ReadCloser
-	stderr  io.ReadCloser
-	cleanup *processGroupCleanup
+	cmd      *exec.Cmd
+	stdout   io.ReadCloser
+	stderr   io.ReadCloser
+	cleanup  *processGroupCleanup
+	proof    *ProcessProof
+	instance string
 }
 
 func (p *proc) run(ctx context.Context, req Request, spec runSpec) (Result, error) {
@@ -151,10 +153,23 @@ func (p *proc) start(ctx context.Context, argv []string, prompt string) (*procRu
 	}
 
 	p.setupProcessGroup(cmd)
+	instance, err := p.opts.ProcessProof.prepare()
+	if err != nil {
+		_ = stdout.Close()
+		_ = stderr.Close()
+		return nil, err
+	}
 	if err := cmd.Start(); err != nil {
+		p.opts.ProcessProof.notStarted(instance)
 		return nil, fmt.Errorf("start %s: %w", p.bin, err)
 	}
-	return &procRun{cmd: cmd, stdout: stdout, stderr: stderr, cleanup: newProcessGroupCleanup(cmd, ctx.Done())}, nil
+	cleanup := newProcessGroupCleanup(cmd, ctx.Done())
+	if err := p.opts.ProcessProof.started(instance, cmd.Process.Pid); err != nil {
+		cleanup.killProcessGroup()
+		_ = cleanup.wait()
+		return nil, err
+	}
+	return &procRun{cmd: cmd, stdout: stdout, stderr: stderr, cleanup: cleanup, proof: p.opts.ProcessProof, instance: instance}, nil
 }
 
 // drainStderr consumes the child's stderr, touching the idle watchdog on every line and handing it to
@@ -221,8 +236,15 @@ func (p *proc) emit(sink EventSink, ev Event) {
 // finish waits for the process, then kills its group even on a normal exit — that is what reaps the
 // subagents and MCP servers a model CLI leaves behind.
 func (r *procRun) finish() int {
+	if r.proof != nil {
+		// Keep the direct child unreaped until signaling ends, reserving its PID against reuse.
+		r.cleanup.killProcessGroup()
+	}
 	_ = r.cleanup.wait() // the exit status is read off ProcessState below
 	r.cleanup.killProcessGroup()
+	if r.proof != nil {
+		r.proof.completed(r.instance, observeProcessGroupExit(r.cmd.Process.Pid))
+	}
 	if r.cmd.ProcessState == nil {
 		return -1
 	}

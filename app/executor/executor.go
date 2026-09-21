@@ -65,8 +65,9 @@ type Event struct {
 // deliberately absent: they travel on Request, since one instance serves roster entries that differ. A
 // zero IdleTimeout or HardTimeout disables that watchdog, so the composition root sets both.
 type Opts struct {
-	IdleTimeout time.Duration
-	HardTimeout time.Duration
+	ProcessProof *ProcessProof
+	IdleTimeout  time.Duration
+	HardTimeout  time.Duration
 	// CodexSandbox selects the codex --sandbox policy; empty means read-only.
 	CodexSandbox   string
 	WorkDir        string

@@ -321,6 +321,29 @@ All five print JSON on stdout and exit before any review starts.
 | `revmux stats` | arithmetic over the archive: per agent, per lens, per stage and per task |
 | `revmux cleanup` | removes one named task and everything under it, the only command that deletes anything |
 
+## Runtime lifecycle evidence
+
+`revmux --capabilities` prints versioned machine-readable execution and process-proof capabilities.
+Passing both `--hard-timeout=0s --idle-timeout=0s` disables the agent deadlines; the default deadlines are unchanged.
+
+`--process-proof=/absolute/new/path.json` enables an optional durable lifecycle journal. The parent directory
+must exist and the path must be unused. The journal records a runner launch identity and each agent launch
+intent before spawning; it adds the agent PID and process-group ID after starting. Updates use a synced
+file, atomic rename, and directory sync. Treat the launch identities as opaque tokens, never as permission
+to signal a numeric PID after restarting the caller.
+
+Version 1 has `scope: "process-groups"` and `state: "pending"`, `"observed"`, or `"unknown"`.
+`observed` means every recorded agent group was observed absent after cleanup, or its launch failed before
+creating a process. A successful signal alone is never terminal evidence. A group still present after the
+cleanup observation window, an unfinished launch, or a missing/stale journal leaves termination uncertain.
+The observation window does not limit an agent's execution time. Proof write errors fence subsequent launches.
+
+This is **not complete process-tree containment**: tools that create another process group or session can
+outlive the recorded group. Capabilities explicitly declare `escapedDescendants: "unsupported"`; callers
+requiring all-descendant termination must reject this scope. The runner instance stays `pending` because
+its parent must separately observe the Revmux process exit. `observedAt` is a Unix timestamp in milliseconds
+for agent-group observation only. No recovery path signals persisted PIDs. Windows does not support this option.
+
 ## Terminal UI
 
 A status table with one row per supervised process, a combined chronological pane and a tab per agent, then a
