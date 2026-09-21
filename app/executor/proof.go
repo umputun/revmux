@@ -47,7 +47,7 @@ type processInstance struct {
 func Capabilities() map[string]any {
 	return map[string]any{
 		"protocol": "plan-exec-revmux", "version": 1,
-		"executionLifetime":    map[string]any{"version": 1, "modes": []string{"unbounded", "bounded"}},
+		"executionLifetime":    map[string]any{"version": 1, "flag": "--execution-lifetime", "modes": []string{"unbounded", "bounded"}},
 		"processTerminalProof": map[string]any{"version": 1, "scope": "process-groups", "escapedDescendants": "unsupported", "supported": runtime.GOOS != "windows"},
 	}
 }

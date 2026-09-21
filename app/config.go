@@ -56,6 +56,8 @@ type options struct {
 	Markdown       bool     `long:"markdown" no-ini:"true" description:"write the report as markdown instead of JSON"`
 	PreserveAPIKey bool     `long:"preserve-anthropic-api-key" no-ini:"true" description:"pass ANTHROPIC_API_KEY to the model CLIs"`
 
+	ExecutionLifetime string `long:"execution-lifetime" no-ini:"true" choice:"unbounded" choice:"bounded" default:"bounded" description:"unbounded disables hard and idle deadlines for every agent attempt; bounded uses timeout options"`
+
 	IdleTimeout   time.Duration `long:"idle-timeout" ini-name:"idle-timeout" default:"2m" description:"kill and retry an agent after this long with no output"`
 	HardTimeout   time.Duration `long:"hard-timeout" ini-name:"hard-timeout" default:"20m" description:"kill an agent after this long, per attempt"`
 	StaggerDelay  time.Duration `long:"stagger-delay" ini-name:"stagger-delay" default:"30s" description:"how long to wait for the first agent before releasing the rest"`
@@ -157,7 +159,29 @@ func parseArgs(args []string) (options, error) {
 		}
 	}
 	o.knobOrigins = origins
+	if err := o.applyExecutionLifetime(); err != nil {
+		return o, err
+	}
 	return o, nil
+}
+
+// applyExecutionLifetime resolves the explicit policy after configuration layering.
+func (o *options) applyExecutionLifetime() error {
+	if o.ExecutionLifetime != "unbounded" {
+		return nil
+	}
+	for _, timeout := range []struct {
+		name  string
+		value time.Duration
+	}{
+		{"hard-timeout", o.HardTimeout}, {"idle-timeout", o.IdleTimeout},
+	} {
+		if o.knobOrigins[timeout.name] == originFlag && timeout.value != 0 {
+			return fmt.Errorf("--execution-lifetime=unbounded conflicts with --%s=%s", timeout.name, timeout.value)
+		}
+	}
+	o.HardTimeout, o.IdleTimeout = 0, 0
+	return nil
 }
 
 // loadIni layers one config file under everything already set and attributes its keys to that layer.
@@ -309,6 +333,7 @@ func (o options) promptOpts() prompt.LoadOpts {
 // review is the one its process actually runs in.
 func (o options) executorOpts(rc reviewContext, clk executor.Clock) executor.Opts {
 	return executor.Opts{
+		Unbounded:      o.ExecutionLifetime == "unbounded",
 		IdleTimeout:    o.IdleTimeout,
 		HardTimeout:    o.HardTimeout,
 		CodexSandbox:   o.CodexSandbox,

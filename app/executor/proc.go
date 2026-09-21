@@ -42,6 +42,9 @@ type proc struct {
 }
 
 func newProc(bin string, runner CommandRunner, opts Opts) proc {
+	if opts.Unbounded {
+		opts.HardTimeout, opts.IdleTimeout = 0, 0
+	}
 	if opts.Clock == nil {
 		opts.Clock = NewClock()
 	}

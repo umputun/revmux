@@ -324,7 +324,17 @@ All five print JSON on stdout and exit before any review starts.
 ## Runtime lifecycle evidence
 
 `revmux --capabilities` prints versioned machine-readable execution and process-proof capabilities.
-Passing both `--hard-timeout=0s --idle-timeout=0s` disables the agent deadlines; the default deadlines are unchanged.
+`--execution-lifetime=unbounded` explicitly disables hard and idle deadlines for every finder,
+synthesis, verification, and retry attempt. It overrides timeout defaults and INI configuration; combining
+it with an explicitly supplied nonzero `--hard-timeout` or `--idle-timeout` is rejected. The caller can
+still cancel execution. Retry and stagger delays schedule work and do not impose execution deadlines.
+
+`--execution-lifetime=bounded` (the default) uses the existing `--hard-timeout` and `--idle-timeout`
+options. Their defaults remain 20 minutes and 2 minutes, and zero disables the corresponding watchdog.
+For a caller-selected hard limit without a shorter idle limit, use for example
+`--execution-lifetime=bounded --hard-timeout=45m --idle-timeout=0s`. These limits apply per attempt.
+Capabilities advertise `executionLifetime.flag: "--execution-lifetime"` so callers can distinguish this
+explicit contract from older binaries that only accept numeric timeout values.
 
 `--process-proof=/absolute/new/path.json` enables an optional durable lifecycle journal. The parent directory
 must exist and the path must be unused. The journal records a runner launch identity and each agent launch

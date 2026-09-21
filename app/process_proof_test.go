@@ -12,7 +12,7 @@ import (
 
 func TestCapabilitiesAndExplicitUnbounded(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
-	opts, err := parseArgs([]string{"--capabilities", "--hard-timeout=0s", "--idle-timeout=0s", "--process-proof=" + filepath.Join(t.TempDir(), "proof.json")})
+	opts, err := parseArgs([]string{"--capabilities", "--execution-lifetime=unbounded", "--process-proof=" + filepath.Join(t.TempDir(), "proof.json")})
 	require.NoError(t, err)
 	assert.Zero(t, opts.HardTimeout)
 	assert.Zero(t, opts.IdleTimeout)
@@ -20,10 +20,14 @@ func TestCapabilitiesAndExplicitUnbounded(t *testing.T) {
 	assert.Zero(t, run(runOpts{opts: opts, stdout: &stdout, stderr: &stderr}))
 	assert.Empty(t, stderr.String())
 	var got struct {
-		Protocol string `json:"protocol"`
-		Version  int    `json:"version"`
+		Protocol          string `json:"protocol"`
+		Version           int    `json:"version"`
+		ExecutionLifetime struct {
+			Flag string `json:"flag"`
+		} `json:"executionLifetime"`
 	}
 	require.NoError(t, json.Unmarshal(stdout.Bytes(), &got))
 	assert.Equal(t, "plan-exec-revmux", got.Protocol)
 	assert.Equal(t, 1, got.Version)
+	assert.Equal(t, "--execution-lifetime", got.ExecutionLifetime.Flag)
 }
