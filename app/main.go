@@ -41,6 +41,7 @@ const agentRetryDelay = 5 * time.Second
 // runOpts is what run needs from its surroundings. Every one of them is injected so the whole entry
 // point is drivable from a test: no real terminal, no real clock, no writes to the process streams.
 type runOpts struct {
+	proof *executor.ProcessProof
 	opts  options
 	clock executor.Clock
 	// retryDelay is injected rather than read from agentRetryDelay so a test drives the retry path
@@ -82,6 +83,11 @@ func main() {
 
 func run(o runOpts) int {
 	switch {
+	case o.opts.Capabilities:
+		if err := o.writeJSON(executor.Capabilities(), "capabilities"); err != nil {
+			return o.fail(err)
+		}
+		return 0
 	case o.opts.Version:
 		if err := printVersion(o.stdout, revision); err != nil {
 			return o.fail(err)
@@ -119,6 +125,24 @@ func run(o runOpts) int {
 			return o.fail(err)
 		}
 		return 0
+	}
+
+	return o.runReview()
+}
+
+func (o runOpts) runReview() (exitCode int) {
+	if o.opts.ProcessProof != "" {
+		proof, err := executor.NewProcessProof(o.opts.ProcessProof)
+		if err != nil {
+			return o.fail(err)
+		}
+		o.proof = proof
+		defer func() {
+			if err := proof.Finish(); err != nil {
+				_, _ = fmt.Fprintf(o.stderr, "error: finalize process proof: %v\n", err)
+				exitCode = 2
+			}
+		}()
 	}
 
 	review, err := o.pipelineConfig()
@@ -374,6 +398,7 @@ func (o runOpts) runnerFactory(rc reviewContext) func(pipeline.RunnerSpec) pipel
 		return o.newRunner
 	}
 	runner, eo := executor.NewRunner(), o.opts.executorOpts(rc, o.clock)
+	eo.ProcessProof = o.proof
 	claude, codex := executor.NewClaude(runner, eo), executor.NewCodex(runner, eo)
 	return func(spec pipeline.RunnerSpec) pipeline.Runner {
 		if spec.Executor == executorCodex {

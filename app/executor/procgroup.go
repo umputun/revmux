@@ -6,8 +6,7 @@ import (
 	"time"
 )
 
-// killGrace is how long a process group gets between SIGTERM and SIGKILL. A normal exit never pays it:
-// the SIGTERM lands on an already-reaped group and returns ESRCH, which short-circuits the wait.
+// killGrace is how long a process group gets between SIGTERM and SIGKILL.
 const killGrace = 200 * time.Millisecond
 
 // processGroupCleanup tears down a started process and everything it spawned. Both the wait and the kill
