@@ -41,6 +41,9 @@ RC_LAUNCH_FAIL=3
 # Anything landing here failed before revmux produced a report, so a code in revmux's vocabulary is not
 # revmux's to claim. Guarded paths never reach it: a command in an `if` condition or followed by `||` is
 # not a `set -e` failure. `-E` above is what extends this into functions and subshells.
+# the guard does not reach inside a command substitution on bash 3.2, the /bin/bash of every mac: there
+# the trap runs in the substitution's own shell and replaces the status the caller meant to read. a
+# substitution whose exact status is passed on therefore clears the trap for itself.
 trap 'rc=$?; if [ "$rc" -le 2 ]; then rc=$RC_LAUNCH_FAIL; fi; exit "$rc"' ERR
 
 # how long to wait for the overlay's inner shell to publish its pid before giving up on it. Only
@@ -450,8 +453,10 @@ if [ -n "${AGTERM_SESSION_ID:-}" ] && [ -n "$AGTERMCTL" ]; then
         esac
     fi
 
+    # --block exits with revmux's own status, and 1 and 2 must reach the caller as they are. the trap is
+    # cleared inside the substitution because bash 3.2 runs it there despite the `||`, turning both into 3.
     rc=0
-    AGTERM_ERR=$(agt session overlay open "$REVMUX_CMD" --target "$AGTERM_SESSION_ID" \
+    AGTERM_ERR=$(trap - ERR; agt session overlay open "$REVMUX_CMD" --target "$AGTERM_SESSION_ID" \
         --cwd "$CWD" "${AGTERM_GEOMETRY[@]}" --block 2>&1 >/dev/null) || rc=$?
     if [ -n "$AGTERM_ERR" ]; then
         printf '%s\n' "$AGTERM_ERR" >&2
