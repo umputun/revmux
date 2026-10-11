@@ -39,7 +39,7 @@ github.com/charmbracelet/lipgloss
 # github.com/charmbracelet/ultraviolet v0.0.0-20251205161215-1948445e3318
 ## explicit; go 1.24.2
 github.com/charmbracelet/ultraviolet
-# github.com/charmbracelet/x/ansi v0.11.8
+# github.com/charmbracelet/x/ansi v0.11.9
 ## explicit; go 1.24.2
 github.com/charmbracelet/x/ansi
 github.com/charmbracelet/x/ansi/kitty
@@ -82,7 +82,7 @@ github.com/gorilla/css/scanner
 # github.com/jessevdk/go-flags v1.6.1
 ## explicit; go 1.20
 github.com/jessevdk/go-flags
-# github.com/lucasb-eyer/go-colorful v1.4.0
+# github.com/lucasb-eyer/go-colorful v1.4.1
 ## explicit; go 1.12
 github.com/lucasb-eyer/go-colorful
 # github.com/mattn/go-isatty v0.0.24
