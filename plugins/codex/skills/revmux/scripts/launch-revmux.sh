@@ -284,27 +284,28 @@ POPUP_H="${REVMUX_POPUP_HEIGHT:-90%}"
 # the app it drives: it rejects flags the app supports, and the feature probe below reads its answer
 # as the app's. Ghostty and cmux export the same variable, so the executable test is what makes this
 # agterm's bundle rather than theirs.
-if [ -n "${GHOSTTY_BIN_DIR:-}" ] && [ -x "$GHOSTTY_BIN_DIR/agtermctl" ]; then
-    AGTERMCTL="$GHOSTTY_BIN_DIR/agtermctl"
-else
-    AGTERMCTL=$(command -v agtermctl 2>/dev/null || true)
+AGTERMCTL=${AGTERMCTL:-}
+if [ -z "$AGTERMCTL" ]; then
+    if [ -n "${GHOSTTY_BIN_DIR:-}" ] && [ -x "$GHOSTTY_BIN_DIR/agtermctl" ]; then
+        AGTERMCTL="$GHOSTTY_BIN_DIR/agtermctl"
+    else
+        AGTERMCTL=$(command -v agtermctl 2>/dev/null || true)
+    fi
 fi
 
-# agtermctl carrying the calling session's socket. A wrapper rather than an argument array because the
-# default socket path contains spaces, and every call below needs it.
+# Every operation carries the owning socket/window, never the user's frontmost one.
 agt() {
-    if [ -n "${AGTERM_SOCKET:-}" ]; then
-        "$AGTERMCTL" "$@" --socket "$AGTERM_SOCKET"
-    else
-        "$AGTERMCTL" "$@"
-    fi
+    local route=()
+    [ -z "${AGTERM_SOCKET:-}" ] || route+=(--socket "$AGTERM_SOCKET")
+    [ -z "${AGTERM_WINDOW_ID:-}" ] || route+=(--window "$AGTERM_WINDOW_ID")
+    "$AGTERMCTL" "$@" ${route[@]+"${route[@]}"}
 }
 
 # Codex can drop AGTERM variables and run from a temporary worktree. Recover the calling session only
 # when one live session belongs to the same Git checkout; ambiguity must fall through to other backends.
 recover_agterm_context() {
-    local tree worktree_common session_id session_cwd session_pane session_common
-    local match_id="" match_pane="" matches=0
+    local tree worktree_common session_id session_cwd session_pane session_token session_common
+    local match_id="" match_pane="" match_token="" matches=0
 
     [ -z "${AGTERM_SESSION_ID:-}" ] || return 0
     [ -n "$AGTERMCTL" ] || return 0
@@ -313,24 +314,28 @@ recover_agterm_context() {
     worktree_common=$(git -C "$CWD" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 0
     tree=$(agt tree --json 2>/dev/null) || return 0
 
-    while IFS=$'\t' read -r session_id session_cwd session_pane; do
+    while IFS=$'\t' read -r session_id session_cwd session_pane session_token; do
         if [ -z "$session_id" ] || [ -z "$session_cwd" ]; then continue; fi
         session_common=$(git -C "$session_cwd" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || continue
         if [ "$session_common" = "$worktree_common" ]; then
             matches=$((matches + 1))
             match_id="$session_id"
             match_pane="$session_pane"
+            match_token="$session_token"
         fi
     done < <(printf '%s' "$tree" | jq -r '
         .result.tree.workspaces[]?.sessions[]?
         | select((.cwd // "") != "")
-        | [.id, .cwd, ([.surfaces[]? | select(.active == true) | .kind][0] // "left")]
+        | [.surfaces[]? | select(.visible == true)] as $visible
+        | [.id, .cwd, (if ($visible | length) == 1 then $visible[0].kind else "" end),
+           (if ($visible | length) == 1 then ($visible[0].paneID // "") else "" end)]
         | @tsv
     ' 2>/dev/null)
 
-    if [ "$matches" -eq 1 ]; then
+    if [ "$matches" -eq 1 ] && [ -n "$match_pane" ]; then
         AGTERM_SESSION_ID="$match_id"
         AGTERM_PANE="$match_pane"
+        AGTERM_PANE_ID="$match_token"
     fi
 }
 
@@ -340,27 +345,36 @@ recover_agterm_context
 # --block would surface as an exit code in revmux's own 0/1/2 vocabulary - so ask the CLI rather than
 # assume, and fall back to the floating panel every version has.
 agterm_supports_pane_overlay() {
-    "$AGTERMCTL" session overlay open --help 2>/dev/null | grep -q -- '--pane'
+    agt session overlay open --help 2>/dev/null | grep -q -- '--pane'
 }
 
-# the calling session's split state and its own solid background color, read in one tree call and
-# printed as `<0|1>:<#rrggbb-or-empty>`. Window-scoped because `tree` defaults to the FRONTMOST window,
-# which is not the agent's whenever the user is looking elsewhere - unscoped it would find no session
-# and report every split as absent. jq is what parses it; without jq there is no honest read, so it
-# reports "not split" and the floating panel stands.
+# One live read for geometry, color and pane ownership: split:color:role:token-support.
+# A supplied token must resolve; only a tree without tokens may use the spawn role.
 agterm_session_state() {
     local tree
-    command -v jq >/dev/null 2>&1 || { printf '0:'; return 0; }
-    if [ -n "${AGTERM_WINDOW_ID:-}" ]; then
-        tree=$(agt tree --json --window "$AGTERM_WINDOW_ID" 2>/dev/null) || tree=""
-    else
-        tree=$(agt tree --json 2>/dev/null) || tree=""
+    if ! command -v jq >/dev/null 2>&1; then
+        [ -z "${AGTERM_PANE_ID:-}${AGTERM_PANE:-}" ] || { echo "error: jq required to validate agterm pane ownership" >&2; return 1; }
+        printf '0:::0'
+        return 0
     fi
-    [ -n "$tree" ] || { printf '0:'; return 0; }
-    printf '%s' "$tree" | jq -r --arg s "$AGTERM_SESSION_ID" '
-        ([.result.tree.workspaces[].sessions[] | select(.id == $s)][0] // {})
-        | "\(if .split then 1 else 0 end):\(if .background.kind == "color" then .background.colorHex else "" end)"
-    ' 2>/dev/null || printf '0:'
+    tree=$(agt tree --json) || return 1
+    printf '%s' "$tree" | jq -er --arg s "$AGTERM_SESSION_ID" --arg p "${AGTERM_PANE_ID:-}" --arg fallback "${AGTERM_PANE:-}" '
+        [.result.tree.workspaces[].sessions[] | select((.id | ascii_downcase) == ($s | ascii_downcase))] |
+        if length != 1 then error("owning session not found") else .[0] end |
+        . as $session | any(.surfaces[]; has("paneID")) as $modern |
+        (if $modern then
+            if $p == "" then error("stable owning pane id required")
+            else [.surfaces[] | select(.paneID == $p)] end
+         elif $fallback != "" then [.surfaces[] | select(.kind == $fallback)]
+         elif $p != "" then error("legacy pane identity unavailable")
+         else [] end) as $owners |
+        (if $p != "" or $fallback != "" then
+            if ($owners | length) != 1 then error("unknown owning pane")
+            elif $owners[0].visible != true then error("owning pane not visible")
+            else $owners[0].kind end
+         else "" end) as $pane |
+        "\(if .split then 1 else 0 end):\(if .background.kind == "color" then .background.colorHex else "" end):\($pane):\(if $modern and $p != "" then 1 else 0 end)"
+    '
 }
 
 # the theme actually rendering right now. `theme list` marks the current one `* `, EXCEPT under macOS
@@ -371,7 +385,7 @@ agterm_session_state() {
 # key is simply absent there, so the light branch is the answer rather than a guess.
 agterm_theme_name() {
     local list header appearance
-    list=$("$AGTERMCTL" theme list 2>/dev/null) || return 0
+    list=$(agt theme list 2>/dev/null) || return 0
     header=$(printf '%s\n' "$list" | sed -n '1{/^syncing with macOS appearance/p;}')
     if [ -z "$header" ]; then
         printf '%s\n' "$list" | sed -n 's/^\* //p' | head -1
@@ -409,73 +423,61 @@ agterm_overlay_tint() {
     printf '#%02x%02x%02x' "$((r * 97 / 100))" "$((g * 97 / 100))" "$(((b * 97 + 255 * 3) / 100))"
 }
 
-# agterm: `session overlay open --block` runs revmux over the agent's own session and blocks until it
-# exits, returning revmux's exit code directly - so no sentinel file is needed, unlike every backend
-# below. Checked first so an agterm session uses its native overlay even when a multiplexer is also
-# present. --cwd pins the overlay to the launcher's directory instead of the agent session's own.
-if [ -n "${AGTERM_SESSION_ID:-}" ] && [ -n "$AGTERMCTL" ]; then
-    # Mark the session active for the duration. Deliberately `active` and not `blocked --blink`,
-    # which is what an interactive tool would set: a review is work in progress, not a prompt waiting
-    # on the user, and blinking for attention over ten minutes during which nothing needs them is
-    # noise. Under a harness that drives the glyph itself this is redundant; under one that does not,
-    # it is the only sign the session is busy. No restore on exit for the same reason - there is no
-    # prior state this owns.
-    AGTERM_STATUS=(session status active)
-    case "${AGTERM_PANE:-}" in
-        left|right|scratch) AGTERM_STATUS+=(--pane "$AGTERM_PANE") ;;
+# Native agterm wins over inherited backends. --block polls a reusable slot, so
+# only this invocation's atomic completion file may identify revmux's exit code.
+if [ "${AGTERM_ENABLED:-}" = 1 ] || [ -n "${AGTERM_SESSION_ID:-}" ]; then
+    if [ -z "${AGTERM_SESSION_ID:-}" ] || [ -z "$AGTERMCTL" ]; then
+        echo "error: agterm review requires AGTERM_SESSION_ID and agtermctl" >&2
+        exit "$RC_LAUNCH_FAIL"
+    fi
+    AGTERM_STATE=$(agterm_session_state) || exit "$RC_LAUNCH_FAIL"
+    IFS=: read -r split color pane modern <<< "$AGTERM_STATE"
+    case "$pane" in
+        ''|left|right) ;;
+        scratch) [ -n "${REVMUX_AGTERM_PERCENT:-}" ] || { echo "error: scratch reviews require REVMUX_AGTERM_PERCENT" >&2; exit "$RC_LAUNCH_FAIL"; } ;;
+        *) echo "error: unsupported agterm pane: $pane" >&2; exit "$RC_LAUNCH_FAIL" ;;
     esac
-    agt "${AGTERM_STATUS[@]}" --target "$AGTERM_SESSION_ID" >/dev/null 2>&1 || true
-    # the EXIT trap from the top already removes both temp files; these two only ensure it runs on a
-    # signal rather than being skipped
-    trap 'exit 130' INT
-    trap 'exit 143' TERM
-
-    # Geometry. --size-percent renders a floating framed panel centered over the session, which keeps
-    # it visible around the review; 80% is enough for the status table plus a readable detail pane.
-    # In a VISIBLE split that panel is centered over BOTH panes: it covers the sibling pane's work and
-    # leaves the review in a frame narrower than the pane the agent runs in. A pane overlay covers this
-    # pane alone and leaves the sibling live, so a split takes it instead. It is always full-pane -
-    # agterm refuses --size-percent with --pane.
-    # An explicit REVMUX_AGTERM_PERCENT asks for the floating panel by name, so it opts back out.
-    # The tint goes on both shapes. A full-pane overlay needs it to be distinguishable from the shell
-    # it covered at all; the framed panel is already distinguishable, and carries it so that one
-    # review does not look like two different tools depending on whether the session was split.
-    AGTERM_STATE=$(agterm_session_state)
-    AGTERM_TINT=$(agterm_overlay_tint "${AGTERM_STATE#*:}")
+    AGTERM_TINT=$(agterm_overlay_tint "$color")
     AGTERM_GEOMETRY=(--size-percent "${REVMUX_AGTERM_PERCENT:-80}" --background-color "$AGTERM_TINT")
-    if [ -z "${REVMUX_AGTERM_PERCENT:-}" ]; then
-        case "${AGTERM_PANE:-}" in
+    if [ -z "${REVMUX_AGTERM_PERCENT:-}" ] && [ "$split" = 1 ]; then
+        case "$pane" in
             left|right)
-                if [ "${AGTERM_STATE%%:*}" = "1" ] && agterm_supports_pane_overlay; then
-                    AGTERM_GEOMETRY=(--pane "$AGTERM_PANE" --background-color "$AGTERM_TINT")
-                fi
-                ;;
+                if agterm_supports_pane_overlay; then
+                    AGTERM_GEOMETRY=(--pane "$pane" --background-color "$AGTERM_TINT")
+                fi ;;
         esac
     fi
-
-    # --block exits with revmux's own status, and 1 and 2 must reach the caller as they are. the trap is
-    # cleared inside the substitution because bash 3.2 runs it there despite the `||`, turning both into 3.
+    # Deliberately active, not blocked: revmux is working, not requesting input.
+    # No restoration: there is no prior state this child owns.
+    AGTERM_STATUS=(session status active --target "$AGTERM_SESSION_ID")
+    if [ "$modern" = 1 ] && agt session status --help 2>/dev/null | grep -q -- '--pane-id'; then
+        AGTERM_STATUS+=(--pane-id "$AGTERM_PANE_ID")
+    elif [ -n "$pane" ]; then
+        AGTERM_STATUS+=(--pane "$pane")
+    fi
+    [ -z "${AGTERM_SOCKET:-}" ] || AGTERM_STATUS+=(--socket "$AGTERM_SOCKET")
+    [ -z "${AGTERM_WINDOW_ID:-}" ] || AGTERM_STATUS+=(--window "$AGTERM_WINDOW_ID")
+    status_cmd=$(printf '%q ' "$AGTERMCTL" "${AGTERM_STATUS[@]}")
+    AGTERM_DONE=$(mktemp "$TMPBASE/revmux-agterm-done-XXXXXX")
+    rm -f "$AGTERM_DONE"
+    trap 'rm -f "$REPORT_FILE" "$STDERR_FILE" "$AGTERM_DONE" "$AGTERM_DONE.tmp" "$AGTERM_DONE.pid" || true' EXIT
+    trap 'exit 129' HUP
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    AGTERM_CMD="$status_cmd >/dev/null 2>&1 || true; $(write_rc_cmd "$AGTERM_DONE")"
+    # Resolve then open is best-effort across pane swaps. Never retry or close
+    # a slot, including an occupied/hidden-pane refusal.
     rc=0
-    AGTERM_ERR=$(trap - ERR; agt session overlay open "$REVMUX_CMD" --target "$AGTERM_SESSION_ID" \
-        --cwd "$CWD" "${AGTERM_GEOMETRY[@]}" --block 2>&1 >/dev/null) || rc=$?
-    if [ -n "$AGTERM_ERR" ]; then
-        printf '%s\n' "$AGTERM_ERR" >&2
+    agt session overlay open "$AGTERM_CMD" --target "$AGTERM_SESSION_ID" \
+        --cwd "$CWD" "${AGTERM_GEOMETRY[@]}" --block >/dev/null || rc=$?
+    if [ ! -s "$AGTERM_DONE" ]; then
+        echo "error: agterm review did not complete (controller exit $rc)" >&2
+        print_report_and_exit "$RC_LAUNCH_FAIL"
     fi
-
-    # A pane open agterm refused means revmux never ran, so the floating panel every version supports
-    # is still worth trying rather than reporting a launcher failure over geometry. Both refusals are
-    # post-checks and neither is decidable from the tree read above: the split can go away between
-    # that read and this call, and the pane's overlay slot is separate from the session-wide one, so a
-    # stale pane overlay is invisible to it. Gated on agterm's own message rather than on an empty
-    # report, which is also what revmux writes when it exits 2 on a failed archive write - retrying
-    # there would run the whole review a second time.
-    if [ "$rc" -ne 0 ] && [ "${AGTERM_GEOMETRY[0]}" = "--pane" ] &&
-        printf '%s' "$AGTERM_ERR" | grep -qE 'pane overlay already open|pane not visible'; then
-        rc=0
-        agt session overlay open "$REVMUX_CMD" --target "$AGTERM_SESSION_ID" \
-            --cwd "$CWD" --size-percent "${REVMUX_AGTERM_PERCENT:-80}" \
-            --background-color "$AGTERM_TINT" --block || rc=$?
-    fi
+    rc=$(trap - ERR; read_rc "$AGTERM_DONE")
+    case "$rc" in
+        ''|*[!0-9]*) print_report_and_exit "$RC_LAUNCH_FAIL" ;;
+    esac
     print_report_and_exit "$rc"
 fi
 

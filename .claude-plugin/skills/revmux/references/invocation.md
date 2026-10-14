@@ -116,15 +116,34 @@ Order matters where environments overlap: herdr is checked before kitty because 
 `KITTY_LISTEN_ON`, and cmux before ghostty because cmux can expose Ghostty's environment variables.
 
 When Codex drops AGTERM variables or runs from a temporary worktree, the launcher queries the live
-tree and compares absolute Git common directories. It adopts the session and active pane only when
-exactly one live session matches. Zero or multiple matches fall through to other backends.
+tree and compares absolute Git common directories. It adopts the session and visible pane only when
+exactly one live session matches and that session has exactly one visible surface; a checkout match
+cannot identify the caller's pane in a split. The recovered stable token is retained when available.
+Zero/multiple matches or ambiguous panes fall through to other backends when no agterm environment
+claims ownership; an explicit agterm environment without usable identity fails rather than targeting
+another terminal.
 
 Under agterm the floating panel is centered over the whole session, so in a **visible split** it covers
 the sibling pane's work and frames the review inside something narrower than the pane it runs in.
-There the launcher opens a pane-scoped overlay on `$AGTERM_PANE` instead, leaving the sibling live.
-Both conditions are checked, never assumed: `--pane` reached `agtermctl` after v0.9.0, and reading the
-split state needs `jq`. Without either, the floating panel stands — and so it does when agterm refuses
-the pane open outright, since the split can go away between the check and the call.
+There the launcher resolves `$AGTERM_PANE_ID` against the live owning session's surfaces and opens
+on that role, leaving the sibling live after swaps/promotions. A supplied unknown or hidden token
+fails, and a token-capable tree requires a stable owner token even when a spawn role is present.
+Only an older tree without pane tokens permits a unique visible spawn-role fallback.
+Pane ownership validation requires `jq`. Older clients without `--pane`, or legacy callers without
+any pane identity and without `jq`, retain the floating default. Scratch requires an explicit
+`REVMUX_AGTERM_PERCENT` to deliberately cover the session. Explicit floating geometry never includes
+`--pane`.
+
+Opening by role remains best-effort: a swap between reading the tree and opening can redirect it.
+Occupied/hidden-pane refusals are authoritative; no retry as a floating panel, slot close, input
+injection or focus change is attempted. The controller's `--block` watches a reusable slot, so only
+this invocation's atomic completion file establishes revmux's exit status. Missing evidence is
+launcher failure (`3`), even with a report fragment or a controller result of `0`, `1` or `2`.
+
+Every call carries `AGTERM_SOCKET`/`AGTERM_WINDOW_ID` when supplied and an explicit session target for
+session operations. CLI selection is `AGTERMCTL`, then the running app's `$GHOSTTY_BIN_DIR/agtermctl`,
+then PATH. The launched child reports `active` for its own stable pane (or legacy role); it never
+sets `blocked` or restores state it did not own.
 
 Either shape gets a background tinted 3% toward blue — derived from the session's own color, else the
 resolved theme's `background`. A pane overlay is always full-pane and would otherwise render as the

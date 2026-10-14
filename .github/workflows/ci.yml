@@ -62,3 +62,6 @@ jobs:
 
       - name: sentinel helpers
         run: sh .github/scripts/check-sentinel-helpers.sh
+
+      - name: agterm launcher regressions (stub-only)
+        run: bash .github/scripts/test-agterm-launcher.sh
