@@ -17,9 +17,11 @@
 # Everything under a round's input/ is caller-written, so an existing scope.md is a decision
 # someone made and must not be clobbered blind.
 #
-# usage: task-state.sh [--tasks-dir <dir>] <task-id>
-#   --tasks-dir  handed to `revmux config` when the session runs revmux with an explicit root; the
-#                root revmux reports back is the one read, never the argument itself
+# usage: task-state.sh [--tasks-dir <dir>] [--config-dir <dir>] <task-id>
+#   --tasks-dir   handed to `revmux config` when the session runs revmux with an explicit root; the
+#                 root revmux reports back is the one read, never the argument itself
+#   --config-dir  handed to `revmux config` as well: it loads and validates that configuration, and
+#                 its INI may choose the tasks root
 #
 # output: `key: value` lines
 #   tasks_dir    resolved root
@@ -39,14 +41,14 @@
 
 set -u
 
-usage="usage: task-state.sh [--tasks-dir <dir>] <task-id>"
+usage="usage: task-state.sh [--tasks-dir <dir>] [--config-dir <dir>] <task-id>"
 task=""
 cfg_args=()
 while [ $# -gt 0 ]; do
     case "$1" in
-        --tasks-dir)
-            [ -n "${2:-}" ] || { echo "error: --tasks-dir needs a directory" >&2; echo "$usage" >&2; exit 1; }
-            cfg_args=(--tasks-dir "$2")
+        --tasks-dir|--config-dir)
+            [ -n "${2:-}" ] || { echo "error: $1 needs a directory" >&2; echo "$usage" >&2; exit 1; }
+            cfg_args+=("$1" "$2")
             shift 2
             ;;
         -*)

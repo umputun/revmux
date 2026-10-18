@@ -84,9 +84,9 @@ the JSON unparseable.
 `--config-dir` (non-negotiable 4, or because the user named one), every `revmux` command carries the
 same flags: the task match and `revmux new` in Step 2's brief, the launch in Step 4, `stats` and
 `cleanup` in housekeeping, `config` in self mode. A call without them reads or writes another archive.
-`preflight.sh` takes `--config-dir`, so it checks the profiles and rosters the run loads.
-`task-state.sh` and `analyze-corpus.py` take no `--config-dir`: give them `--tasks-dir` with the
-`paths.tasks_dir` that `revmux config` reports under those flags.
+`task-state.sh` takes both flags and `preflight.sh` takes `--config-dir`, so each loads the
+configuration the run loads. `analyze-corpus.py` takes no `--config-dir`: give it `--tasks-dir` with
+the `paths.tasks_dir` that `revmux config` reports under those flags.
 
 ## Workflow
 
@@ -124,9 +124,11 @@ git clone https://github.com/umputun/revmux.git && cd revmux && make install
 paths `git rev-parse --path-format=absolute --git-dir --git-common-dir` prints differ. Then say two
 separate things:
 
-- **Only when the archive is inside it** — the `paths.tasks_dir` from `revmux config` (non-negotiable 6
-  flags included) is under `git rev-parse --show-toplevel`: this task's rounds, at that path, are
-  deleted when the worktree is removed, and self mode loses them. Keeping the worktree, or reviewing
+- **Only when the archive is inside it** — resolve the `paths.tasks_dir` from `revmux config`
+  (non-negotiable 6 flags included) with `realpath`, or its nearest existing parent with the missing
+  part appended while it does not exist yet: revmux keeps symlinks in that path and git resolves them.
+  It is inside when it equals `git rev-parse --show-toplevel` or starts with it plus `/`. Then say
+  this task's rounds, at that path, are deleted when the worktree is removed, and self mode loses them. Keeping the worktree, or reviewing
   from the main checkout, is what keeps them. Offer no copy: it is a write outside this checkout.
 - **Always:** Git does not copy the other checkout's untracked `.revmux/` files into a new linked
   worktree, so local config and prompt overrides may differ from the main checkout's.
@@ -224,14 +226,14 @@ Spawn **one** `general-purpose` agent. Hand it the resolved scope from Step 1 an
 
 > Prepare a revmux review round. Write files; change no source, run no review, commit nothing.
 >
-> Every `revmux` command below carries `<this session's --tasks-dir/--config-dir flags, or "no extra
-> flags">`, and `task-state.sh` takes `<--tasks-dir and the paths.tasks_dir revmux config reports under
-> them, or nothing>`.
+> Every `revmux` command below, and `task-state.sh`, carries `<this session's --tasks-dir/--config-dir
+> flags, or "no extra flags">`.
 >
-> **Write nothing outside the tree this session may write to, `revmux new` included.** A refused write
-> or command (a denied permission, a sandbox, a worktree isolation refusal) ends the preparation: put
-> its text in `notes` and return. Do not retry it through another tool, a shell redirect, an API or a
-> symlink.
+> **Write nothing outside the tree this session may write to, `revmux new` included.** If a guard
+> rejects only how a command is written and names a compliant form of the same operation inside this
+> tree (split it, quote it, run the plain command), follow that form once. Any other refusal, or a
+> second refusal of the same operation, ends the preparation: put its text in `notes` and return. Do
+> not retry it through another tool, a shell redirect, an API or a symlink.
 >
 > The scope is: `<the row resolved in Step 1, with its ref range>`, and its scale is
 > `<the shortstat Step 1 printed>`. Take the scale as given rather than measuring it again.
@@ -250,8 +252,8 @@ Spawn **one** `general-purpose` agent. Hand it the resolved scope from Step 1 an
 >    matches: `pr-<number>`, `issue-<number>`, a branch name with `/` replaced by `-`,
 >    `since-<short-sha>`, or `wip-<branch>`. No path separators, no `..`, no leading dot, not absolute.
 > 3. Run `<the absolute path this session resolved for scripts/task-state.sh> <task-id>`, with the
->    `--tasks-dir` named above when there is one. It exits 1 with a usage line without an id. It validates the id and reports the
->    `task.md` anchors, every round, and each round's `input/` state — `prepared` (never reviewed),
+>    flags named above when there are any. It exits 1 with a usage line without an id. It validates the
+>    id and reports the `task.md` anchors, every round, and each round's `input/` state — `prepared` (never reviewed),
 >    `claimed` (a review started and never finished) or `ran`. That is the inventory; do not `ls` the
 >    task or a round to confirm what it already told you.
 > 4. Name the round `NN-label` — `01-initial`, `02-after-fix`, `03-final` — with `NN` one past the
@@ -305,8 +307,9 @@ a decision already made is not the same thing.
 
 **Check what comes back before launching.** A missing `round_dir` or an empty `wrote` means no round
 is ready and the run would fail on a missing scope; fix that here rather than launching into it.
-**A refusal in `notes` blocks the launch even when `wrote` is not empty**: the round holds only part of
-its context. Tell the user what was refused and where, and launch nothing until it is resolved. The
+**An unresolved refusal in `notes` blocks the launch even when `wrote` is not empty**: the round holds
+only part of its context. A command-form retry that went through is reported there too and blocks
+nothing. Tell the user what was refused and where, and launch nothing until it is resolved. The
 scale numbers are what Step 4's one-line announcement is built from.
 
 ### Step 3: Choose profile and flags

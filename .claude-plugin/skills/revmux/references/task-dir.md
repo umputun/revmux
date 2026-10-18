@@ -217,8 +217,8 @@ Name a new task only when nothing matches:
 Prefer the most stable identifier: a branch name outlives a sha, a PR number outlives a rename. Then
 write that task's `task.md`, so the next session matches instead of deriving.
 
-`scripts/task-state.sh [--tasks-dir <dir>] <task-id>` validates an id and reports what the task holds — its `task.md`
-anchors, every round, and each round's `input/` state. Each round comes back `prepared`, `claimed` or
+`scripts/task-state.sh [--tasks-dir <dir>] [--config-dir <dir>] <task-id>` validates an id and
+reports what the task holds — its `task.md` anchors, every round, and each round's `input/` state. Each round comes back `prepared`, `claimed` or
 `ran`; `revmux config` lists only the `ran` ones, so the script is how a round that is still open —
 never reviewed, or reviewed by a run that never finished — becomes visible. A `claimed` round is only
 re-runnable while that run left nothing in it; revmux refuses the name and says so if it did not.

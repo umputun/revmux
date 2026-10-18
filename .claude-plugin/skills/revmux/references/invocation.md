@@ -404,7 +404,8 @@ That last one distinguishes a deliberate setting from a default, which `--help` 
 `rounds` lists the rounds that ran to completion, so neither a round prepared but not yet reviewed nor
 one whose review never finished is in it — both are still open under their own name, the interrupted
 one only while its review left nothing behind.
-`scripts/task-state.sh [--tasks-dir <dir>] <task-id>` reports those, with each round's `input/` state.
+`scripts/task-state.sh [--tasks-dir <dir>] [--config-dir <dir>] <task-id>` reports those, with each
+round's `input/` state.
 A task whose `task.md` will not parse is still listed, with `meta_error` saying why its anchors are
 empty; fix the file rather than minting a second id for the same subject.
 

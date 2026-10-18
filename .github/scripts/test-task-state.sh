@@ -21,10 +21,21 @@ cat > "$work/bin/revmux" <<'FAKE'
 printf '%s\n' "$@" > "$FAKE_ARGV"
 [ -z "${FAKE_FAIL:-}" ] || exit 1
 root="$FAKE_DEFAULT_ROOT"
+explicit=""
+confdir=""
 while [ $# -gt 0 ]; do
-    [ "$1" = "--tasks-dir" ] && root="$2"
+    case "$1" in
+        --tasks-dir) explicit="$2" ;;
+        --config-dir) confdir="$2" ;;
+    esac
     shift
 done
+if [ -z "$confdir" ]; then
+    [ -z "${FAKE_FAIL_DEFAULT_CONFIG:-}" ] || exit 1
+elif [ -s "$confdir/tasks-root" ]; then
+    root=$(cat "$confdir/tasks-root")
+fi
+[ -z "$explicit" ] || root="$explicit"
 tasks='[]'
 for dir in "$root"/*/; do
     [ -d "$dir" ] || continue
@@ -107,6 +118,31 @@ run demo --tasks-dir "$explicit"
 expect_argv "option after id" config --tasks-dir "$explicit"
 expect_line "option after id" "$out" "exists: true"
 
+confdir="$work/config dir"
+mkdir -p "$confdir"
+printf '%s' "$explicit" > "$confdir/tasks-root"
+
+FAKE_FAIL_DEFAULT_CONFIG=1 run --config-dir "$confdir" demo
+[ "$code" -eq 0 ] || fail "config dir with a broken default: exit $code, stderr: $err"
+expect_argv "config dir with a broken default" config --config-dir "$confdir"
+expect_line "config dir with a broken default" "$out" "tasks_dir: $explicit"
+expect_line "config dir with a broken default" "$out" "exists: true"
+
+FAKE_FAIL_DEFAULT_CONFIG=1 run demo
+[ "$code" -eq 1 ] || fail "broken default without config dir: exit $code, want 1"
+expect_line "broken default without config dir" "$err" "error: revmux config failed"
+
+run --config-dir "$confdir" --tasks-dir "$FAKE_DEFAULT_ROOT" demo
+[ "$code" -eq 0 ] || fail "tasks dir over the config dir's root: exit $code, stderr: $err"
+expect_argv "tasks dir over the config dir's root" config --config-dir "$confdir" --tasks-dir "$FAKE_DEFAULT_ROOT"
+expect_line "tasks dir over the config dir's root" "$out" "tasks_dir: $FAKE_DEFAULT_ROOT"
+expect_line "tasks dir over the config dir's root" "$out" "exists: false"
+
+run demo --tasks-dir "$explicit" --config-dir "$confdir"
+[ "$code" -eq 0 ] || fail "both flags after the id: exit $code, stderr: $err"
+expect_argv "both flags after the id" config --tasks-dir "$explicit" --config-dir "$confdir"
+expect_line "both flags after the id" "$out" "exists: true"
+
 run --tasks-dir "$FAKE_DEFAULT_ROOT" other
 [ "$code" -eq 0 ] || fail "explicit root with no rounds: exit $code, stderr: $err"
 expect_line "explicit root with no rounds" "$out" "exists: true"
@@ -116,6 +152,8 @@ usage_cases=(
     "no arguments|"
     "option without a value|--tasks-dir"
     "empty root|--tasks-dir||demo"
+    "config dir without a value|demo|--config-dir"
+    "empty config dir|--config-dir||demo"
     "unknown option|--task-dir|$explicit|demo"
     "two task ids|demo|other"
     "separator in the id|feature/foo"

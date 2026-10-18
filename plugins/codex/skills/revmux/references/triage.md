@@ -58,13 +58,14 @@ it this brief with every path already expanded:
 > Gather a filed item for a revmux triage round. Write files; change no source, run no review, post
 > nothing to the forge, commit nothing.
 >
-> Every `revmux` command below carries `<this session's --tasks-dir/--config-dir flags, or "no extra
-> flags">`, and `task-state.sh` takes `<--tasks-dir and the paths.tasks_dir revmux config reports under
-> them, or nothing>`.
+> Every `revmux` command below, and `task-state.sh`, carries `<this session's --tasks-dir/--config-dir
+> flags, or "no extra flags">`.
 >
-> **Write nothing outside the tree this session may write to, `revmux new` included.** A refused write
-> or command ends the gathering: put its text in `notes` and return. Do not retry it through another
-> tool, a shell redirect, an API or a symlink.
+> **Write nothing outside the tree this session may write to, `revmux new` included.** If a guard
+> rejects only how a command is written and names a compliant form of the same operation inside this
+> tree (split it, quote it, run the plain command), follow that form once. Any other refusal, or a
+> second refusal of the same operation, ends the gathering: put its text in `notes` and return. Do not
+> retry it through another tool, a shell redirect, an API or a symlink.
 >
 > The item is `<the kind, number and repository resolved above>`. Its metadata is `<the JSON from the
 > probe>` — take it as given rather than fetching it again.
@@ -74,7 +75,8 @@ it this brief with every path already expanded:
 >    second id for it runs as a first round with no history. Derive `issue-<number>` or
 >    `discussion-<number>` only when nothing matches.
 > 2. Run `<the absolute path this session resolved for scripts/task-state.sh> <task-id>`, with the
->    `--tasks-dir` named above when there is one, for the round inventory, then `revmux new --task <id> --run <NN-label>` with `NN` one past the highest there.
+>    flags named above when there are any, for the round inventory, then
+>    `revmux new --task <id> --run <NN-label>` with `NN` one past the highest there.
 >    Write only to the paths it prints.
 > 3. `scope` — required, **under 1500 characters**. What was filed, by whom, when, and its current state;
 >    the item's URL and the command that reads its thread; what the panel is being asked to weigh. Name
@@ -98,7 +100,7 @@ it this brief with every path already expanded:
 > "kind": "", "number": 0, "url": "", "comments": 0, "notes": ""}`. Put anything that went wrong in
 > `notes` and do not paper over it.
 
-A refusal in `notes` blocks the panel, exactly as in SKILL.md's Step 2.
+An unresolved refusal in `notes` blocks the panel, exactly as in SKILL.md's Step 2.
 
 ## 3. Run the panel
 
