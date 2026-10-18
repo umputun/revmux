@@ -14,9 +14,10 @@
 # own binaries — while an ordinary run needs the roster and the stages and not the base, which
 # may name a binary nothing else uses.
 #
-# usage: preflight.sh [profile] [--lenses]
-#   profile   profile to check; defaults to whatever revmux resolves as its default
-#   --lenses  check the invocation --lenses produces rather than the profile's own roster
+# usage: preflight.sh [profile] [--lenses] [--config-dir <dir>]
+#   profile       profile to check; defaults to whatever revmux resolves as its default
+#   --lenses      check the invocation --lenses produces rather than the profile's own roster
+#   --config-dir  the run's own --config-dir, so the profiles and rosters checked are the ones it loads
 #
 # output: one `key: value` line per check, then `ok: true|false`
 # exit:   0 all good, 1 something missing
@@ -24,9 +25,10 @@
 set -u
 
 usage() {
-    echo "usage: $(basename "$0") [profile] [--lenses]" >&2
-    echo "  profile   profile to check; defaults to whatever revmux resolves as its default" >&2
-    echo "  --lenses  check the invocation --lenses produces rather than the profile's own roster" >&2
+    echo "usage: $(basename "$0") [profile] [--lenses] [--config-dir <dir>]" >&2
+    echo "  profile       profile to check; defaults to whatever revmux resolves as its default" >&2
+    echo "  --lenses      check the invocation --lenses produces rather than the profile's own roster" >&2
+    echo "  --config-dir  the run's own --config-dir, so the profiles and rosters checked are the ones it loads" >&2
 }
 
 # strict: an argument that is not understood is a caller mistake, and silently dropping it checks a
@@ -34,10 +36,23 @@ usage() {
 # clean host for a run that then fails to launch its only finder
 profile=""
 lenses=""
-for arg in "$@"; do
+cfg_args=()
+while [ $# -gt 0 ]; do
+    arg=$1
+    shift
     case "$arg" in
         --lenses)
             lenses=1
+            ;;
+        --config-dir)
+            if [ -z "${1:-}" ]; then
+                echo "--config-dir needs a directory" >&2
+                usage
+                echo "ok: false"
+                exit 1
+            fi
+            cfg_args=(--config-dir "$1")
+            shift
             ;;
         -*)
             echo "unknown option: $arg" >&2
@@ -90,9 +105,13 @@ echo "revmux: $(command -v revmux) ($(revmux --version 2>/dev/null || echo 'vers
 
 # `revmux config` resolves the whole tree: profiles, rosters, stages and the executor
 # vocabulary. It runs no pipeline and writes nothing, so it is safe to call for a probe.
-cfg=$(revmux config 2>/dev/null) || {
+cfg=$(revmux config ${cfg_args[@]+"${cfg_args[@]}"} 2>/dev/null) || {
     fail "config: FAILED - revmux could not resolve its configuration"
-    echo "hint: run 'revmux config' directly to see the error"
+    if [ ${#cfg_args[@]} -gt 0 ]; then
+        echo "hint: run 'revmux config' with the same --config-dir to see the error"
+    else
+        echo "hint: run 'revmux config' directly to see the error"
+    fi
     echo "ok: false"
     exit 1
 }

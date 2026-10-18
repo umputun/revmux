@@ -33,12 +33,16 @@ install: build
 uninstall:
 	rm -f "$(BINDIR)/revmux"
 
-test:
+test: test-scripts
 	go clean -testcache
 	go test -race -coverprofile=coverage.out ./...
 	grep -v "_mock.go" coverage.out | grep -v mocks > coverage_no_mocks.out
 	go tool cover -func=coverage_no_mocks.out
 	rm coverage.out coverage_no_mocks.out
+
+test-scripts:
+	.github/scripts/test-task-state.sh
+	.github/scripts/test-preflight.sh
 
 lint: lint-go lint-scripts
 
@@ -78,4 +82,4 @@ version:
 	@echo "branch: $(BRANCH), hash: $(HASH), timestamp: $(TIMESTAMP)"
 	@echo "revision: $(REV)"
 
-.PHONY: all build install uninstall test lint lint-go lint-scripts check-plugins fmt race version
+.PHONY: all build install uninstall test test-scripts lint lint-go lint-scripts check-plugins fmt race version

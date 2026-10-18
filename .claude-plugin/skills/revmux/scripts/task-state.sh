@@ -17,7 +17,9 @@
 # Everything under a round's input/ is caller-written, so an existing scope.md is a decision
 # someone made and must not be clobbered blind.
 #
-# usage: task-state.sh <task-id>
+# usage: task-state.sh [--tasks-dir <dir>] <task-id>
+#   --tasks-dir  handed to `revmux config` when the session runs revmux with an explicit root; the
+#                root revmux reports back is the one read, never the argument itself
 #
 # output: `key: value` lines
 #   tasks_dir    resolved root
@@ -32,13 +34,32 @@
 #   rounds       round names in order, or `none`
 #   round        one per round: <name> ran|claimed|prepared scope=present|MISSING goal=present|absent
 #                profile=present|absent context=<number of files>
-# exit: 0 when revmux resolves; 1 on a bad task id, a missing revmux, or a failing `revmux config`
+# exit: 0 when revmux resolves; 1 on a bad argument or task id, a missing revmux, or a failing
+#       `revmux config`
 
 set -u
 
-task="${1:-}"
+usage="usage: task-state.sh [--tasks-dir <dir>] <task-id>"
+task=""
+cfg_args=()
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --tasks-dir)
+            [ -n "${2:-}" ] || { echo "error: --tasks-dir needs a directory" >&2; echo "$usage" >&2; exit 1; }
+            cfg_args=(--tasks-dir "$2")
+            shift 2
+            ;;
+        -*)
+            echo "error: unknown option $1" >&2; echo "$usage" >&2; exit 1 ;;
+        *)
+            [ -z "$task" ] || { echo "error: more than one task id" >&2; echo "$usage" >&2; exit 1; }
+            task=$1
+            shift
+            ;;
+    esac
+done
 if [ -z "$task" ]; then
-    echo "usage: task-state.sh <task-id>" >&2
+    echo "$usage" >&2
     exit 1
 fi
 
@@ -53,7 +74,7 @@ esac
 
 command -v revmux >/dev/null 2>&1 || { echo "error: revmux not on PATH" >&2; exit 1; }
 
-cfg=$(revmux config 2>/dev/null) || { echo "error: revmux config failed" >&2; exit 1; }
+cfg=$(revmux config ${cfg_args[@]+"${cfg_args[@]}"} 2>/dev/null) || { echo "error: revmux config failed" >&2; exit 1; }
 
 has_jq=false
 if command -v jq >/dev/null 2>&1; then

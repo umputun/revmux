@@ -31,7 +31,10 @@ If a note would be equally true of any Go project, it does not belong here.
 
 - Build: `make build` (output: `.bin/revmux`)
 - Install: `make install` (symlinks `.bin/revmux` into `$BINDIR`, default `/usr/local/bin`; `make uninstall` removes it)
-- Test: `make test` (race detector + coverage, excludes mocks)
+- Test: `make test` (race detector + coverage, excludes mocks), which runs `make test-scripts` first.
+  That target is the bash tests under `.github/scripts/test-*.sh` for the shipped skill scripts,
+  each against a fake `revmux` on a `PATH` cut down to `/usr/bin:/bin`, so on macOS the scripts run
+  under the system bash 3.2. CI runs it in the `lint-scripts` job on ubuntu, which is bash 5.
 - Lint: `make lint`, which is `lint-go` plus `lint-scripts`.
   **`golangci-lint` alone is not the whole gate** — it is Go-only, and the shipped shell scripts have
   their own CI job that pipes `shellcheck` through `xargs`, so any output at all fails it, info-level

@@ -62,3 +62,6 @@ jobs:
 
       - name: sentinel helpers
         run: sh .github/scripts/check-sentinel-helpers.sh
+
+      - name: script tests
+        run: make test-scripts

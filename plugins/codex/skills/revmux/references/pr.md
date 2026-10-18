@@ -7,7 +7,7 @@ is a pull request — "revmux pr 123", "review PR 123 with revmux", a pull-reque
 ```
 gh pr view       metadata: head branch, base, url, size — and the task.md anchors, for free
 git worktree     the PR head checked out somewhere else, the user's checkout untouched
---workdir        the agents run there; revmux itself still runs from the main checkout
+--workdir        the agents run there; revmux itself still runs from the session's own checkout
 cleanup          worktree and temp branch removed, the archive left behind
 ```
 
@@ -70,7 +70,7 @@ everything master gained after the PR forked and reports another author's code a
 `merge_base` comes back empty, stop and say so — a fallback to `HEAD~N` reviews a different range and
 looks like it worked.
 
-## 3. Run revmux from the main checkout, never from the worktree
+## 3. Run revmux from the session's own checkout, never from the PR worktree
 
 Two roots, and a PR review is where confusing them costs the most:
 
@@ -89,9 +89,11 @@ revmux --task pr-<n> --run 01-initial --workdir "$workdir" --no-tui \
 Two things follow from that, and together they are the whole reason for the rule:
 
 - **the archive outlives the checkout.** `--tasks-dir` resolves against the process working directory,
-  so the round lands in the main repository's `.revmux/tasks/pr-<n>/` and step 5 cannot take it with it.
-  Run from inside the worktree instead and the entire record — prompts, stage snapshots, `events.jsonl`
-  — sits inside the directory the cleanup deletes.
+  so the round lands in the session checkout's `.revmux/tasks/pr-<n>/` and step 5 cannot take it with it.
+  Run from inside the PR worktree instead and the entire record — prompts, stage snapshots,
+  `events.jsonl` — sits inside the directory the cleanup deletes.
+  This protects the round from step 5 only. When the session's own checkout is itself a linked worktree,
+  removing that one later takes the archive with it — SKILL.md Step 0 tells the user so.
 - **the PR's own `.revmux/` never loads.** The project layer is read from the process working directory
   and never from `--workdir`, so a branch that adds or edits `.revmux/lenses/*.md` does not get to
   rewrite the instructions its own review runs under. That text is what a headless agent with a shell
