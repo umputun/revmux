@@ -1,5 +1,5 @@
 ---
-description: four-agent panel over a filed item rather than a diff — facts, thesis, antithesis and cost on codex; run it with --no-synthesis, since every argument is single-source and the drop rule eats them otherwise
+description: four-agent panel over a filed item rather than a diff — facts, thesis, antithesis and cost on codex; run it with --no-synthesis, since synthesis boosts confidence where panelists told to disagree happen to agree
 model: claude/opus:high
 agents:
   - {name: facts,      lenses: [grounding, precedent], color: cyan}

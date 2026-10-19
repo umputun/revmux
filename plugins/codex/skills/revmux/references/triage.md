@@ -114,9 +114,8 @@ the short end of the usual range.
 
 **Every flag on that line is required, and two of them are silent when dropped:**
 
-- **`--no-synthesis`** — every triage argument is single-source by construction, and synthesis drops weak
-  singletons. Left on, it eats the panel's minor-weight arguments wholesale and boosts confidence where
-  two agents *told to disagree* happen to agree. The report still looks like a report.
+- **`--no-synthesis`** — left on, synthesis boosts confidence where two agents *told to disagree*
+  happen to agree, so a panel point reads as corroborated when it is not. The report still looks like a report.
 - **`--verify-group-by source`** — verification buckets by directory by default and merges thin buckets
   into one, so a four-argument panel reaches a single verifier holding a case and its rebuttal together.
   In `source` mode each panelist's case is judged on its own.

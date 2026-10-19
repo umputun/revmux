@@ -269,9 +269,10 @@ func TestSynthesizer_prompt_dropRule(t *testing.T) {
 	text, err := stage.Compose(prompt.ComposeOpts{Vars: s.vars(synthSources())})
 	require.NoError(t, err)
 
-	// the drop rule is executed by the model, so the composed prompt is the only thing a Go test can assert
-	assert.Contains(t, text, "route it to the verifier")
-	assert.Contains(t, text, "degraded")
+	// the merge rules are executed by the model, so the composed prompt is the only thing a Go test can assert
+	assert.Contains(t, text, "5. Drop nothing.")
+	assert.Contains(t, text, "routed to the verifier like any other")
+	assert.NotContains(t, text, "confidence below 80", "no single-source finding is dropped for low confidence")
 	assert.Contains(t, text, "min(99, highest confidence + 10 * (distinct sources - 1))")
 	assert.Contains(t, text, "2 sources ran, 2 reported.")
 }
@@ -329,7 +330,7 @@ func TestSynthesizer_attribution(t *testing.T) {
 			`{"merged_ids":["bugs+impl-1"],"file":"a.go","line":10,"severity":"major","confidence":80,"title":"leak","body":"b"}`,
 			`{"merged_ids":["bugs+impl-1","codex-1"],"file":"a.go","line":12,"severity":"minor","confidence":60,"title":"other","body":"b"}`,
 		), inputs)
-		require.Error(t, err, "the schema binds each input to at most one output")
+		require.Error(t, err, "an input claimed by two outputs is a contract violation")
 		assert.Contains(t, err.Error(), `id "bugs+impl-1" into more than one output`)
 	})
 

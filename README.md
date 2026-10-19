@@ -161,8 +161,8 @@ configuration.
    lenses, plus a `codex` peer. Launch is staggered, agent 1 first and the rest released once it produces
    its first output. Each agent returns structured findings.
 2. **synthesize**. One model call. It merges every source's findings, dedupes on `(file, line ±2)`, boosts
-   confidence where distinct sources corroborate, splits out open questions and pre-existing issues, and
-   drops weak singletons.
+   confidence where distinct sources corroborate, and splits out open questions and pre-existing issues.
+   It drops nothing: a single-source, low-confidence finding still reaches verify.
 3. **verify**. Parallel agents grouped by directory. Each verifier sees only its own group, so it cannot
    anchor on a neighbouring finding. Every finding comes back with a verdict: confirmed, refined, rejected,
    immaterial or pre-existing.

@@ -340,8 +340,9 @@
                   <h3>synthesize</h3>
                   <p>
                     One model call merges every source, dedupes on <code>(file, line ±2)</code>, boosts
-                    confidence where distinct sources corroborate, splits out open questions and pre-existing
-                    issues, and drops weak singletons.
+                    confidence where distinct sources corroborate, and splits out open questions and
+                    pre-existing issues. It drops nothing: a single-source, low-confidence finding still
+                    reaches verify.
                   </p>
                 </div>
                 <div class="stage b3">

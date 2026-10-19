@@ -225,9 +225,10 @@ func (s *synthesizer) parse(raw json.RawMessage,
 		return finding.Report{}, nil, errors.New("synthesis returned no findings object")
 	}
 
-	// one claimed set across all three lists: the schema binds each input to at most one output, and the
+	// one claimed set across all three lists: the schema binds each input to exactly one output, and the
 	// lists are three halves of one merge — an input reported as both a finding and a pre-existing issue
-	// is the same contract violation as one reported twice in either
+	// is the same contract violation as one reported twice in either. An input claimed by none is not an
+	// error here; reportDropped announces it
 	claimed := map[string]bool{}
 	findings, err := s.attribute(out.Findings, inputs, claimed)
 	if err != nil {
@@ -258,9 +259,10 @@ func (s *synthesizer) unclaimed(inputs map[string]finding.Finding, claimed map[s
 	return out
 }
 
-// reportDropped announces what synthesis removed rather than merged — the pipeline's largest filter by a
-// wide margin: across one archived corpus it removed 58 findings where verify removed 2, three of them
-// critical. The event carries the findings themselves, so events.jsonl answers which ones on its own.
+// reportDropped announces what synthesis removed rather than merged. The shipped prompt drops nothing, so
+// under it a non-empty list is the model departing from instructions; an overridden synthesis.md may still
+// drop by design. Either way the findings never reach verify, and the event carries them so events.jsonl
+// answers which ones on its own.
 func (s *synthesizer) reportDropped(dropped []finding.Finding) {
 	if len(dropped) == 0 {
 		return

@@ -302,8 +302,9 @@ revmux --task pr-123 --run 02-after-fix &gt; findings.json</pre>
           </li>
           <li>
             <strong>synthesize.</strong> One model call. It merges every source's findings, dedupes on
-            <code>(file, line ±2)</code>, boosts confidence where distinct sources corroborate, splits out open
-            questions and pre-existing issues, and drops weak singletons. It is told the true source roster as
+            <code>(file, line ±2)</code>, boosts confidence where distinct sources corroborate, and splits out
+            open questions and pre-existing issues. It drops nothing: a single-source, low-confidence finding
+            still reaches verify, which is where it is confirmed or rejected. It is told the true source roster as
             data, including which agents degraded.
           </li>
           <li>
@@ -706,8 +707,7 @@ receives, including what counts as critical, major and minor here.</pre>
           <code>triage</code> reviews an issue, a proposal or a discussion instead of a change. Its severities
           rate how much a point bears on the decision rather than what goes wrong at runtime, and it returns
           arguments for a maintainer to weigh. revmux decides nothing. Run it with
-          <code>--no-synthesis</code>: every argument on a four-way panel is single-source by construction, so
-          the drop rule eats the minor ones and the confidence boost fires on agreement between agents told to
+          <code>--no-synthesis</code>: the confidence boost fires on agreement between agents told to
           disagree. <code>--verify-group-by source</code> keeps each panelist's case in front of its own
           verifier.
         </p>

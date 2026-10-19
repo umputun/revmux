@@ -227,8 +227,8 @@ will not read, and an unwritable `./.revmux/` under `revmux init`.
 
 `--profile <name>`. The default is `comprehensive` and is itself a config knob.
 
-`triage` is the one shipped profile that needs flags beside it: `--no-synthesis`, because every argument
-a panel produces is single-source and the drop rule eats them, and `--verify-group-by source`, so each
+`triage` is the one shipped profile that needs flags beside it: `--no-synthesis`, because synthesis
+boosts confidence where panelists told to disagree happen to agree, and `--verify-group-by source`, so each
 panelist's case is verified apart from the case answering it. `references/triage.md` is the procedure.
 
 `expert` needs no extra flags, and **is never selected on the caller's own judgment**. Two agents at
@@ -283,8 +283,8 @@ with each lens's own one-line description.
 
 1. **find** — the roster runs in parallel, staggered. Each agent returns structured findings.
 2. **synthesize** — one model call. Merges every source, dedupes on `(file, line ±2)`, boosts
-   confidence where distinct sources corroborate, splits out open questions and pre-existing issues,
-   drops weak singletons.
+   confidence where distinct sources corroborate, splits out open questions and pre-existing issues.
+   It drops nothing: a single-source, low-confidence finding still reaches verify.
 3. **verify** — parallel agents grouped by directory, each seeing only its own group so it cannot
    anchor on a neighbour. Every finding comes back with a verdict. `--verify-group-by source` keys the
    groups by the agent that raised the finding instead, and skips the merge that folds thin directories

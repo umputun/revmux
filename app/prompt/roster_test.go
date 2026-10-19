@@ -124,7 +124,7 @@ stages:
 		assert.Equal(t, "codex", st.Executor)
 		assert.Equal(t, "gpt-5.6-sol", st.Model)
 		assert.Equal(t, "xhigh", st.Effort)
-		assert.Equal(t, "merges every source's findings, dedupes them, boosts corroboration and drops weak singletons",
+		assert.Equal(t, "merges every source's findings, dedupes them and boosts corroboration",
 			st.Description, "the body and its metadata are the stage file's, only the runner is the profile's")
 	})
 

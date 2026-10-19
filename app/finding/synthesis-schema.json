@@ -7,7 +7,7 @@
   "properties": {
     "findings": {
       "type": "array",
-      "description": "the merged findings that survive the drop rule, most severe first",
+      "description": "the merged findings, most severe first",
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -18,7 +18,7 @@
             "items": {
               "type": "string"
             },
-            "description": "ids of the input findings this one merges, copied exactly; every id must come from the input list, and one input finding belongs to at most one output finding across all three lists -- a dropped input belongs to none"
+            "description": "ids of the input findings this one merges, copied exactly; every id must come from the input list, and every input finding belongs to exactly one output finding across all three lists"
           },
           "file": {
             "type": "string",
@@ -73,7 +73,7 @@
             "items": {
               "type": "string"
             },
-            "description": "ids of the input findings this one merges, copied exactly; every id must come from the input list, and one input finding belongs to at most one output finding across all three lists -- a dropped input belongs to none"
+            "description": "ids of the input findings this one merges, copied exactly; every id must come from the input list, and every input finding belongs to exactly one output finding across all three lists"
           },
           "file": {
             "type": "string",
@@ -128,7 +128,7 @@
             "items": {
               "type": "string"
             },
-            "description": "ids of the input findings this one merges, copied exactly; every id must come from the input list, and one input finding belongs to at most one output finding across all three lists -- a dropped input belongs to none"
+            "description": "ids of the input findings this one merges, copied exactly; every id must come from the input list, and every input finding belongs to exactly one output finding across all three lists"
           },
           "file": {
             "type": "string",

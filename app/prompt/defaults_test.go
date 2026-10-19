@@ -206,7 +206,7 @@ func TestDefaults_TriageRoster(t *testing.T) {
 			"and losing codex costs one input rather than the panel's opposition")
 
 	assert.Contains(t, p.Description, "--no-synthesis",
-		"a bare --profile triage runs the drop rule over arguments that are single-source by construction")
+		"a bare --profile triage boosts confidence on agreement between panelists told to disagree")
 	body := strings.Join(strings.Fields(p.Body), " ")
 	assert.Contains(t, body, "Leave the file field empty when the point is not about a line of code",
 		"the finder schema requires file and describes it as a path, so the profile is the counterweight")

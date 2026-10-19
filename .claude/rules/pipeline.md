@@ -79,11 +79,13 @@ A merged id that is not an input is a **hard error**, never a skip: it means the
 dropping it quietly yields a finding credited with fewer sources than it earned.
 
 **An input id claimed by two outputs is a hard error too, for the mirror-image reason.**
-The schema binds each input finding to **at most** one output, across all three lists taken together —
-at most rather than exactly, because the drop rule below legitimately leaves a weak singleton in none —
+The schema binds each input finding to **exactly** one output, across all three lists taken together,
 so `synthesizer.parse` threads one claimed set through `findings`, `open_questions` and `pre_existing`,
 not one per list.
-An unclaimed input is therefore never an error; only a twice-claimed one is.
+Only the at-most half is enforced: an unclaimed input is never an error, because it is a finding dropped
+against the shipped prompt or by an override that still drops, and failing the stage over it would throw
+away every finding the model did keep.
+`EventDropped` reports it instead, as below.
 A reuse means one finder's work became two report entries, possibly a finding and a pre-existing issue
 at once, contradicting each other about the same code.
 Renaming the duplicate would keep both and invent an id for the second that no finder ever emitted,
@@ -99,7 +101,7 @@ Pass the real roster into the synthesis prompt as data rather than letting the m
 from the findings themselves.
 `{{SOURCES}}` must state which agents ran, which degraded, and which emitted each finding.
 
-### Confidence and drop rules
+### Confidence and merge rules
 
 Implemented in `prompts/synthesis.md`, not in Go.
 Synthesis is a full model stage: deciding that two differently-worded findings describe one issue is semantic work,
@@ -108,31 +110,29 @@ and matching on file and line in Go would both merge unrelated findings and spli
 - dedupe on `(file, line ±2)` with similar descriptions
 - boost: `min(99, max_conf + 10*(N-1))` over distinct sources
 - severity: max across sources
-- drop: single-source, confidence below 80, no corroboration — **never a critical or a major**
-- open questions and pre-existing issues are split out **first** and are never boosted, dropped, or verified for fixing
+- drop: **nothing** — a single-source, low-confidence, uncorroborated finding goes to the verifier like any other
+- open questions and pre-existing issues are split out **first** and are never boosted or verified for fixing
 
-**What the drop rule removes is announced, because nothing else can see it.** `synthesizer.unclaimed`
+**Synthesis drops nothing, because low confidence calls for verification, not suppression.**
+The finder schema scores confidence by how far the finder traced the failure: 60 is "the code says what
+I claim", 85 is "traced from an input to the failure".
+A cut in that range discards findings whose missing step is what verify exists to check, and synthesis
+has no code access to tell a vague finding from one with a single unchecked fact.
+Corroboration raises confidence; its absence is not evidence against a defect, since one reviewer looking
+in the right place is the normal case for the worst bugs.
+A near miss and a loss back this: a real major at confidence 75 that met every condition of a
+single-source confidence cut and survived only because the model ignored the rule, and a minor at 50 that
+was dropped, refiled by a later round and confirmed by verify (discussion #48).
+Dropping was only ever a cost optimization, and the cost is bounded: thin directories are pooled and
+`--verify-groups` caps the group count, so kept singletons lengthen verifier prompts more than they add
+processes.
+
+**What synthesis drops anyway is announced, because nothing else can see it.** `synthesizer.unclaimed`
 returns every input id no output claimed — `attribute` already errors on a second claim, so the set is
-exact — and `run` emits it as `EventDropped` carrying the findings themselves. Measured over one archived
-corpus synthesis removed 58 findings where verify removed 2, three of them critical, and the only way to
-learn that was to hand-diff two stage snapshots. `parse` returns the list rather than emitting it, so the
-stage's parsing stays testable without an event channel.
-
-**Severity exempts a finding from the drop rule, and only the drop rule.**
-A single source is not evidence against a serious defect: one reviewer looking in the right place is
-the normal case for the worst bugs, and corroboration is a boost rather than a gate.
-Measured over the first seven rounds, four majors met all three drop conditions and one met them
-exactly — single source, confidence 75, nothing corroborating — and survived only because the model
-declined to apply the rule it was given.
-A critical or major that would be dropped is kept and routed to the verifier instead, the same escape
-hatch a degraded run uses.
-
-**Degraded runs do not drop.**
-With a source dead, corroboration is rarer, so the drop rule starts eating findings the missing source would have confirmed.
-The gate is prompt text like every other rule in this section: `{{SOURCES}}` states which agents degraded,
-and `prompts/synthesis.md` instructs the model to keep every would-be-drop and route it to the verifier
-when that list is non-empty. It is not a Go branch, and `SourceStatus.Degraded()` is not what enforces it.
-The verifier is the authority anyway; dropping is only a cost optimization.
+exact — and `run` emits it as `EventDropped` carrying the findings themselves. Those findings never reach
+verify, so the event is the only record of a model departing from the shipped prompt, or of an overridden
+`synthesis.md` that still drops by design. `parse` returns the list
+rather than emitting it, so the stage's parsing stays testable without an event channel.
 
 ### Degrade policy
 

@@ -140,9 +140,8 @@ in a diff. Four things change in how it is read, and `references/triage.md` is t
   argument are not expected to overlap, so two names in `sources` is a curiosity rather than the
   strongest signal in the report.
 
-**A triage run needs `--no-synthesis`, and its absence is silent.** Every argument a panel raises is
-single-source by construction, so the drop rule eats the minor-weight ones wholesale and the confidence
-boost fires where two agents *told to disagree* happen to agree. The report that comes back still looks
+**A triage run needs `--no-synthesis`, and its absence is silent.** The confidence boost fires where two
+agents *told to disagree* happen to agree, so a panel point reads as corroborated when it is not. The report that comes back still looks
 like a report. This holds on a second round as much as the first.
 
 ## The run archive

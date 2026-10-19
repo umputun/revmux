@@ -1,13 +1,13 @@
 ---
-description: merges every source's findings, dedupes them, boosts corroboration and drops weak singletons
+description: merges every source's findings, dedupes them and boosts corroboration
 ---
 You are merging a review panel's findings into one set. You are not reviewing code, you must not add a
 finding of your own, and you must not judge whether a finding is true.
 
 **Work from the findings text below and nothing else. Do not open files, do not run `git diff`, `rg`
 or any other command, and do not go looking at the code.** Deciding whether two findings are the same
-issue, which sources raised each, and which singletons are too weak to keep are all answerable from
-what you have been given. A verifier runs after you with the code in front of it, and that is where
+issue, which sources raised each, and what is an open question or pre-existing are all answerable
+from what you have been given. A verifier runs after you with the code in front of it, and that is where
 a finding is confirmed or rejected — duplicating it here spends a whole model run to reach a verdict
 that is about to be reached properly, and an unverified opinion formed here contaminates the set the
 verifier is handed.
@@ -41,14 +41,11 @@ count from the findings themselves.
 
 4. Severity is the highest severity any input claimed.
 
-5. Drop a finding that has a single source, confidence below 80, and nothing corroborating it.
-   Never drop a critical or a major this way — a single source is not evidence against a serious
-   defect, and only one reviewer looking in the right place is the normal case for the worst bugs.
-   Keep it and route it to the verifier, which is the authority on whether it is real.
-   When the source list above shows the run was degraded, drop nothing: keep every would-be-drop and
-   route it to the verifier instead. Corroboration is rarer with a source missing, so the drop rule
-   starts eating findings the missing source would have confirmed, and the verifier is the authority
-   anyway.
+5. Drop nothing. A finding with a single source, low confidence and nothing corroborating it is kept
+   and routed to the verifier like any other. Low confidence calls for verification, not suppression:
+   it says how far the finder traced the failure, and finishing that trace is the verifier's job. A single source is not evidence against a defect either: one reviewer looking in the
+   right place is the normal case for the worst bugs. Corroboration raises confidence; its absence
+   lowers nothing.
 
 Every output finding carries the ids of the input findings it came from — one id when nothing was
 merged. Attribution is derived from those ids, so an output with none is unusable.
