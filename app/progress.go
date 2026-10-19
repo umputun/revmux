@@ -153,8 +153,8 @@ func (pr *progress) line(ev pipeline.Event) string {
 			what += " [" + ev.Text + "]"
 		}
 	case pipeline.EventDropped:
-		// printed rather than folded into the stage line: synthesis is the pipeline's largest filter and
-		// this is the only place a caller learns a finding left the run without reaching the report
+		// printed rather than folded into the stage line: a dropped finding reaches neither verify nor the
+		// report, so this stderr notice is the only progress line that says one left the run
 		what = ev.Text
 	case pipeline.EventAgentActivity, pipeline.EventAgentState:
 		what = ev.Text

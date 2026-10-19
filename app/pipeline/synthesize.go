@@ -156,7 +156,8 @@ func (s *synthesizer) findingsBlock(sources []sourceResult) string {
 }
 
 // sourcesBlock states what actually ran. A degraded source has to be loud here as well as in the JSON
-// and the markdown banner, since it is what tells the model corroboration was rarer than it looks.
+// and the markdown banner, since the prompt tells the model to take this roster as fact rather than infer
+// the source count from the findings.
 func (s *synthesizer) sourcesBlock(sources []sourceResult) string {
 	reported, degraded := 0, []string{}
 	lines := make([]string, 0, len(sources))
@@ -225,7 +226,7 @@ func (s *synthesizer) parse(raw json.RawMessage,
 		return finding.Report{}, nil, errors.New("synthesis returned no findings object")
 	}
 
-	// one claimed set across all three lists: the schema binds each input to exactly one output, and the
+	// one claimed set across all three lists: the schema binds each input to at most one output, and the
 	// lists are three halves of one merge — an input reported as both a finding and a pre-existing issue
 	// is the same contract violation as one reported twice in either. An input claimed by none is not an
 	// error here; reportDropped announces it

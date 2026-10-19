@@ -30,7 +30,7 @@ count from the findings themselves.
 
 1. Split out what is not a defect in the change under review. A question the reviewer could not
    answer from the code goes to **open questions**; a defect in code the change did not touch goes to
-   **pre-existing**. Move both out first: neither is deduped, boosted or dropped.
+   **pre-existing**. Move both out first: neither is deduped or boosted.
 
 2. Deduplicate. Two findings are the same when they name the same file within two lines of each other
    and describe the same problem. Merge them into one, keeping the clearest title and body.

@@ -79,12 +79,14 @@ A merged id that is not an input is a **hard error**, never a skip: it means the
 dropping it quietly yields a finding credited with fewer sources than it earned.
 
 **An input id claimed by two outputs is a hard error too, for the mirror-image reason.**
-The schema binds each input finding to **exactly** one output, across all three lists taken together,
+The schema binds each input finding to **at most** one output, across all three lists taken together,
 so `synthesizer.parse` threads one claimed set through `findings`, `open_questions` and `pre_existing`,
 not one per list.
-Only the at-most half is enforced: an unclaimed input is never an error, because it is a finding dropped
-against the shipped prompt or by an override that still drops, and failing the stage over it would throw
-away every finding the model did keep.
+At most rather than exactly because the schema is embedded and outlives the prompt: an overridden
+`synthesis.md` written before the drop rule went, `revmux init` output included, still drops, and an
+exactly-one schema would contradict it.
+An unclaimed input is therefore never an error, whether the shipped prompt was ignored or an override
+dropped it by design, and failing the stage over it would throw away every finding the model did keep.
 `EventDropped` reports it instead, as below.
 A reuse means one finder's work became two report entries, possibly a finding and a pre-existing issue
 at once, contradicting each other about the same code.
