@@ -2,7 +2,10 @@
 
 package executor
 
-import "os/exec"
+import (
+	"errors"
+	"os/exec"
+)
 
 // setupProcessGroup is a no-op: windows has no process groups to detach from.
 func (p *proc) setupProcessGroup(cmd *exec.Cmd) {}
@@ -15,4 +18,8 @@ func (pg *processGroupCleanup) killProcessGroup() {
 		}
 		_ = pg.cmd.Process.Kill()
 	})
+}
+
+func observeProcessGroupExit(_ int) error {
+	return errors.New("process-group observation is unsupported on Windows")
 }
