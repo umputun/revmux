@@ -261,7 +261,8 @@ Spawn **one** `general-purpose` agent. Hand it the resolved scope from Step 1 an
 >    `revmux new --task <id> --run <NN-label>`, exactly as written and with no `--help` run before it.
 >    It prints the absolute path of every file to write plus which of them it created.
 > 5. Write to those paths and no others. Never join a path, never create a directory the output did
->    not name, and never write over an existing `scope.md` without reading it first.
+>    not name, and never write over an existing `scope.md` without reading it first. The one
+>    exception is `context`, a directory the output names but does not create: write files inside it.
 >    **Every file below is bullets, paths and command blocks — never paragraphs of prose.** Every agent
 >    in the roster reads them and then reads the diff itself, so anything the diff already says is length
 >    paid for twice, and writing it is most of what this round costs in wall-clock.
@@ -281,8 +282,9 @@ Spawn **one** `general-purpose` agent. Hand it the resolved scope from Step 1 an
 >      with nothing copied forward. You see the diff and the file list, which is not enough to state a repo's conventions,
 >      and a generated file here wins over the project's and silently replaces it.
 >      Write it only when the user says this subject needs a different bar than the repo's.
->    - `context` — optional. Ticket text, design notes, commit list. Its path is reported but the
->      directory is not created.
+>    - `context` — optional. Ticket text, design notes, commit list. Its path is a directory that is
+>      reported but not created: create it, then write one or more files inside it
+>      (`context/notes.md`). Never write the path itself as a file; revmux refuses the round.
 >    - `task_file` — when `created` lists it, and also when it is already there but still the unfilled
 >      template with every anchor empty. Read it first either way. `description`, plus `url`, `branch`
 >      and `base` when known: that front matter is what the next session matches on, and a task.md left

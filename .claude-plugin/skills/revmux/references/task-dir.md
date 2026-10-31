@@ -22,7 +22,8 @@ $ revmux new --task pr-123 --run 01-initial
 ```
 
 **Write to those paths and no others.** Never join a path and never create a directory the output did
-not name. The layout is revmux's own detail.
+not name. The one exception is `context`, a directory named but not created: write files inside it.
+The layout is revmux's own detail.
 
 `created` names what this call made, so a second round on an existing task reports `round_dir` and
 `input_dir` alone. `context` is reported but never created — create it only when filling it.
