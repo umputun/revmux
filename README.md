@@ -74,8 +74,8 @@ dpkg -i revmux_<version>_linux_amd64.deb
 rpm -i revmux_<version>_linux_amd64.rpm
 ```
 
-With a Go toolchain, `go install github.com/umputun/revmux/app@latest` builds it from source, installed as
-`app`, so rename it to `revmux`. Or build from a clone:
+With a Go toolchain, `go install github.com/umputun/revmux/app/revmux@latest` builds it from source into
+`GOBIN` (defaults to `$(go env GOPATH)/bin`). Or build from a clone:
 
 ```
 git clone https://github.com/umputun/revmux.git && cd revmux

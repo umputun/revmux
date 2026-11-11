@@ -5,7 +5,7 @@ release:
 
 builds:
   - id: revmux
-    main: ./app
+    main: ./app/revmux
     binary: revmux
     env:
       - CGO_ENABLED=0

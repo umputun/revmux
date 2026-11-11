@@ -187,10 +187,10 @@
 rpm -i revmux_&lt;version&gt;_linux_amd64.rpm</pre>
         <h3>From source</h3>
         <p>With a Go toolchain:</p>
-        <pre class="code">go install github.com/umputun/revmux/app@latest</pre>
+        <pre class="code">go install github.com/umputun/revmux/app/revmux@latest</pre>
         <p>
-          The binary is installed as <code>app</code>, so rename it to <code>revmux</code>, or build from a
-          clone instead:
+          The <code>revmux</code> binary lands in <code>GOBIN</code> (defaults to <code>$(go env GOPATH)/bin</code>).
+          Or build from a clone instead:
         </p>
         <pre class="code">git clone https://github.com/umputun/revmux.git &amp;&amp; cd revmux
 make build        <span class="c-dim"># produces .bin/revmux</span>

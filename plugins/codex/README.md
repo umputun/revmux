@@ -14,7 +14,7 @@ conventions.
 ## Requirements
 
 - `revmux` — `brew install umputun/apps/revmux` on macOS, a binary from the releases page, or
-  `go install github.com/umputun/revmux/app@latest` (installs as `app`, rename it)
+  `go install github.com/umputun/revmux/app/revmux@latest`
 - `claude` — every lens agent and both model stages run on it by default
 - `codex` — needed by any profile, roster entry or stage naming it in a `model:`, which every shipped
   profile except `claude-only` does. `preflight.sh <profile>` answers it for the profile that will run

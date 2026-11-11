@@ -96,7 +96,7 @@ fail() {
 if ! command -v revmux >/dev/null 2>&1; then
     echo "revmux: MISSING"
     echo "install: brew install umputun/apps/revmux (macOS)"
-    echo "     or: go install github.com/umputun/revmux/app@latest (binary lands as 'app', rename it)"
+    echo "     or: go install github.com/umputun/revmux/app/revmux@latest"
     echo "     or: git clone https://github.com/umputun/revmux.git && cd revmux && make install"
     echo "ok: false"
     exit 1

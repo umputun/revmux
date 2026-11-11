@@ -116,7 +116,7 @@ If revmux is absent:
 
 ```
 brew install umputun/apps/revmux                   # macOS
-go install github.com/umputun/revmux/app@latest    # installs as 'app'; rename to 'revmux'
+go install github.com/umputun/revmux/app/revmux@latest
 git clone https://github.com/umputun/revmux.git && cd revmux && make install
 ```
 

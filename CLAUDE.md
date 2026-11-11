@@ -64,22 +64,24 @@ If a note would be equally true of any Go project, it does not belong here.
 
 ## Project structure
 
-`app/` is the composition root (`package main`), split by concern.
+`app/` holds all Go source, and `app/revmux/` is the composition root (`package main`), split by concern.
+The main package sits one level down so `go install github.com/umputun/revmux/app/revmux@latest`
+produces a binary named `revmux`, since Go names it after the last path element.
 
-- `app/main.go` — entrypoint + `run()`
-- `app/config.go` — go-flags options, INI parsing, precedence, the config template and `--dump-defaults`
-- `app/defaults/config` — the embedded, fully commented-out INI template `revmux init` materializes;
+- `app/revmux/main.go` — entrypoint + `run()`
+- `app/revmux/config.go` — go-flags options, INI parsing, precedence, the config template and `--dump-defaults`
+- `app/revmux/defaults/config` — the embedded, fully commented-out INI template `revmux init` materializes;
   it lives here rather than under `app/prompt/defaults/` because it is settings, not prompt content
-- `app/introspect.go` — the `revmux config` subcommand and the catalog it prints
-- `app/newcmd.go` — the `revmux new` subcommand, which scaffolds a round and prints the paths it created
-- `app/initcmd.go` — the `revmux init` subcommand, and the `--init` flag routed into it, which materialize
+- `app/revmux/introspect.go` — the `revmux config` subcommand and the catalog it prints
+- `app/revmux/newcmd.go` — the `revmux new` subcommand, which scaffolds a round and prints the paths it created
+- `app/revmux/initcmd.go` — the `revmux init` subcommand, and the `--init` flag routed into it, which materialize
   `./.revmux/` and print what is in it
-- `app/statscmd.go` — the `revmux stats` subcommand, which prints the corpus `app/archive` aggregates
-- `app/cleanupcmd.go` — the `revmux cleanup` subcommand, the one thing in revmux that removes anything
-- `app/treewriter.go` — the one materializer `revmux init` and `--dump-defaults` both write prompt files
+- `app/revmux/statscmd.go` — the `revmux stats` subcommand, which prints the corpus `app/archive` aggregates
+- `app/revmux/cleanupcmd.go` — the `revmux cleanup` subcommand, the one thing in revmux that removes anything
+- `app/revmux/treewriter.go` — the one materializer `revmux init` and `--dump-defaults` both write prompt files
   through, contained by an `os.Root` on its destination
-- `app/artifacts.go` — the artifacts `package main` owns: `manifest.json`, `report.md`, `findings.json`
-- `app/progress.go` — the non-TTY event subscriber (timestamped lines to stderr), plus the run's closing
+- `app/revmux/artifacts.go` — the artifacts `package main` owns: `manifest.json`, `report.md`, `findings.json`
+- `app/revmux/progress.go` — the non-TTY event subscriber (timestamped lines to stderr), plus the run's closing
   summary, which the pipeline emits no event for
 - `app/executor/` — supervised subprocess execution for claude and codex
 - `app/prompt/` — front matter and roster parsing, lens composition, `{{VAR}}` substitution, `go:embed` defaults
@@ -459,12 +461,12 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
 - A new CLI flag needs: the `options` struct tag and the flag table in `site/reference.html`.
   A runtime knob needs the knob table in `site/docs.html` as well, which is the same set with the reasons
   attached, and the README only where the README already states the thing being changed.
-  An INI-backed one also needs a commented-out entry in `app/defaults/config`, the template `revmux init` writes —
+  An INI-backed one also needs a commented-out entry in `app/revmux/defaults/config`, the template `revmux init` writes —
   not `--dump-defaults`, which extracts the prompt tree and knows nothing about settings —
   plus the runtime-knob list in `.claude/rules/config.md`, which names the set literally and goes stale silently.
   It is reported by `revmux config` automatically: `knobs` is built by reflection over the `options` struct.
   A flag whose `choice:` vocabulary another package matches on spells that word twice, since a struct tag
-  cannot name a constant: `--verify-group-by`'s `source` is `choice:"source"` in `app/config.go` and
+  cannot name a constant: `--verify-group-by`'s `source` is `choice:"source"` in `app/revmux/config.go` and
   `groupBySource` in `app/pipeline/verify.go`. Renaming one side compiles and passes, and leaves the mode
   reachable by a flag value that silently behaves as the default.
 - A new roster key needs: the `agentYAML` field it parses into, the `AgentSpec` field it resolves to,
@@ -480,7 +482,7 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
   fixtures in `app/prompt` and `app/pipeline` tests. The parsed form reaches `AgentSpec`, `Stage` and
   `RunnerSpec` as three separate fields, so nothing downstream of the parser changes — which is what keeps
   `revmux config`, `manifest.json` and `finding.SourceStat` out of that list.
-- A new pipeline `EventKind` needs a case in `app/progress.go` **and** in the TUI — in `agentState.track`
+- A new pipeline `EventKind` needs a case in `app/revmux/progress.go` **and** in the TUI — in `agentState.track`
   for an agent-scoped kind, or in `Model.apply` for one that is not, since `apply` dispatches everything
   else to `track` and both switches end in a `default` that renders nothing.
   **Renaming one needs `app/archive` as a third site.** `collect.go` reads `events.jsonl` back through a
@@ -493,7 +495,7 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
   archive's two arrays calling the same stage different things.
   `manifest.json`'s `finished_at` is a third instance of it: `app/archive/size.go` decodes the marker
   through its own partial struct to date a task, rather than importing `package main`'s manifest type,
-  so renaming that field in `app/artifacts.go` compiles and passes and leaves every task reporting no
+  so renaming that field in `app/revmux/artifacts.go` compiles and passes and leaves every task reporting no
   `last_run` — which reads as a corpus of reviews that never completed.
 - A new subcommand needs: the `options` field with its `command:` tag, the `show*` selection field, the
   back-pointer in `parseArgs`, and the case in `run()`. Then seven places enumerate the set literally and go
@@ -622,7 +624,7 @@ Stamping happens in `find`, not synthesis, or `--no-synthesis` runs carry invent
   It states revmux's flags, profiles, JSON field names, exit codes and archive layout as fact, and an
   agent executes what it says without checking. A skill describing a flag that no longer behaves that way
   is worse than one that omits it: the caller acts on it confidently and has to recover afterwards.
-  Treat `.claude-plugin/skills/` and `plugins/codex/` as consumers of `app/config.go`, `app/finding/`
+  Treat `.claude-plugin/skills/` and `plugins/codex/` as consumers of `app/revmux/config.go`, `app/finding/`
   and `app/archive/` the way `README.md` and `site/` are.
 - **The plugin version is maintainer work, never a contributor's.**
   It is stated three times — `version:` in `.claude-plugin/plugin.json`, in the `plugins` entry of

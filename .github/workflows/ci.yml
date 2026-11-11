@@ -27,7 +27,7 @@ jobs:
 
       - name: build and test
         run: |
-          go build -o /dev/null ./app
+          go build -o /dev/null ./app/revmux
           go test -race -timeout=300s -covermode=atomic -coverprofile=${{ github.workspace }}/profile.cov_tmp ./...
           grep -v -E "_mock.go|/mocks/" ${{ github.workspace }}/profile.cov_tmp > ${{ github.workspace }}/profile.cov
 

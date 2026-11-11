@@ -19,7 +19,7 @@ all: test check-plugins build
 # exactly that, since an agent that runs `make build` breaks the binary supervising it.
 # mv is a rename: the running process keeps its old inode and the new one is a clean file.
 build:
-	go build -ldflags "-X main.revision=$(REV) -s -w" -o .bin/revmux.$(BRANCH) ./app
+	go build -ldflags "-X main.revision=$(REV) -s -w" -o .bin/revmux.$(BRANCH) ./app/revmux
 	cp .bin/revmux.$(BRANCH) .bin/revmux.tmp && mv -f .bin/revmux.tmp .bin/revmux
 
 # symlink rather than copy, so every subsequent `make build` is picked up without reinstalling.

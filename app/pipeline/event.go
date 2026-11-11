@@ -11,8 +11,8 @@ import (
 // complete record.
 const eventBuffer = 256
 
-// EventKind names what an Event reports. A new kind needs a case in app/progress.go and in the TUI,
-// or it is silently invisible in one of the two renderers.
+// EventKind names what an Event reports. A new kind needs a case in app/revmux/progress.go and in the
+// TUI, or it is silently invisible in one of the two renderers.
 type EventKind string
 
 // Event kinds. There is deliberately no pipeline-complete kind: completion must not be droppable, so

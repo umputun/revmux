@@ -255,7 +255,7 @@ revmux reports what was spent, it does not model or optimize it.
 
 The pipeline is headless and knows nothing about terminals.
 `Events()` returns one buffered channel with **exactly one reader**: the active renderer,
-either `app/progress.go` or `app/ui`, never both.
+either `app/revmux/progress.go` or `app/ui`, never both.
 
 - A blocked renderer must never stall the pipeline. Buffer, and drop or coalesce rather than block.
 - Every new `EventKind` needs a case in **both** renderers, or it is invisible in one of them.
