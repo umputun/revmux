@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime/debug"
 	"slices"
 	"strings"
 	"sync"
@@ -31,6 +32,29 @@ import (
 	"github.com/umputun/revmux/app/task"
 	"github.com/umputun/revmux/app/ui"
 )
+
+func TestBuildVersion(t *testing.T) {
+	tests := []struct {
+		name     string
+		revision string
+		info     *debug.BuildInfo
+		want     string
+	}{
+		{name: "ldflags revision wins", revision: "v0.3.0-custom", info: &debug.BuildInfo{Main: debug.Module{Version: "v0.3.0"}}, want: "v0.3.0-custom"},
+		{name: "ldflags without build info", revision: "v0.3.0-custom", want: "v0.3.0-custom"},
+		{name: "installed module version", revision: "unknown", info: &debug.BuildInfo{Main: debug.Module{Version: "v0.3.0"}}, want: "v0.3.0"},
+		{name: "empty revision", info: &debug.BuildInfo{Main: debug.Module{Version: "v0.3.0"}}, want: "v0.3.0"},
+		{name: "development build", revision: "unknown", info: &debug.BuildInfo{Main: debug.Module{Version: "(devel)"}}, want: "unknown"},
+		{name: "empty module version", revision: "unknown", info: &debug.BuildInfo{}, want: "unknown"},
+		{name: "missing build info", revision: "unknown", want: "unknown"},
+		{name: "missing revision and build info", want: "unknown"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, buildVersion(tt.revision, tt.info))
+		})
+	}
+}
 
 func TestPrintVersion(t *testing.T) {
 	tests := []struct {

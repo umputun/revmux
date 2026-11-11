@@ -12,7 +12,7 @@ whatever is drawn next until the following frame's first lipgloss render resets 
 continuation row is the first visible one after a scroll it renders un-bold.
 
 The combined pane closes and re-opens bold per row in `textRows`; `agentpane.go` and
-`app/progress.go` go through `Wrap` with no per-row pass at all. `findings.rowLines` closes it too,
+`app/revmux/progress.go` go through `Wrap` with no per-row pass at all. `findings.rowLines` closes it too,
 since `ansiHeadOff` carries `\x1b[22m`. The fix is one per-row helper the three share.
 
 Surfaced by the issue #27 review as pre-existing. The symptom is a row of bold prose rather than lost

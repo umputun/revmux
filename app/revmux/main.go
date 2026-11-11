@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"syscall"
 	"time"
 
@@ -83,7 +84,8 @@ func main() {
 func run(o runOpts) int {
 	switch {
 	case o.opts.Version:
-		if err := printVersion(o.stdout, revision); err != nil {
+		info, _ := debug.ReadBuildInfo()
+		if err := printVersion(o.stdout, buildVersion(revision, info)); err != nil {
 			return o.fail(err)
 		}
 		return 0
@@ -409,6 +411,18 @@ func openTTY() (*os.File, error) {
 		return nil, fmt.Errorf("open tty: %w", err)
 	}
 	return f, nil
+}
+
+// buildVersion prefers the revision stamped by ldflags and falls back to the module version, which is
+// all a `go install` build carries, since it skips the Makefile's ldflags.
+func buildVersion(rev string, info *debug.BuildInfo) string {
+	if rev != "" && rev != "unknown" {
+		return rev
+	}
+	if info != nil && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return info.Main.Version
+	}
+	return "unknown"
 }
 
 func printVersion(w io.Writer, rev string) error {

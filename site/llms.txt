@@ -32,7 +32,7 @@ revmux runs a review and returns findings, and does nothing else. It performs no
 
 - Homebrew on macOS: `brew install umputun/apps/revmux`
 - [Releases](https://github.com/umputun/revmux/releases): prebuilt binaries for macOS and Linux on amd64 and arm64, plus `.deb` and `.rpm` packages
-- With a Go toolchain: `go install github.com/umputun/revmux/app@latest` (installs as `app`, rename it to `revmux`)
+- With a Go toolchain: `go install github.com/umputun/revmux/app/revmux@latest`
 - From a clone: `make build` produces `.bin/revmux`, `make install` symlinks it into `/usr/local/bin`
 - The model CLIs the chosen profile names must be installed and authenticated; `preflight.sh` in the shipped skill checks any invocation
 

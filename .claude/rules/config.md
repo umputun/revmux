@@ -1,16 +1,16 @@
 ---
 paths:
-  - "app/config.go"
-  - "app/main.go"
-  - "app/introspect.go"
-  - "app/newcmd.go"
-  - "app/initcmd.go"
-  - "app/statscmd.go"
-  - "app/cleanupcmd.go"
-  - "app/treewriter.go"
-  - "app/artifacts.go"
-  - "app/inputsnapshot.go"
-  - "app/progress.go"
+  - "app/revmux/config.go"
+  - "app/revmux/main.go"
+  - "app/revmux/introspect.go"
+  - "app/revmux/newcmd.go"
+  - "app/revmux/initcmd.go"
+  - "app/revmux/statscmd.go"
+  - "app/revmux/cleanupcmd.go"
+  - "app/revmux/treewriter.go"
+  - "app/revmux/artifacts.go"
+  - "app/revmux/inputsnapshot.go"
+  - "app/revmux/progress.go"
   - "app/archive/**"
 ---
 

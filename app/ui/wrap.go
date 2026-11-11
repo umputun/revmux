@@ -14,8 +14,8 @@ const minWrapCols = 20
 
 // Wrap lays one entry across as many rows as its text needs, continuing under the text column. The
 // first row carries head; the rest are indented to head's width. It is the one line-breaker for every
-// caller on the inline path, and exported for app/progress.go, which lives in package main. Document
-// panes do not come here — mdRenderer wraps those itself.
+// caller on the inline path, and exported for app/revmux/progress.go, which lives in package main.
+// Document panes do not come here — mdRenderer wraps those itself.
 func Wrap(head, text string, width int) []string {
 	// the narrow branch clips rather than passing the row through: every row this returns has to fit
 	// the width, and the plain renderer writes them straight to stderr with no clip of its own

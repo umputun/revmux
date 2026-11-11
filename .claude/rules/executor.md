@@ -202,7 +202,7 @@ The decoder emits text; how much of it fits is decided where the terminal width 
 is a sanity bound against a pathological block, not a column count.
 
 **Both renderers clip, and that is what makes this safe.** `app/ui` clips through lipgloss against the
-width bubbletea reports; `app/progress.go` has no such width reported to it, so it measures the terminal
+width bubbletea reports; `app/revmux/progress.go` has no such width reported to it, so it measures the terminal
 itself — `COLUMNS` first, then `term.GetSize` on its own writer, then a fallback for a redirected
 stderr. Without that half, moving the cut out of the decoder just replaces a bad truncation with an
 unbounded line on stderr.

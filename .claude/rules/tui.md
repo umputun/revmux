@@ -127,7 +127,7 @@ cover both.
   **There is one `Wrap`, in `app/ui`, and there were three.** Separate copies in the log, the browser
   and the plain renderer had already diverged — two measured display width and one counted runes, so
   the same text broke differently depending on which pane it landed in. It stays the one line-breaker
-  for every caller on the inline path, and it is exported because `app/progress.go` lives in
+  for every caller on the inline path, and it is exported because `app/revmux/progress.go` lives in
   `package main`.
   It walks runes, never bytes: trimming a byte at a time while measuring display cells exits inside a
   multi-byte rune, and since markdown rendering runs first the text also carries ANSI, so a byte cut

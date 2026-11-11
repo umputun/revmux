@@ -98,7 +98,7 @@ Then read the files it touches in full:
 ```
 app/ui/model.go          the tally type and Model.count
 app/ui/status.go         the header
-app/main.go              runOpts.write, which picks the stdout renderer
+app/revmux/main.go       runOpts.write, which picks the stdout renderer
 CLAUDE.md                the stdout rule this rewrote
 ```
 
