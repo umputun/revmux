@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.2.8
+
+**Improvements**
+- run codex agents on gpt-6.2-sol and gpt-6.2-astra 8ca33be
+- move main package to app/revmux so go install yields revmux #54 @umputun
+- tell the round-prep agent that context is a directory b116a46
+- describe agent color as painted by Paint/SGR, not lipgloss a85cbb8
+- bump golang.org/x/term from 0.47.0 to 0.48.0 #55 @app/dependabot
+- bump golang.org/x/sys from 0.49.0 to 0.50.0 #56 @app/dependabot
+- bump github.com/yuin/goldmark from 1.8.6 to 1.8.7 #52 @app/dependabot
+- bump golang.org/x/term from 0.46.0 to 0.47.0 #47 @app/dependabot
+
+**Bug Fixes**
+- route low-confidence singletons to verify instead of dropping them #49 @umputun
+
 ## v0.2.7
 
 **Improvements**
