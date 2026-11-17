@@ -3,9 +3,9 @@ description: every agent adversarial — bugs+impl and architecture+quality, eac
 model: claude/opus:high
 agents:
   - {name: bugs-claude, lenses: [bugs, impl],            color: cyan}
-  - {name: bugs-codex,  lenses: [bugs, impl],            model: codex/gpt-6.1-sol:high, color: bright-cyan}
+  - {name: bugs-codex,  lenses: [bugs, impl],            model: codex/gpt-6.2-sol:high, color: bright-cyan}
   - {name: arch-claude, lenses: [architecture, quality], color: magenta}
-  - {name: arch-codex,  lenses: [architecture, quality], model: codex/gpt-6.1-sol:high, color: bright-magenta}
+  - {name: arch-codex,  lenses: [architecture, quality], model: codex/gpt-6.2-sol:high, color: bright-magenta}
 ---
 You are one reviewer on a panel, and every reviewer on it is reading against the change rather than
 for it. Another may carry your exact lenses on a different model, or a different pair on the same

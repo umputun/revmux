@@ -40,7 +40,7 @@ func TestDefaults_FocusedRoster(t *testing.T) {
 	assert.Equal(t, AgentSpec{Name: "bugs", Lenses: []string{"bugs"}, Executor: "claude",
 		Model: "opus", Effort: "high", Color: "6", ColorName: "cyan"}, specs[0])
 	assert.Equal(t, AgentSpec{Name: "adversarial", Lenses: []string{"adversarial"}, Executor: "codex",
-		Model: "gpt-6.1-sol", Effort: "high", Color: "3", ColorName: "yellow"}, specs[1],
+		Model: "gpt-6.2-sol", Effort: "high", Color: "3", ColorName: "yellow"}, specs[1],
 		"the adversarial entry composes a lens, not a prompt file of its own")
 }
 
@@ -129,7 +129,7 @@ func TestDefaults_CodexOnlyRunsEveryStageOnCodex(t *testing.T) {
 		st, stErr := p.Stage(set, stage)
 		require.NoError(t, stErr)
 		assert.Equal(t, "codex", st.Executor, stage)
-		assert.Equal(t, "gpt-6.1-sol", st.Model, "%s inherits the profile's own model", stage)
+		assert.Equal(t, "gpt-6.2-sol", st.Model, "%s inherits the profile's own model", stage)
 		assert.Equal(t, "high", st.Effort, "%s inherits the profile's own effort", stage)
 	}
 
@@ -140,7 +140,7 @@ func TestDefaults_CodexOnlyRunsEveryStageOnCodex(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, override, 1)
 	assert.Equal(t, "codex", override[0].Executor)
-	assert.Equal(t, "gpt-6.1-sol", override[0].Model)
+	assert.Equal(t, "gpt-6.2-sol", override[0].Model)
 
 	claude, err := set.Profile("claude-only")
 	require.NoError(t, err)
@@ -171,7 +171,7 @@ func TestDefaults_ComprehensiveRoster(t *testing.T) {
 			"comment, so one process settles that where two would both report it, and a fifth agent "+
 			"would queue behind the default --max-parallel of 4")
 	assert.Equal(t, AgentSpec{Name: "adversarial", Lenses: []string{"adversarial"}, Executor: "codex",
-		Model: "gpt-6.1-sol", Effort: "high", Color: "3", ColorName: "yellow"}, specs[3],
+		Model: "gpt-6.2-sol", Effort: "high", Color: "3", ColorName: "yellow"}, specs[3],
 		"adversarial is a peer source in the default roster, not a second pass over the others")
 
 	var carried []string
@@ -201,7 +201,7 @@ func TestDefaults_TriageRoster(t *testing.T) {
 	assert.Equal(t, AgentSpec{Name: "antithesis", Lenses: []string{"antithesis"}, Executor: "claude",
 		Model: "opus", Effort: "high", Color: "5", ColorName: "magenta"}, specs[2])
 	assert.Equal(t, AgentSpec{Name: "cost", Lenses: []string{"cost"}, Executor: "codex",
-		Model: "gpt-6.1-sol", Effort: "high", Color: "3", ColorName: "yellow"}, specs[3],
+		Model: "gpt-6.2-sol", Effort: "high", Color: "3", ColorName: "yellow"}, specs[3],
 		"cost takes the codex slot because it only reads code: a sandbox with no network cannot empty it, "+
 			"and losing codex costs one input rather than the panel's opposition")
 

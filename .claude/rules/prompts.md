@@ -44,7 +44,7 @@ agents:
   - {name: bugs+impl,    lenses: [bugs, impl],            color: cyan}
   - {name: arch+quality, lenses: [architecture, quality], color: magenta}
   - {name: docs+tests,   lenses: [docs, tests, comments], color: green}
-  - {name: adversarial, lenses: [adversarial], model: codex/gpt-6.1-sol:high, color: yellow}
+  - {name: adversarial, lenses: [adversarial], model: codex/gpt-6.2-sol:high, color: yellow}
 ---
 ```
 
@@ -58,7 +58,7 @@ There is no `executor:` key and no `effort:` key in any prompt file.
 ```
 claude                   the binary's own default model and effort
 claude/opus:high         fully specified
-codex/gpt-6.1-sol          effort falls back to the profile's, then the binary's
+codex/gpt-6.2-sol          effort falls back to the profile's, then the binary's
 codex:high               the binary's default model at high effort
 ```
 

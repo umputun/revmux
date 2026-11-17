@@ -287,8 +287,8 @@ model: claude/opus:high
 agents:
   - {name: money,     lenses: [bugs, impl, payments],   color: red}
   - {name: contracts, lenses: [architecture, docs],     color: cyan}
-  - {name: peer,      lenses: [adversarial], model: codex/gpt-6.1-sol:xhigh}
-  - {name: second,    lenses: [bugs],        model: codex/gpt-6.1-sol:high}
+  - {name: peer,      lenses: [adversarial], model: codex/gpt-6.2-sol:xhigh}
+  - {name: second,    lenses: [bugs],        model: codex/gpt-6.2-sol:high}
 stages:
   synthesis: claude/opus:high
   verify:    claude/sonnet:low

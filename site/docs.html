@@ -561,7 +561,7 @@ agents:
   - {name: bugs+impl,    lenses: [bugs, impl],            color: cyan}
   - {name: arch+quality, lenses: [architecture, quality], color: magenta}
   - {name: docs+tests,   lenses: [docs, tests, comments], color: green}
-  - {name: adversarial, lenses: [adversarial], model: codex/gpt-6.1-sol:high, color: yellow}
+  - {name: adversarial, lenses: [adversarial], model: codex/gpt-6.2-sol:high, color: yellow}
 ---</pre>
         <p>
           The top-level runner is inheritance, not a fixed review topology. This supports single-vendor profiles
@@ -575,12 +575,12 @@ agents:
         <p>
           One <code>model</code> string selects the binary, the model and the effort together. The binary leads
           and is mandatory, either <code>claude</code> or <code>codex</code>, so a value validates itself and
-          revmux never has to guess which CLI runs <code>gpt-6.1-sol</code> from a catalog of model names that
+          revmux never has to guess which CLI runs <code>gpt-6.2-sol</code> from a catalog of model names that
           would go stale.
         </p>
         <pre class="code">claude                   claude, its own default model and effort
 claude/opus:high         fully specified
-codex/gpt-6.1-sol          effort falls back to the profile's, then the binary's
+codex/gpt-6.2-sol          effort falls back to the profile's, then the binary's
 codex:high               codex's default model at high effort</pre>
         <p>
           The three travel together because they are not independent: <code>opus</code> means nothing to codex.
@@ -650,7 +650,7 @@ codex:high               codex's default model at high effort</pre>
               <tr>
                 <td>expert</td>
                 <td class="prose">
-                  two agents at xhigh, codex <code>gpt-6-astra:xhigh</code> and claude
+                  two agents at xhigh, codex <code>gpt-6.2-astra:xhigh</code> and claude
                   <code>fable:xhigh</code>, each carrying all eight lenses, both stages on fable
                 </td>
               </tr>
@@ -687,8 +687,8 @@ model: claude/opus:high
 agents:
   - {name: money,     lenses: [bugs, impl, payments],   color: red}
   - {name: contracts, lenses: [architecture, docs],     color: cyan}
-  - {name: peer,      lenses: [adversarial], model: codex/gpt-6.1-sol:xhigh}
-  - {name: second,    lenses: [bugs],        model: codex/gpt-6.1-sol:high}
+  - {name: peer,      lenses: [adversarial], model: codex/gpt-6.2-sol:xhigh}
+  - {name: second,    lenses: [bugs],        model: codex/gpt-6.2-sol:high}
 stages:
   synthesis: claude/opus:high
   verify:    claude/sonnet:low

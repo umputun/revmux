@@ -283,7 +283,7 @@ func TestRun_archive(t *testing.T) {
 		require.Len(t, got.Agents, 2, "a source that never delivered is still part of the roster that ran")
 		peer := got.Agents[1]
 		assert.Equal(t, "adversarial", peer.Name, "an agent is named for its lens, never for the binary running it")
-		assert.Equal(t, "gpt-6.1-sol", peer.RequestedModel)
+		assert.Equal(t, "gpt-6.2-sol", peer.RequestedModel)
 		assert.Equal(t, "high", peer.Effort)
 		assert.True(t, peer.Degraded)
 		assert.Empty(t, peer.ActualModel, "nothing ran, so nothing is claimed to have run")

@@ -1,8 +1,8 @@
 ---
-description: two agents at xhigh, codex gpt-6-astra and claude fable, each carrying all eight lenses — for a plan, or a change nobody wants to get wrong
+description: two agents at xhigh, codex gpt-6.2-astra and claude fable, each carrying all eight lenses — for a plan, or a change nobody wants to get wrong
 model: claude/fable:xhigh
 agents:
-  - {name: astra, lenses: [bugs, impl, architecture, quality, docs, tests, comments, adversarial], model: codex/gpt-6-astra:xhigh, color: cyan}
+  - {name: astra, lenses: [bugs, impl, architecture, quality, docs, tests, comments, adversarial], model: codex/gpt-6.2-astra:xhigh, color: cyan}
   - {name: fable, lenses: [bugs, impl, architecture, quality, docs, tests, comments, adversarial], color: magenta}
 ---
 You are one of two reviewers. The other carries the same lenses as you, on a different model. You

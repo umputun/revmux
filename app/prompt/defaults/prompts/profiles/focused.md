@@ -3,7 +3,7 @@ description: one bugs lens on claude plus an adversarial codex peer, for a small
 model: claude/opus:high
 agents:
   - {name: bugs, lenses: [bugs], color: cyan}
-  - {name: adversarial, lenses: [adversarial], model: codex/gpt-6.1-sol:high, color: yellow}
+  - {name: adversarial, lenses: [adversarial], model: codex/gpt-6.2-sol:high, color: yellow}
 ---
 You are one reviewer on a panel. Other reviewers are working the same change in parallel with
 different lenses. You never see their findings and must not guess at them — report what your own

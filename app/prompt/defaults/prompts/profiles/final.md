@@ -3,7 +3,7 @@ description: narrow last pass before merge — two agents, and nothing below maj
 model: claude/opus:high
 agents:
   - {name: bugs+impl, lenses: [bugs, impl], color: cyan}
-  - {name: adversarial, lenses: [adversarial], model: codex/gpt-6.1-sol:high, color: yellow}
+  - {name: adversarial, lenses: [adversarial], model: codex/gpt-6.2-sol:high, color: yellow}
 ---
 You are one reviewer on a small panel taking a last look at a change that has already been reviewed.
 Another reviewer is working the same change in parallel with different lenses. You never see their

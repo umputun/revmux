@@ -600,8 +600,8 @@ model: claude/opus:high
 agents:
   - {name: money,     lenses: [bugs, impl, <b>payments</b>],    color: red}
   - {name: contracts, lenses: [architecture, docs],      color: cyan}
-  - {name: peer,      lenses: [adversarial], model: <b>codex/gpt-6.1-sol:xhigh</b>}
-  - {name: second,    lenses: [bugs],        model: <b>codex/gpt-6.1-sol:high</b>}
+  - {name: peer,      lenses: [adversarial], model: <b>codex/gpt-6.2-sol:xhigh</b>}
+  - {name: second,    lenses: [bugs],        model: <b>codex/gpt-6.2-sol:high</b>}
 stages:
   synthesis: claude/opus:high
   verify:    claude/sonnet:low

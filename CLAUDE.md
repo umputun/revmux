@@ -345,7 +345,7 @@ A roster entry also carries an optional `color` — an ANSI-16 name or `#RRGGBB`
 and handed to both renderers, so the TUI and `--no-tui` never color the same agent differently.
 
 **One `model:` string is the whole runner selection, and a profile's covers the whole review.**
-`<binary>[/<model>][:<effort>]` — `claude`, `claude/opus:high`, `codex/gpt-6.1-sol`. There is no `executor:`
+`<binary>[/<model>][:<effort>]` — `claude`, `claude/opus:high`, `codex/gpt-6.2-sol`. There is no `executor:`
 key and no `effort:` key in any prompt file.
 The three are one field because they are not independent: a model belongs to a binary, so separate keys let
 a file state a pairing that cannot run, and every layer that inherited one without the other recreated it —

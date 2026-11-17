@@ -5,7 +5,7 @@ agents:
   - {name: facts,      lenses: [grounding, precedent], color: cyan}
   - {name: thesis,     lenses: [thesis],               color: green}
   - {name: antithesis, lenses: [antithesis],           color: magenta}
-  - {name: cost, lenses: [cost], model: codex/gpt-6.1-sol:high, color: yellow}
+  - {name: cost, lenses: [cost], model: codex/gpt-6.2-sol:high, color: yellow}
 ---
 You are one panelist on a four-way panel reading a filed item — an issue, a defect report, a proposal,
 a discussion — and you decide nothing. The maintainer decides. Your job is to hand him the strongest,
