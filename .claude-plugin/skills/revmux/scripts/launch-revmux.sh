@@ -278,6 +278,28 @@ OVERLAY_TITLE="rm: ${DIR_NAME}${TITLE_TASK:+ [$TITLE_TASK]}"
 POPUP_W="${REVMUX_POPUP_WIDTH:-90%}"
 POPUP_H="${REVMUX_POPUP_HEIGHT:-90%}"
 
+# rex: a split beside the agent's own block; rex closes the block when revmux exits. Checked before
+# the agterm recovery below: a rex server started from an agterm shell passes AGTERM_* to its blocks,
+# and the recovery can match an agterm session on the same checkout. The split does not take focus,
+# because the reader watches it while typing to the agent. The session and block are explicit so rex
+# never acts on the focused block of another session.
+if [ "${TERM_PROGRAM:-}" = "rex" ] && [ -n "${REX_SESSION:-}" ] && [ -n "${REX_BLOCK:-}" ]; then
+    if ! command -v rex >/dev/null 2>&1; then
+        echo "error: rex session detected but rex CLI not found" >&2
+        exit "$RC_LAUNCH_FAIL"
+    fi
+    new_sentinel
+    # stdout carries the creation result, which must not land in front of the report
+    if ! rex split -s "$REX_SESSION" -b "$REX_BLOCK" --split=right --cwd "$CWD" --label "$OVERLAY_TITLE" \
+            --focus=false --shell=none -- sh -c "$(write_rc_cmd "$SENTINEL")" >/dev/null; then
+        echo "error: rex split failed" >&2
+        exit "$RC_LAUNCH_FAIL"
+    fi
+    await_sentinel "$SENTINEL" || print_report_and_exit "$RC_LAUNCH_FAIL"
+    rc=$(read_rc "$SENTINEL")
+    print_report_and_exit "${rc:-$RC_LAUNCH_FAIL}"
+fi
+
 # the agtermctl belonging to the RUNNING app, which is not always the one on PATH. agterm exports
 # GHOSTTY_BIN_DIR pointing into its own bundle, and a second install earlier in PATH answers
 # `command -v` while $AGTERM_SOCKET still reaches this one. That CLI is then version-skewed against
@@ -789,6 +811,6 @@ if [ "${INSIDE_EMACS:-}" = "vterm" ] && command -v emacsclient >/dev/null 2>&1; 
     print_report_and_exit "${rc:-$RC_LAUNCH_FAIL}"
 fi
 
-echo "error: no overlay terminal available (requires agterm, tmux, zellij, herdr, kitty, wezterm, cmux, ghostty, iTerm2, or emacs vterm)" >&2
+echo "error: no overlay terminal available (requires rex, agterm, tmux, zellij, herdr, kitty, wezterm, cmux, ghostty, iTerm2, or emacs vterm)" >&2
 echo "hint: run revmux directly with --no-tui for headless mode" >&2
 exit "$RC_LAUNCH_FAIL"

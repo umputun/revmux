@@ -100,6 +100,7 @@ is visible while it runs.
 
 | backend | detected by | how it opens |
 |---|---|---|
+| rex | `$TERM_PROGRAM=rex` + `$REX_SESSION` + `$REX_BLOCK`; exits 3 without `rex` | 50/50 split right of the agent's block, no focus change |
 | agterm | `$AGTERM_SESSION_ID`, or one Git checkout match, plus `agtermctl` | floating panel at 80%, or a pane overlay in a split, blocking |
 | tmux window | `$TMUX` + `REVMUX_TMUX_WINDOW=1`, or agent-deck | server-owned window, survives a client drop |
 | tmux popup | `$TMUX` | `display-popup -E` at 90% |
