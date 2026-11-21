@@ -428,7 +428,7 @@ and the user has no other signal. An overlay run is that signal, on screen, live
 "<the absolute path this session resolved for scripts/launch-revmux.sh>" --task <id> --run <name> [any revmux flag]
 ```
 
-Detects the terminal (agterm, tmux, zellij, herdr, kitty, wezterm/kaku, cmux, ghostty, iTerm2, Emacs
+Detects the terminal (rex, agterm, tmux, zellij, herdr, kitty, wezterm/kaku, cmux, ghostty, iTerm2, Emacs
 vterm), runs revmux with its TUI in an overlay, returns the report on stdout. Under agterm: floating
 panel at 80% of the pane, or a pane overlay when the session is split, which leaves the sibling pane
 live. Either shape is tinted blue. Do not pass `--no-tui`; the script rejects it.
