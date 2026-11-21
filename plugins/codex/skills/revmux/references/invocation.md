@@ -115,6 +115,8 @@ is visible while it runs.
 
 Order matters where environments overlap: herdr is checked before kitty because herdr-in-kitty sets
 `KITTY_LISTEN_ON`, and cmux before ghostty because cmux can expose Ghostty's environment variables.
+Rex is checked before agterm because a Rex server started from an agterm shell passes `AGTERM_*` to
+its blocks.
 
 When Codex drops AGTERM variables or runs from a temporary worktree, the launcher queries the live
 tree and compares absolute Git common directories. It adopts the session and active pane only when

@@ -40,11 +40,11 @@ If a note would be equally true of any Go project, it does not belong here.
   their own CI job that pipes `shellcheck` through `xargs`, so any output at all fails it, info-level
   findings included. `lint-scripts` copies that command verbatim; run `make lint`, never the
   `golangci-lint` line by itself, or a green local run still reddens master.
-  That job also runs `.github/scripts/check-sentinel-helpers.sh` over the eight sentinel backends
+  That job also runs `.github/scripts/check-sentinel-helpers.sh` over the nine sentinel backends
   inside `launch-revmux.sh`, which must each claim a round through `new_sentinel` and build their
   inner command through `write_rc_cmd`/`write_fifo_rc_cmd`.
   Only the three that change directory inside the generated shell pass it as the helper's second
-  argument — kitty, iTerm2 and emacs vterm; the other five hand it to the backend through `--cwd` or
+  argument — kitty, iTerm2 and emacs vterm; the other six hand it to the backend through `--cwd` or
   an initial-working-directory setting.
   It checks two drift shapes because one check cannot see both: it counts the three and fails when the
   totals disagree, which catches a backend that stopped calling the helper, and it matches
@@ -55,7 +55,7 @@ If a note would be equally true of any Go project, it does not belong here.
   Either shape is valid shell and is copied into both trees, so neither `shellcheck` nor
   `make check-plugins` can see it — which is how the iTerm2 path once waited out its whole grace
   period for a pid nothing wrote, and threw away a finished review's report.
-  `agentdeck-window.sh` is a ninth sentinel backend and is deliberately excluded: it is sourced rather
+  `agentdeck-window.sh` is a tenth sentinel backend and is deliberately excluded: it is sourced rather
   than inlined, it cannot install the EXIT trap `new_sentinel` installs, and it never calls
   `await_sentinel` at all, so the published pid is not load-bearing there.
 - Format: `make fmt`

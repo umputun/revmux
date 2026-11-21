@@ -164,7 +164,7 @@ write_fifo_rc_cmd() {
 
 # claim this round's sentinel path and arm the cleanup for every artifact the round creates. Every
 # sentinel backend opens with this, so the set of files a round makes and the set its trap removes are
-# stated once rather than eight times - which is how the iTerm2 trap came to name a .pid file nothing
+# stated once rather than nine times - which is how the iTerm2 trap came to name a .pid file nothing
 # on that path ever wrote. LAUNCH_SCRIPT is cleared here so the trap is safe under `set -u` for the
 # backends that never make one, and so it cannot outlive the round that did.
 new_sentinel() {
@@ -433,8 +433,8 @@ agterm_overlay_tint() {
 
 # agterm: `session overlay open --block` runs revmux over the agent's own session and blocks until it
 # exits, returning revmux's exit code directly - so no sentinel file is needed, unlike every backend
-# below. Checked first so an agterm session uses its native overlay even when a multiplexer is also
-# present. --cwd pins the overlay to the launcher's directory instead of the agent session's own.
+# below. Checked after rex so an agterm session uses its native overlay even when a multiplexer is
+# also present. --cwd pins the overlay to the launcher's directory instead of the agent session's own.
 if [ -n "${AGTERM_SESSION_ID:-}" ] && [ -n "$AGTERMCTL" ]; then
     # Mark the session active for the duration. Deliberately `active` and not `blocked --blink`,
     # which is what an interactive tool would set: a review is work in progress, not a prompt waiting
