@@ -353,7 +353,8 @@ revmux --task pr-123 --run 02-after-fix &gt; findings.json</pre>
 
         <h2 id="supervision">Supervision and degrade <a class="anchor" href="#supervision">#</a></h2>
         <p>
-          A <strong>finder</strong> that produces no output for <code>--idle-timeout</code> (2m by default) is
+          A <strong>finder</strong> that produces no output for <code>--idle-timeout</code> (2m by default, 5m
+          for an agy agent when unset) is
           killed and retried once, after a short jittered pause so the relaunch does not land in whatever
           window killed it. So is one that exceeds <code>--hard-timeout</code> (20m per attempt). On a
           second failure the agent is marked degraded and the run continues: the report banner names the

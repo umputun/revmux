@@ -337,8 +337,9 @@ Every roster entry composes lenses; its `model:` only selects which binary runs 
 binary at what effort.
 There is no codex-specific prompt file — the shipped `adversarial` entry composes
 `lenses/adversarial.md`, and only its `model:` says codex runs it.
-An agent is named for its lens, never for its binary: the exception is a profile whose agents carry
-identical lens sets, where the runner is the only thing distinguishing them — `grill-me` and `expert`.
+An agent is named for its lens, never for its binary: the exception is agents within one profile that
+carry identical lens sets, where the runner is the only thing distinguishing them — every agent of
+`grill-me` and `expert`, and the two adversarial peers of `comprehensive-plus`.
 Lens text stays executor-agnostic; the output-contract difference (claude has `--json-schema`, codex does not)
 is injected by the executor, never authored into a lens file.
 A roster entry also carries an optional `color` — an ANSI-16 name or `#RRGGBB` — resolved in `app/prompt`
