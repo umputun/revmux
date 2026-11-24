@@ -39,6 +39,8 @@ Timeouts are configurable if a run is genuinely stuck rather than slow: `--idle-
 `2m`) kills and retries an agent that has produced no output for that long, and `--hard-timeout`
 (default `20m`) caps a single attempt. Raising them makes a stalled run take longer to fail, not more
 likely to succeed.
+The one exception is a roster that names `agy`: its thinking steps write nothing until they finish and
+were measured past two minutes on a high-effort model, so pass `--idle-timeout=5m` for such a run.
 
 ## Relay the milestones while it runs
 
@@ -146,7 +148,7 @@ not the session happened to be split.
 
 ### Why the launcher forwards PATH
 
-revmux spawns `claude` and `codex` itself, and overlay backends start children from a server process
+revmux spawns `claude`, `codex` and `agy` itself, and overlay backends start children from a server process
 whose environment predates the user's shell rc files. Without forwarding, every agent degrades on a
 binary that is plainly installed and the run exits `2`.
 

@@ -16,6 +16,7 @@ func TestParseRunner(t *testing.T) {
 		{"binary and model", "claude/opus", Runner{Executor: "claude", Model: "opus"}},
 		{"the whole triple", "codex/gpt-5.6-sol:high", Runner{Executor: "codex", Model: "gpt-5.6-sol", Effort: "high"}},
 		{"binary and effort", "codex:xhigh", Runner{Executor: "codex", Effort: "xhigh"}},
+		{"agy triple", "agy/gemini-4-neon-high:max", Runner{Executor: "agy", Model: "gemini-4-neon-high", Effort: "max"}},
 		{"empty is empty", "", Runner{}},
 		{"surrounding space", "  claude/opus:low  ", Runner{Executor: "claude", Model: "opus", Effort: "low"}},
 		// split on the first slash, so a model whose own name carries one arrives intact

@@ -1,7 +1,7 @@
 # revmux — project notes
 
-revmux runs a structured multi-agent code review by spawning and supervising `claude --print` and
-`codex exec` subprocesses, then returns findings.
+revmux runs a structured multi-agent code review by spawning and supervising `claude --print`, `codex exec`
+and `agy --print` subprocesses, then returns findings.
 It exists because agent fan-out driven from inside an AI coding session is unobservable and unrecoverable:
 agents go silent for minutes, sometimes never return, and the caller has no timeout, no kill, no retry and no progress.
 
@@ -83,7 +83,7 @@ produces a binary named `revmux`, since Go names it after the last path element.
 - `app/revmux/artifacts.go` — the artifacts `package main` owns: `manifest.json`, `report.md`, `findings.json`
 - `app/revmux/progress.go` — the non-TTY event subscriber (timestamped lines to stderr), plus the run's closing
   summary, which the pipeline emits no event for
-- `app/executor/` — supervised subprocess execution for claude and codex
+- `app/executor/` — supervised subprocess execution for claude, codex and agy
 - `app/prompt/` — front matter and roster parsing, lens composition, `{{VAR}}` substitution, `go:embed` defaults
 - `app/pipeline/` — the three stages, fan-out, stagger, degrade policy, typed event channel
 - `app/finding/` — `Finding` and `Report` types, the per-stage JSON schemas, markdown and JSON rendering
@@ -694,7 +694,7 @@ Every animation is disabled under `prefers-reduced-motion`.
 
 Detailed per-subsystem engineering notes live in `.claude/rules/*.md`, each scoped with `paths:` frontmatter.
 
-- `.claude/rules/executor.md` — subprocess supervision, verified `claude` and `codex` CLI behavior, stream decoding
+- `.claude/rules/executor.md` — subprocess supervision, verified `claude`, `codex` and `agy` CLI behavior, stream decoding
 - `.claude/rules/pipeline.md` — the three-stage contract, degrade policy, stagger, event channel
 - `.claude/rules/prompts.md` — front matter, roster resolution, lens composition, config precedence
 - `.claude/rules/tui.md` — bubbletea conventions and the lipgloss/ANSI traps

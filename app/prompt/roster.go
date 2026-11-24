@@ -26,7 +26,7 @@ const (
 
 // the two accepted vocabularies, checked by validate and reported verbatim by `revmux config`.
 var (
-	executors = []string{executorClaude, "codex"}
+	executors = []string{executorClaude, "codex", "agy"}
 	efforts   = []string{"low", "medium", "high", "xhigh", "max"}
 )
 

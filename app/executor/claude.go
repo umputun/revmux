@@ -26,7 +26,7 @@ func NewClaude(runner CommandRunner, opts Opts) *Claude {
 // Run executes one request and reports what happened. A non-zero exit or an idle timeout comes back on
 // the Result, not as an error — whether that degrades the source is the pipeline's call.
 func (c *Claude) Run(ctx context.Context, req Request, sink EventSink) (Result, error) {
-	req.Prompt += ClaudeNarrationContract(req.Schema)
+	req.Prompt += NarrationContract(req.Schema)
 	spec := runSpec{
 		argv: c.args(req),
 		sink: sink,
@@ -39,11 +39,11 @@ func (c *Claude) Run(ctx context.Context, req Request, sink EventSink) (Result, 
 	return res, err
 }
 
-// ClaudeNarrationContract asks the model to say what it is doing, and exists because --json-schema
+// NarrationContract asks the model to say what it is doing, and exists because --json-schema
 // otherwise makes it silent: the schema forces every conclusion through a StructuredOutput tool call, so
 // text blocks come back all but empty. Only with a schema — a schema-less call writes prose already.
 // Exported for the same reason CodexOutputContract is: Run appends it after the prompt was archived.
-func ClaudeNarrationContract(schema json.RawMessage) string {
+func NarrationContract(schema json.RawMessage) string {
 	if len(schema) == 0 {
 		return ""
 	}

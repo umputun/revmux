@@ -129,7 +129,8 @@
           <h1>revmux</h1>
           <p class="lede">
             A supervised multi-agent review, normally launched by your coding agent rather than typed by you.
-            revmux spawns <code>claude --print</code> and <code>codex exec</code> subprocesses, watches them,
+            revmux spawns <code>claude --print</code>, <code>codex exec</code> and <code>agy --print</code>
+            subprocesses, watches them,
             and returns findings on stdout as JSON or markdown.
           </p>
         </div>
@@ -234,6 +235,10 @@ codex plugin add revmux@revmux</pre>
           <li><code>codex-only</code>: codex alone</li>
         </ul>
         <p>
+          No shipped profile names <code>agy</code>, the Antigravity CLI; a profile or roster entry of your own
+          that does needs it installed and signed in.
+        </p>
+        <p>
           <code>preflight.sh</code> in the shipped skill answers it for any profile and any invocation,
           <code>--lenses</code> included.
         </p>
@@ -250,6 +255,20 @@ codex plugin add revmux@revmux</pre>
           agents. Put the helper in the reviewed repo's <code>.claude/settings.json</code>, or put a
           <code>claude</code> wrapper first on <code>PATH</code> that runs the real binary, by absolute path,
           with <code>--settings &lt;file&gt;</code> added.
+        </p>
+        <p>
+          <code>agy</code> runs with a per-run <code>--settings</code> overlay denying <code>write_file(*)</code>,
+          which covers its file-writing and editing tools and the subagents it starts. Shell commands still
+          run, so a redirect can still write a file, the same as claude's Bash. The same overlay allows
+          <code>read_file(*)</code>, because agy runs shell commands in a sandbox that otherwise hides files
+          a git config may include, and then every git command fails; a reviewer can therefore read anything
+          on the machine, <code>~/.ssh</code> included, as a claude reviewer already can.
+        </p>
+        <p>
+          An agy thinking step writes nothing until it is done, and on a high-effort model one can outlast
+          the default <code>--idle-timeout</code>: steps of over two minutes were measured on
+          <code>gemini-4-neon-high</code>. Pass <code>--idle-timeout=5m</code>, or set
+          <code>idle-timeout</code> in the config, for a review whose roster names agy.
         </p>
 
         <h2 id="quick-start">Quick start <a class="anchor" href="#quick-start">#</a></h2>
@@ -574,14 +593,15 @@ agents:
         <h3>The model string</h3>
         <p>
           One <code>model</code> string selects the binary, the model and the effort together. The binary leads
-          and is mandatory, either <code>claude</code> or <code>codex</code>, so a value validates itself and
+          and is mandatory, <code>claude</code>, <code>codex</code> or <code>agy</code>, so a value validates itself and
           revmux never has to guess which CLI runs <code>gpt-6.2-sol</code> from a catalog of model names that
           would go stale.
         </p>
         <pre class="code">claude                   claude, its own default model and effort
 claude/opus:high         fully specified
 codex/gpt-6.2-sol          effort falls back to the profile's, then the binary's
-codex:high               codex's default model at high effort</pre>
+codex:high               codex's default model at high effort
+agy/gemini-4-neon-high   an agy model, as agy models lists it</pre>
         <p>
           The three travel together because they are not independent: <code>opus</code> means nothing to codex.
           A file cannot state a pairing that will not run, and an entry naming a different binary than the
@@ -1067,7 +1087,7 @@ receives, including what counts as critical, major and minor here.</pre>
                 "roster": [...], "stages": [...]}],
   "lenses": [{"name": "adversarial", "description": "..."}],
   "stages": [{"name": "synthesis", "description": "..."}],
-  "vocabulary": {"executors": ["claude", "codex"],
+  "vocabulary": {"executors": ["claude", "codex", "agy"],
                  "efforts": ["low", "medium", "high", "xhigh", "max"]},
   "paths": {
     "tasks_dir": "/abs/project/.revmux/tasks",

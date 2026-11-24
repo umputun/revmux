@@ -297,7 +297,7 @@ func artifactHarness(t *testing.T) (*harness, func() []string) {
 				// claude its narration contract — and this mock stands in for one of them. Recording
 				// the prompt as handed over would make "the archived prompt is what a process
 				// received" pass against bytes no process would ever receive.
-				prompt := req.Prompt + executor.ClaudeNarrationContract(req.Schema)
+				prompt := req.Prompt + executor.NarrationContract(req.Schema)
 				if spec.Executor == executorCodex {
 					prompt = req.Prompt + executor.CodexOutputContract(req.Schema)
 				}

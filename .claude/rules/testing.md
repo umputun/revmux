@@ -37,6 +37,10 @@ The supervisor's behavior is defined by these, so they are written before the co
   forwarding, the model read-back and the diagnostic gate are tested against.
   The single capture prints each header line once and so cannot exercise the dedup at all —
   the doubled-banner fixture is derived from it, like every other derivation here.
+- **agy clean** — `agy-clean.jsonl`, a full review ending in a `result` event; the null-answer, error-status,
+  tool-error, truncated and stalling agy fixtures are derived from it.
+  agy writes the recording machine's paths into tool parameters and outputs as well as `init.cwd`, so that
+  capture is scrubbed throughout, to the same `/home/reviewer/revmux`, not on one line.
 
 Fixtures are recorded from real CLI output, not hand-written.
 Hand-written fixtures encode what someone assumed the CLI emits, which is exactly the class of bug they should catch.

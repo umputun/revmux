@@ -12,7 +12,7 @@ description: >
 
 # revmux — supervised multi-agent code review
 
-revmux spawns and supervises parallel `claude --print` and `codex exec` subprocesses, watches each for
+revmux spawns and supervises parallel `claude --print`, `codex exec` and `agy --print` subprocesses, watches each for
 stalls, retries what hangs, and returns findings on stdout.
 
 It does no scope detection, no git, no PR fetching, no source modification. This skill does that half.
