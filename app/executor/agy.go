@@ -34,6 +34,11 @@ func (a *Agy) Run(ctx context.Context, req Request, sink EventSink) (Result, err
 		return Result{}, err
 	}
 	req.Prompt = line
+	// agy's idle timeout can differ from the other executors', so the value this run is killed at is
+	// put on record; an info event, because it must not release the stagger gate
+	if a.opts.IdleTimeout > 0 {
+		a.emit(sink, Event{Kind: EventInfo, Text: "idle timeout: " + a.opts.IdleTimeout.String()})
+	}
 	structured := len(req.Schema) > 0
 	spec := runSpec{
 		argv: a.args(req),
@@ -107,6 +112,9 @@ type agyStep struct {
 	ToolName  string `json:"tool_name"`
 	ToolInfo  *struct {
 		Parameters map[string]any `json:"parameters"`
+		Error      *struct {
+			Message string `json:"message"`
+		} `json:"error"`
 	} `json:"tool_info"`
 }
 
@@ -187,7 +195,12 @@ func (a *Agy) step(s agyStep, texts map[int]*strings.Builder, sink EventSink, st
 	case "ERROR":
 		// a refused or failed tool call does not fail the agent, it carries on with less, so the
 		// review narrows silently unless this is said
-		a.emit(sink, Event{Kind: EventInfo, Text: clampRunes("tool failed: " + s.label())})
+		text := "tool failed: " + s.label()
+		// the reason is what tells a missing file from a denied permission
+		if s.ToolInfo != nil && s.ToolInfo.Error != nil && s.ToolInfo.Error.Message != "" {
+			text += ": " + flattenLines(s.ToolInfo.Error.Message)
+		}
+		a.emit(sink, Event{Kind: EventInfo, Text: clampRunes(text)})
 	}
 }
 

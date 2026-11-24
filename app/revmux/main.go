@@ -54,7 +54,9 @@ type runOpts struct {
 	stderr     io.Writer
 	openTTY    func() (*os.File, error)
 	newRunner  func(pipeline.RunnerSpec) pipeline.Runner
-	snapshot   func(reviewContext) []ui.InputDocument
+	// cmdRunner starts the model CLIs; nil is the real one
+	cmdRunner executor.CommandRunner
+	snapshot  func(reviewContext) []ui.InputDocument
 }
 
 // configuredReview is everything one review resolved before it starts. Keeping the context beside the
@@ -378,8 +380,12 @@ func (o runOpts) runnerFactory(rc reviewContext) func(pipeline.RunnerSpec) pipel
 	if o.newRunner != nil {
 		return o.newRunner
 	}
-	runner, eo := executor.NewRunner(), o.opts.executorOpts(rc, o.clock)
-	claude, codex, agy := executor.NewClaude(runner, eo), executor.NewCodex(runner, eo), executor.NewAgy(runner, eo)
+	runner, eo := o.cmdRunner, o.opts.executorOpts(rc, o.clock)
+	if runner == nil {
+		runner = executor.NewRunner()
+	}
+	claude, codex := executor.NewClaude(runner, eo), executor.NewCodex(runner, eo)
+	agy := executor.NewAgy(runner, o.opts.agyOpts(eo))
 	return func(spec pipeline.RunnerSpec) pipeline.Runner {
 		switch spec.Executor {
 		case executorCodex:

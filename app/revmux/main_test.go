@@ -182,7 +182,7 @@ func TestRun_config(t *testing.T) {
 				assert.NotEmpty(t, a.Color, "agent %s reports no color, so the palette assignment is invisible", a.Name)
 			}
 		}
-		assert.Equal(t, []string{"claude-only", "codex-only", "comprehensive", "expert", "final", "focused", "grill-me", "triage"}, names)
+		assert.Equal(t, []string{"claude-only", "codex-only", "comprehensive", "comprehensive-plus", "expert", "final", "focused", "grill-me", "triage"}, names)
 
 		set, err := prompt.Load(prompt.LoadOpts{})
 		require.NoError(t, err)
@@ -1101,6 +1101,52 @@ func TestRunOpts_runnerFactory(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				assert.IsType(t, tt.want, factory(tt.spec))
+			})
+		}
+	})
+
+	t.Run("idle timeout per executor", func(t *testing.T) {
+		tests := []struct {
+			name, origin, executor string
+			want                   time.Duration
+		}{
+			{name: "agy on the default", origin: originDefault, executor: "agy", want: agyIdleTimeout},
+			{name: "claude on the default", origin: originDefault, executor: "claude", want: 2 * time.Minute},
+			{name: "codex on the default", origin: originDefault, executor: "codex", want: 2 * time.Minute},
+			{name: "agy with a flag", origin: originFlag, executor: "agy", want: 2 * time.Minute},
+			{name: "claude with a flag", origin: originFlag, executor: "claude", want: 2 * time.Minute},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				var armed []time.Duration
+				clk := &mocks.ClockMock{
+					NowFunc: time.Now,
+					AfterFuncFunc: func(d time.Duration, _ func()) executor.Timer {
+						armed = append(armed, d)
+						return &mocks.TimerMock{StopFunc: func() bool { return true }, ResetFunc: func(time.Duration) bool { return true }}
+					},
+				}
+				cmds := &mocks.CommandRunnerMock{CommandFunc: func(ctx context.Context, _ string, _ ...string) *exec.Cmd {
+					return exec.CommandContext(ctx, "true")
+				}}
+				r := newRunOpts(t, options{IdleTimeout: 2 * time.Minute, knobOrigins: map[string]string{"idle-timeout": tt.origin}})
+				ro := r.opts()
+				ro.newRunner, ro.clock, ro.cmdRunner = nil, clk, cmds
+
+				var info []string
+				sink := &mocks.EventSinkMock{EmitFunc: func(ev executor.Event) {
+					if ev.Kind == executor.EventInfo {
+						info = append(info, ev.Text)
+					}
+				}}
+				run := ro.runnerFactory(reviewContext{WorkDir: t.TempDir()})(pipeline.RunnerSpec{Executor: tt.executor})
+				_, err := run.Run(context.Background(), executor.Request{Prompt: "x"}, sink)
+				require.NoError(t, err)
+
+				assert.Equal(t, []time.Duration{tt.want}, armed)
+				if tt.executor == "agy" {
+					assert.Contains(t, info, "idle timeout: "+tt.want.String())
+				}
 			})
 		}
 	})

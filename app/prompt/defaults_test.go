@@ -65,8 +65,9 @@ func TestDefaults_EveryProfileResolvesItsRoster(t *testing.T) {
 	set, err := Load(LoadOpts{})
 	require.NoError(t, err)
 	known := set.LensNames()
-	require.Len(t, set.ProfileNames(), 8,
-		"the shipped set is comprehensive, focused, final, claude-only, codex-only, grill-me, triage and expert")
+	require.Len(t, set.ProfileNames(), 9,
+		"the shipped set is comprehensive, comprehensive-plus, focused, final, claude-only, codex-only, grill-me, "+
+			"triage and expert")
 
 	for _, name := range set.ProfileNames() {
 		p, err := set.Profile(name)
@@ -168,8 +169,7 @@ func TestDefaults_ComprehensiveRoster(t *testing.T) {
 	assert.Equal(t, AgentSpec{Name: "docs+tests", Lenses: []string{"docs", "tests", "comments"},
 		Executor: "claude", Model: "opus", Effort: "high", Color: "2", ColorName: "green"}, specs[2],
 		"comments rides with docs rather than taking a slot of its own: the two overlap on a stale doc "+
-			"comment, so one process settles that where two would both report it, and a fifth agent "+
-			"would queue behind the default --max-parallel of 4")
+			"comment, so one process settles that where two would both report it")
 	assert.Equal(t, AgentSpec{Name: "adversarial", Lenses: []string{"adversarial"}, Executor: "codex",
 		Model: "gpt-6.2-sol", Effort: "high", Color: "3", ColorName: "yellow"}, specs[3],
 		"adversarial is a peer source in the default roster, not a second pass over the others")
@@ -182,6 +182,28 @@ func TestDefaults_ComprehensiveRoster(t *testing.T) {
 		[]string{"bugs", "impl", "architecture", "quality", "docs", "tests", "comments", "adversarial"}, carried,
 		"the flagship profile carries every code-review lens exactly once; the triage lenses belong to a "+
 			"review shape it does not run")
+}
+
+func TestDefaults_ComprehensivePlusRoster(t *testing.T) {
+	set, err := Load(LoadOpts{})
+	require.NoError(t, err)
+	base, err := set.Profile("comprehensive")
+	require.NoError(t, err)
+	p, err := set.Profile("comprehensive-plus")
+	require.NoError(t, err)
+	assert.Equal(t, base.Body, p.Body)
+
+	baseSpecs, err := base.Roster(nil, set.LensNames())
+	require.NoError(t, err)
+	specs, err := p.Roster(nil, set.LensNames())
+	require.NoError(t, err)
+	require.Len(t, specs, 5)
+
+	assert.Equal(t, baseSpecs[:3], specs[:3])
+	assert.Equal(t, AgentSpec{Name: "adversarial-codex", Lenses: []string{"adversarial"}, Executor: "codex",
+		Model: "gpt-6.2-sol", Effort: "high", Color: "3", ColorName: "yellow"}, specs[3])
+	assert.Equal(t, AgentSpec{Name: "adversarial-agy", Lenses: []string{"adversarial"}, Executor: "agy",
+		Model: "gemini-4-neon", Effort: "high", Color: "11", ColorName: "bright-yellow"}, specs[4])
 }
 
 func TestDefaults_TriageRoster(t *testing.T) {

@@ -42,6 +42,10 @@ const (
 	configFileName = "config"
 )
 
+// agyIdleTimeout is the idle timeout agy runs under when none was set. A thinking step on
+// gemini-4-neon-high was measured at 125s against the 2m default.
+const agyIdleTimeout = 5 * time.Minute
+
 // options is the full CLI surface. Only the runtime knobs carry an ini-name; everything shaping a
 // review lives in the prompt tree, and the meta flags make no sense in a config file.
 type options struct {
@@ -59,7 +63,7 @@ type options struct {
 	IdleTimeout   time.Duration `long:"idle-timeout" ini-name:"idle-timeout" default:"2m" description:"kill and retry an agent after this long with no output"`
 	HardTimeout   time.Duration `long:"hard-timeout" ini-name:"hard-timeout" default:"20m" description:"kill an agent after this long, per attempt"`
 	StaggerDelay  time.Duration `long:"stagger-delay" ini-name:"stagger-delay" default:"30s" description:"how long to wait for the first agent before releasing the rest"`
-	MaxParallel   int           `long:"max-parallel" ini-name:"max-parallel" default:"4" description:"how many agents run at once"`
+	MaxParallel   int           `long:"max-parallel" ini-name:"max-parallel" default:"6" description:"how many agents run at once"`
 	VerifyGroups  int           `long:"verify-groups" ini-name:"verify-groups" default:"6" description:"cap on the number of verifier groups"`
 	VerifyGroupBy string        `long:"verify-group-by" ini-name:"verify-group-by" choice:"dir" choice:"source" default:"dir" description:"key verifier groups by directory or by the agent that raised the finding"`
 	TasksDir      string        `long:"tasks-dir" ini-name:"tasks-dir" default:"./.revmux/tasks" description:"root directory holding task directories"`
@@ -314,6 +318,16 @@ func (o options) executorOpts(rc reviewContext, clk executor.Clock) executor.Opt
 		PreserveAPIKey: o.PreserveAPIKey,
 		Clock:          clk,
 	}
+}
+
+// agyOpts raises the idle timeout to agyIdleTimeout when no flag or config file set one: an agy
+// thinking step writes nothing until it is done, and on a high-effort model it outlasts the default.
+// Claude and codex keep the default, so a hang in either is still caught at it.
+func (o options) agyOpts(eo executor.Opts) executor.Opts {
+	if o.knobOrigins["idle-timeout"] == originDefault {
+		eo.IdleTimeout = agyIdleTimeout
+	}
+	return eo
 }
 
 // promptSet loads the prompt tree and confirms the selected profile resolves.

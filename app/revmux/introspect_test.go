@@ -33,7 +33,7 @@ func TestOptions_knobs(t *testing.T) {
 	assert.Equal(t, knob{Name: "stagger-delay", Value: "5s", Source: originFlag}, got["stagger-delay"])
 	assert.Equal(t, knob{Name: "hard-timeout", Value: (20 * time.Minute).String(), Source: originDefault}, got["hard-timeout"])
 	assert.Equal(t, knob{Name: "verify-groups", Value: 3, Source: originUser}, got["verify-groups"])
-	assert.Equal(t, knob{Name: "max-parallel", Value: 4, Source: originDefault}, got["max-parallel"])
+	assert.Equal(t, knob{Name: "max-parallel", Value: 6, Source: originDefault}, got["max-parallel"])
 	assert.Equal(t, knob{Name: "profile", Value: "comprehensive", Source: originDefault}, got["profile"])
 
 	t.Run("no meta flag is reported as a knob", func(t *testing.T) {

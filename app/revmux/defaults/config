@@ -7,7 +7,8 @@
 # Every line ships commented out. A file holding only comments is replaced by --init on upgrade, while a
 # single uncommented line marks it customized and is left untouched.
 
-# how long an agent may go without output before it is killed and retried
+# how long an agent may go without output before it is killed and retried;
+# while this stays commented out, an agy agent gets 5m instead
 # idle-timeout = 2m
 
 # how long one attempt may run; a retried agent gets this budget again
@@ -17,7 +18,7 @@
 # stagger-delay = 30s
 
 # how many agents run at once
-# max-parallel = 4
+# max-parallel = 6
 
 # cap on the number of verifier groups
 # verify-groups = 6
