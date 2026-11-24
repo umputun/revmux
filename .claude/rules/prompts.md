@@ -203,7 +203,7 @@ See `.claude/rules/pipeline.md`.
 
 ### Executor and lens are orthogonal
 
-A `model:` names `claude` or `codex` and nothing else.
+A `model:` names `claude`, `codex` or `agy` and nothing else.
 Anything else is a **load-time** error with a clear message, never a runtime surprise.
 
 There is no codex-specific prompt file and no per-entry prompt-path override.
@@ -395,7 +395,7 @@ the `revmux config` payload, where an untagged field would emit `URL` rather tha
 - every lens named by a roster entry exists
 - every stage named by a profile's `stages:` block is one the pipeline dispatches — `synthesis` or
   `verify`, not merely a `prompts/*.md` that loaded
-- every `model:` parses: the binary is `claude` or `codex`, and an effort suffix is one of `low`,
+- every `model:` parses: the binary is `claude`, `codex` or `agy`, and an effort suffix is one of `low`,
   `medium`, `high`, `xhigh`, `max`. `parseRunner` is the only way a runner is built, so it is the only
   place either vocabulary is checked — a second check elsewhere is unreachable code pretending to guard
 - `color`, when present, is an ANSI-16 name (`red`, `bright-blue`, …) or `#RRGGBB`

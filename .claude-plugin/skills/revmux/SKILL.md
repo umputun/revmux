@@ -1,13 +1,13 @@
 ---
 name: revmux
-description: Run a supervised multi-agent code review by composing a task directory and driving the revmux CLI, then report or act on the findings it returns. revmux spawns and watches parallel claude and codex subprocesses with stall detection, retry, per-agent progress and a full run archive; this skill is the caller that writes the review context, launches it, reads the JSON back, and re-runs it after fixes. It also triages a filed issue, proposal or discussion instead of a diff, running a four-way panel over it — grounding, the case for, the case against, and cost — and putting the maintainer's six answers to him with the arguments behind each. It also has a self mode that reads what past rounds produced and tells the user what the record says about the review itself — which stage is filtering, which lens rates hardest, whether rounds converge — then proposes one change to the local prompt text at a time, with the number behind it. It fetches a pull request into a throwaway worktree, reviews it there and cleans up after. Also answers questions about revmux itself — profiles, lenses, task directories, flags, the JSON shape, exit codes and the run archive. Activates on "revmux", "run revmux", "multi-agent review", "supervised review", "review with revmux", "revmux this branch", "revmux the last commit", "revmux pr 123", "revmux this PR", "review PR 123 with revmux", "run a revmux round", "re-review after fixes", "revmux it and show me", "revmux this, I want to watch", "run it visible", "show me the review", "triage this", "triage issue 123", "is this worth doing", "should we accept this", "should I close this", "revmux self", "self-improve revmux", "tune revmux", "revmux profiles", "revmux lenses", "what does revmux return", "revmux exit codes", "revmux task directory".
+description: Run a supervised multi-agent code review by composing a task directory and driving the revmux CLI, then report or act on the findings it returns. revmux spawns and watches parallel claude, codex and agy subprocesses with stall detection, retry, per-agent progress and a full run archive; this skill is the caller that writes the review context, launches it, reads the JSON back, and re-runs it after fixes. It also triages a filed issue, proposal or discussion instead of a diff, running a four-way panel over it — grounding, the case for, the case against, and cost — and putting the maintainer's six answers to him with the arguments behind each. It also has a self mode that reads what past rounds produced and tells the user what the record says about the review itself — which stage is filtering, which lens rates hardest, whether rounds converge — then proposes one change to the local prompt text at a time, with the number behind it. It fetches a pull request into a throwaway worktree, reviews it there and cleans up after. Also answers questions about revmux itself — profiles, lenses, task directories, flags, the JSON shape, exit codes and the run archive. Activates on "revmux", "run revmux", "multi-agent review", "supervised review", "review with revmux", "revmux this branch", "revmux the last commit", "revmux pr 123", "revmux this PR", "review PR 123 with revmux", "run a revmux round", "re-review after fixes", "revmux it and show me", "revmux this, I want to watch", "run it visible", "show me the review", "triage this", "triage issue 123", "is this worth doing", "should we accept this", "should I close this", "revmux self", "self-improve revmux", "tune revmux", "revmux profiles", "revmux lenses", "what does revmux return", "revmux exit codes", "revmux task directory".
 argument-hint: 'optional: what to review ("pr 123", "issue 123", a ref, a path), plus "show me" / "focused" / "final" / "triage" / "loop" / "lenses a,b"'
 allowed-tools: [Bash, Read, Edit, Write, Grep, Glob, Agent, AskUserQuestion, Monitor, TaskStop]
 ---
 
 # revmux — supervised multi-agent code review
 
-revmux spawns and supervises parallel `claude --print` and `codex exec` subprocesses, watches each for
+revmux spawns and supervises parallel `claude --print`, `codex exec` and `agy --print` subprocesses, watches each for
 stalls, retries what hangs, and returns findings on stdout.
 
 It does no scope detection, no git, no PR fetching, no source modification. This skill does that half.
@@ -93,7 +93,7 @@ the `paths.tasks_dir` that `revmux config` reports under those flags.
 ### Step 0: Preflight
 
 ```bash
-${CLAUDE_SKILL_DIR}/scripts/preflight.sh [profile] [--lenses] [--config-dir <dir>]
+${CLAUDE_SKILL_DIR}/scripts/preflight.sh [profile] [--lenses] [--no-synthesis] [--no-verify] [--config-dir <dir>]
 ```
 
 Checks revmux plus every binary the invocation needs. Exits `1` naming what is missing.
@@ -111,6 +111,9 @@ profile's own base runner, so the binaries needed are that base plus the stages,
 roster's own. Checked as an ordinary run, a `--lenses` invocation can pass preflight and then have its
 only finder fail to launch; checked the other way round, an ordinary run can be refused over a binary
 it never touches.
+
+**Pass `--no-synthesis` and `--no-verify` when the run will use them.** A stage the run turns off
+launches nothing, so its binary is not needed, and checking it refuses a review that would run.
 
 If revmux is absent:
 

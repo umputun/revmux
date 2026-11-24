@@ -47,7 +47,7 @@ Measured directly against the real CLI. Do not re-derive, and do not assume any 
   Measured on one task with one schema, run twice: bare, 2 text blocks against 8 tool calls; with the
   narration instruction appended, 7 text blocks against 7 tool calls, same 8 findings. It costs
   nothing and it is the only way to get a claude agent to say what it is doing.
-  That is `ClaudeNarrationContract`, appended by the executor and exported so the archive records it —
+  That is `NarrationContract`, appended by the executor and exported so the archive records it —
   the same shape and the same reason as `CodexOutputContract`. Codex needs none of it; its reasoning
   arrives in the rollout.
 - Even a trivial call carries substantial input tokens — system prompt, project instructions, skills listing.
@@ -242,10 +242,10 @@ failing process to have something to order against. The `fail` helper mode exist
 
 ### Shared base, thin executors
 
-`Claude` and `Codex` both need the same run loop, idle watchdog, process-group teardown and line reader.
-Duplicating that gives two near-identical `Run` bodies, which `dupl` will fail in lint.
+`Claude`, `Codex` and `Agy` all need the same run loop, idle watchdog, process-group teardown and line reader.
+Duplicating that gives near-identical `Run` bodies, which `dupl` will fail in lint.
 
-Put the shared machinery on an unexported `proc` struct that both embed.
+Put the shared machinery on an unexported `proc` struct that all three embed.
 Each executor supplies only its own `args()` and its own output parsing.
 Model and effort belong on the **per-run request**, not on construction-time options —
 a single executor instance has to serve roster entries with different models.
@@ -300,7 +300,7 @@ Codex is a peer executor, not a special case in the pipeline — but the executo
   stdout write.
 - **Codex has no `--json-schema`.**
   The executor appends its own "return only JSON matching this shape" contract to the composed prompt,
-  rendering `Request.Schema` inline. That field is set for **both** executors and carries the running
+  rendering `Request.Schema` inline. That field is set for **every** executor and carries the running
   stage's schema, so a codex entry running synthesis or verify asks for that stage's shape.
   Hardcoding a finder-shaped contract here breaks the moment a profile resolves a stage onto codex.
   The wrapper text lives in the executor, never in a lens file, which must stay executor-agnostic.
@@ -365,9 +365,81 @@ Codex is a peer executor, not a special case in the pipeline — but the executo
   The check ignores project trust, as verified in Codex 0.146.0's
   [`exec-lib.rs` (`codex-rs/exec/src/lib.rs`)](https://github.com/openai/codex/blob/rust-v0.146.0/codex-rs/exec/src/lib.rs#L790-L799).
 
+### agy differences
+
+Measured against agy 1.5.16. agy is a peer executor on the shared `proc`, like the other two.
+
+- **The prompt goes in on stdin as one stream-json message**, `{"event":"user","message":{"role":"user","content":...}}`.
+  `--print` takes the prompt as its value, so a plain stdin prompt is never read, and `--print=-` is taken
+  literally as the prompt `-`.
+  `--input-format stream-json` with an empty `--print=` reads the message instead, and stdin closing after it
+  ends the run after one turn.
+- The stream is `init`, `step_update` and one `result` carrying `structured_output`, `status`, `error` and
+  `usage`.
+  There is no per-model usage map, so the actual model is what `init.model` reports.
+  `Result.Tokens` is input plus output plus cache reads; agy's own `total_tokens` leaves the cache reads out.
+  `output_tokens` already includes `thinking_tokens` (measured 28,098 against 27,207 on a run whose visible
+  output was a few tool calls), so adding `thinking_tokens` counts reasoning twice.
+- **A `structured_output` of `null` is normalized to no answer.**
+  It decodes as the four bytes `null`, which passes every `len() == 0` no-answer check downstream.
+- **Response text arrives as fragments across several updates of one `step_index`**, so it is held until the
+  step is done and emitted as one line.
+- **The last step streams the answer as text, usually right after a closing line of narration in the same
+  step.** Under a schema the trailing JSON is cut off before the line is emitted, since it is already on the
+  `result` event; the cut starts at the first `{` whose remainder is valid JSON, because the prose before it
+  may mention braces of its own.
+- Tool parameters are PascalCase (`Path`, `CommandLine`), which `toolArg` folds.
+  A tool step in state `ERROR`, a denial included, goes out as `EventInfo` for the reason claude's
+  `permission_denials` do.
+- **Under a schema agy is silent like claude, so it gets the same `NarrationContract`.**
+  Measured on one review without it: no step but the last carried any text. With it, every step did.
+- **The settings overlay is `{"permissions":{"allow":["read_file(*)"],"deny":["write_file(*)"]}}`.**
+  A headless run starts in Auto mode, which wrote a file when asked to.
+  `write_file` is the permission kind every file-writing tool is checked under, `edit_file` included, and a
+  subagent inherits the rule.
+  `--mode plan` blocks writes but fails `run_command` as well, which takes away the `git diff` the design
+  depends on, and it returned a null answer.
+  A redirect through `run_command` still writes, with or without `--sandbox`, which grants the working
+  directory read and write: the same exposure as claude's Bash, for the same reasons.
+- **`read_file(*)` is there because a headless run puts shell commands in agy's terminal sandbox**, which
+  hides every path it does not mount.
+  A `~/.gitconfig` including a file outside those mounts makes every git command fail with exit 128 —
+  measured as `fatal: unable to access '~/.gitconfig-local': Operation not permitted` on a plain
+  `git diff HEAD` — and a reviewer whose diff fails reviews something other than the change.
+  The grant mounts the whole host read-only, which also covers a worktree whose `.git` points outside the
+  working directory. Writes are unchanged: the working directory and `/tmp` were writable with and
+  without it. The cost is that a reviewer can read what the sandbox hides by default, `~/.ssh`
+  included, which is what claude's Read and Bash can already reach.
+- **An agy model string names the model family and puts the effort after the colon: `agy/gemini-4-neon:high`.**
+  `agy models` lists only effort-suffixed variants such as `gemini-4-neon-high`, but agy also takes the
+  bare family with `--effort`, and then `init.model` reports the bare name.
+  A suffixed variant beside a different effort is refused before any model call:
+  `--model gemini-3.8-flash-low --effort high` exits 1 with a `result` of status `ERROR` and
+  `--model gemini-3.8-flash-low conflicts with --effort=high`, which reaches the log as an info line.
+  `Runner.or` carries the profile's effort onto an entry of another binary, which the codex peer relies
+  on, so a suffixed agy entry under a profile with an effort fails every attempt and degrades.
+  An inherited effort the family does not offer fails the same way: `gemini-3.8-flash` has no `xhigh`.
+- **Tool-name deny rules such as `invoke_subagent(*)` are accepted and silently ignored**, so nothing stops an
+  agy reviewer starting subagents.
+  Their writes are denied, but their tool calls never reach the stream; only the `invoke_subagent` step does.
+  The permission kinds the binary knows are `command`, `read_file`, `write_file`, `url`, `mcp` and
+  `unsandboxed`. Do not add a rule outside them: it looks like protection and does nothing.
+- **A thinking step writes nothing to either pipe until it is done, and on a high-effort model it outlasts
+  the default `--idle-timeout`.**
+  Measured at 83s on `gemini-3.8-flash-medium` and 125s on `gemini-4-neon-high`, where a second step was
+  killed at 2m and retried.
+  revmux does not tail anything for agy, so the documented answer is `--idle-timeout=5m` for a run whose
+  roster or stages run agy; the cost is that a hung agent, of any executor in that run, is noticed later.
+  agy's conversation store, `~/.gemini/antigravity-cli/conversations/<conversation_id>.db-wal`, grew every
+  3-4s through 45s of silent thinking, so it is the liveness source a tail would read if this changes.
+- There is no typed rate-limit signal and no agy rate limit has been captured, so no pattern is matched:
+  a failed run reports `result.error` as `EventInfo` and degrades through the no-answer path.
+- There is no session-persistence flag, so every run is a saved agy conversation.
+
 ### Error and limit patterns
 
 claude gets its rate-limit signal from the typed `rate_limit_event`, so string matching is only needed for codex.
+agy has neither, see above.
 Where patterns are used, tier them: **retry → limit → error**.
 
 - Retry tier covers transient server hiccups: `API Error: 529`, `502`, `503`, `504`.

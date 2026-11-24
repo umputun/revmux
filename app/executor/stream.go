@@ -58,10 +58,11 @@ type contentBlock struct {
 // toolArgKeys are the input fields worth showing beside a tool's name, most specific first. A tool
 // call carries what it is acting on — the file being read, the pattern being searched — and a bare
 // "Read" repeated down the log says only that the agent is alive, not what it is looking at.
-var toolArgKeys = []string{"file_path", "pattern", "command", "path", "query", "description", "url"}
+// The keys are lowercase because agy spells its parameters in PascalCase (Path, CommandLine);
+// toolArg folds case so one list serves both decoders.
+var toolArgKeys = []string{"file_path", "pattern", "command", "commandline", "path", "query", "description", "url"}
 
-// arg is the one input value worth showing next to the tool's name, shortened for a status row: a
-// path is cut to its last two elements, anything else to its first line.
+// arg is the one input value worth showing next to the tool's name.
 func (b contentBlock) arg() string {
 	if len(b.Input) == 0 {
 		return ""
@@ -70,14 +71,24 @@ func (b contentBlock) arg() string {
 	if err := json.Unmarshal(b.Input, &in); err != nil {
 		return ""
 	}
+	return toolArg(in)
+}
+
+// toolArg picks the input value worth showing next to a tool's name, shortened for a status row: a
+// path is cut to its last two elements, anything else flattened to one line.
+func toolArg(in map[string]any) string {
+	folded := make(map[string]any, len(in))
+	for k, v := range in {
+		folded[strings.ToLower(k)] = v
+	}
 	for _, key := range toolArgKeys {
-		val, ok := in[key].(string)
+		val, ok := folded[key].(string)
 		if !ok || strings.TrimSpace(val) == "" {
 			continue
 		}
 		val = flattenLines(val)
 		if key == "file_path" || key == "path" {
-			val = b.shortPath(val)
+			val = shortPath(val)
 		}
 		return clampRunes(val)
 	}
@@ -101,7 +112,7 @@ func clampRunes(s string) string {
 
 // shortPath keeps the last two elements of a path. An absolute path eats a status row on its own, and
 // the leading directories are the same for every file in one review anyway.
-func (b contentBlock) shortPath(p string) string {
+func shortPath(p string) string {
 	parts := strings.Split(p, "/")
 	if len(parts) <= 2 {
 		return p

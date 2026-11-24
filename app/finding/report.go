@@ -48,7 +48,8 @@ type SourceStat struct {
 
 	// Tokens is what the agent's own CLI reported, and it is not the same quantity across executors —
 	// never compare one executor's number with another's. claude sums input, output and both cache
-	// counters; codex prints one number after its "tokens used" footer. In one measured corpus claude
+	// counters; agy sums input, output and cache reads; codex prints one number after its "tokens used"
+	// footer. In one measured corpus claude
 	// agents ranged 0.11M-7.0M per round while the codex peer sat flat at 0.12-0.17M, which is mostly
 	// the two definitions rather than two costs. It is honest per agent and over time for that agent.
 	Tokens int `json:"tokens"`

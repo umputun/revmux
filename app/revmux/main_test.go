@@ -1089,6 +1089,7 @@ func TestRunOpts_runnerFactory(t *testing.T) {
 		}{
 			{"claude", pipeline.RunnerSpec{Executor: "claude"}, &executor.Claude{}},
 			{"codex", pipeline.RunnerSpec{Executor: "codex"}, &executor.Codex{}},
+			{"agy", pipeline.RunnerSpec{Executor: "agy"}, &executor.Agy{}},
 			{"empty defaults to claude", pipeline.RunnerSpec{}, &executor.Claude{}},
 		}
 
@@ -1200,7 +1201,7 @@ func (r *runHarness) newRunner(spec pipeline.RunnerSpec) pipeline.Runner {
 			// a real executor appends to the prompt inside Run, and this mock stands in for one. Record
 			// what a process would actually receive, or an archive compared against this is compared
 			// against bytes no process ever saw
-			received := req.Prompt + executor.ClaudeNarrationContract(req.Schema)
+			received := req.Prompt + executor.NarrationContract(req.Schema)
 			if spec.Executor == "codex" {
 				received = req.Prompt + executor.CodexOutputContract(req.Schema)
 			}
