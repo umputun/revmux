@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.3.0
+
+**New Features**
+- add `comprehensive-plus` profile with an agy adversarial peer #61 @umputun
+- add agy as a third runner #60 @umputun
+- add Rex backend #58 @belaytzev
+
+**Improvements**
+- bump github.com/charmbracelet/x/ansi from 0.11.9 to 0.11.10 #59 @app/dependabot
+- update backend counts and order notes for the rex launcher branch d6e91fa
+
 ## v0.2.8
 
 **Improvements**
