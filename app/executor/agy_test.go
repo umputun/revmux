@@ -84,7 +84,7 @@ func TestAgy_args(t *testing.T) {
 	runner := fakeRunner("emit", path)
 	a := executor.NewAgy(runner, executor.Opts{})
 
-	req := executor.Request{Prompt: "review this", Model: "gemini-4-neon-high", Effort: "high", Schema: json.RawMessage(`{"type":"object"}`)}
+	req := executor.Request{Prompt: "review this", Model: "gemini-4-neon", Effort: "high", Schema: json.RawMessage(`{"type":"object"}`)}
 	_, err := a.Run(context.Background(), req, discardSink())
 	require.NoError(t, err)
 
@@ -97,7 +97,7 @@ func TestAgy_args(t *testing.T) {
 		"--output-format", "stream-json",
 		"--disable-slash-commands",
 		"--settings", `{"permissions":{"allow":["read_file(*)"],"deny":["write_file(*)"]}}`,
-		"--model", "gemini-4-neon-high",
+		"--model", "gemini-4-neon",
 		"--effort", "high",
 		"--json-schema", `{"type":"object"}`,
 	}
@@ -166,6 +166,17 @@ func TestAgy_Run_clean(t *testing.T) {
 	assert.Contains(t, progress, "run_command wc -l stream.go")
 	assert.Contains(t, progress, "read_file executor/stream.go", "a path is shortened like claude's")
 	assert.Empty(t, eventsOf(events(), executor.EventInfo))
+}
+
+func TestAgy_Run_modelMismatch(t *testing.T) {
+	data := agyPatch(t, func(ev map[string]any) bool { return ev["event"] == "init" }, func(ev map[string]any) {
+		ev["init"].(map[string]any)["model"] = "gemini-3.8-flash-low"
+	})
+	res, err := executor.NewAgy(fakeRunner("emit", writeFixture(t, data)), executor.Opts{}).Run(context.Background(),
+		executor.Request{Prompt: "x", Model: "gemini-3.8-flash-medium"}, discardSink())
+	require.NoError(t, err)
+	assert.Equal(t, "gemini-3.8-flash-medium", res.RequestedModel)
+	assert.Equal(t, "gemini-3.8-flash-low", res.ActualModel)
 }
 
 func TestAgy_Run_answerKeptWithoutSchema(t *testing.T) {

@@ -39,7 +39,7 @@ Timeouts are configurable if a run is genuinely stuck rather than slow: `--idle-
 `2m`) kills and retries an agent that has produced no output for that long, and `--hard-timeout`
 (default `20m`) caps a single attempt. Raising them makes a stalled run take longer to fail, not more
 likely to succeed.
-The one exception is a roster that names `agy`: its thinking steps write nothing until they finish and
+The one exception is a review that runs `agy`, in the roster or a stage: its thinking steps write nothing until they finish and
 were measured past two minutes on a high-effort model, so pass `--idle-timeout=5m` for such a run.
 
 ## Relay the milestones while it runs
@@ -572,12 +572,14 @@ form: the decision is the user's, one task per call.
 
 ## Environment
 
-revmux drives the model CLIs as subprocesses, so both must already be installed and authenticated:
+revmux drives the model CLIs as subprocesses, so each one a run names must already be installed and
+authenticated:
 
 - `claude` — every lens agent and both model stages run on it by default
 - `codex` — needed when a profile, a roster entry or a stage names it in its `model:`. `claude-only`
   needs claude alone and `codex-only` needs codex alone; the other six shipped profiles need both.
   `preflight.sh <profile>` answers it for the profile that will actually run
+- `agy` — needed only when a profile, a roster entry or a stage names it; no shipped profile does
 
 `ANTHROPIC_API_KEY` is stripped from the child environment by default so `claude` uses interactive
 subscription auth; `--preserve-anthropic-api-key` passes it through for key-based auth. `CLAUDECODE`

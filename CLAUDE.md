@@ -242,7 +242,7 @@ the final report, so a round directory holds:
 ├── stages/           findings after find, after synthesis, after verify
 ├── events.jsonl      revmux's own decisions: stalls, retries, degrades, stage changes
 ├── agents/           verbatim tees, own subdir for the same reason
-│                     <agent>.jsonl claude stream-json, <agent>.log codex prose,
+│                     <agent>.jsonl claude or agy stream-json, <agent>.log codex prose,
 │                     <agent>.retry.jsonl the second attempt when one is retried
 └── report.md, findings.json
 ```

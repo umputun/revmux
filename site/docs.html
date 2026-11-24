@@ -268,7 +268,7 @@ codex plugin add revmux@revmux</pre>
           An agy thinking step writes nothing until it is done, and on a high-effort model one can outlast
           the default <code>--idle-timeout</code>: steps of over two minutes were measured on
           <code>gemini-4-neon-high</code>. Pass <code>--idle-timeout=5m</code>, or set
-          <code>idle-timeout</code> in the config, for a review whose roster names agy.
+          <code>idle-timeout</code> in the config, for a review that runs agy in the roster or a stage.
         </p>
 
         <h2 id="quick-start">Quick start <a class="anchor" href="#quick-start">#</a></h2>
@@ -601,7 +601,7 @@ agents:
 claude/opus:high         fully specified
 codex/gpt-6.2-sol          effort falls back to the profile's, then the binary's
 codex:high               codex's default model at high effort
-agy/gemini-4-neon-high   an agy model, as agy models lists it</pre>
+agy/gemini-4-neon:high   an agy model family at one of its efforts</pre>
         <p>
           The three travel together because they are not independent: <code>opus</code> means nothing to codex.
           A file cannot state a pairing that will not run, and an entry naming a different binary than the
@@ -609,6 +609,12 @@ agy/gemini-4-neon-high   an agy model, as agy models lists it</pre>
           refused, since <code>claude/</code> is a second spelling of <code>claude</code>. It parses on the first
           <code>/</code> so a model whose own name has one survives, and on the last <code>:</code>, whose
           suffix must be a real effort: <code>:hgih</code> is a load error rather than a typo nobody sees.
+        </p>
+        <p>
+          An agy model is written as its family, <code>gemini-4-neon</code>, with the effort after the colon.
+          <code>agy models</code> lists the variants with the effort in the name, and agy refuses such a
+          variant beside a different effort, including one inherited from the profile, so the reviewer
+          fails every attempt. The effort, written or inherited, must be one agy offers for that family.
         </p>
         <p>
           A stage resolves through three layers in turn: its <code>stages:</code> override, the stage file's own

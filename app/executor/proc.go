@@ -32,7 +32,7 @@ type runSpec struct {
 	shareTouch func(func())
 }
 
-// proc is the machinery Claude and Codex share: start, idle watchdog, process-group teardown, line
+// proc is the machinery Claude, Codex and Agy share: start, idle watchdog, process-group teardown, line
 // reading. It holds immutable configuration only — one instance serves every roster entry concurrently,
 // so any per-run state would be a data race.
 type proc struct {

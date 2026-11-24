@@ -243,9 +243,9 @@ failing process to have something to order against. The `fail` helper mode exist
 ### Shared base, thin executors
 
 `Claude`, `Codex` and `Agy` all need the same run loop, idle watchdog, process-group teardown and line reader.
-Duplicating that gives two near-identical `Run` bodies, which `dupl` will fail in lint.
+Duplicating that gives near-identical `Run` bodies, which `dupl` will fail in lint.
 
-Put the shared machinery on an unexported `proc` struct that both embed.
+Put the shared machinery on an unexported `proc` struct that all three embed.
 Each executor supplies only its own `args()` and its own output parsing.
 Model and effort belong on the **per-run request**, not on construction-time options —
 a single executor instance has to serve roster entries with different models.
@@ -300,7 +300,7 @@ Codex is a peer executor, not a special case in the pipeline — but the executo
   stdout write.
 - **Codex has no `--json-schema`.**
   The executor appends its own "return only JSON matching this shape" contract to the composed prompt,
-  rendering `Request.Schema` inline. That field is set for **both** executors and carries the running
+  rendering `Request.Schema` inline. That field is set for **every** executor and carries the running
   stage's schema, so a codex entry running synthesis or verify asks for that stage's shape.
   Hardcoding a finder-shaped contract here breaks the moment a profile resolves a stage onto codex.
   The wrapper text lives in the executor, never in a lens file, which must stay executor-agnostic.
@@ -410,6 +410,15 @@ Measured against agy 1.5.16. agy is a peer executor on the shared `proc`, like t
   working directory. Writes are unchanged: the working directory and `/tmp` were writable with and
   without it. The cost is that a reviewer can read what the sandbox hides by default, `~/.ssh`
   included, which is what claude's Read and Bash can already reach.
+- **An agy model string names the model family and puts the effort after the colon: `agy/gemini-4-neon:high`.**
+  `agy models` lists only effort-suffixed variants such as `gemini-4-neon-high`, but agy also takes the
+  bare family with `--effort`, and then `init.model` reports the bare name.
+  A suffixed variant beside a different effort is refused before any model call:
+  `--model gemini-3.8-flash-low --effort high` exits 1 with a `result` of status `ERROR` and
+  `--model gemini-3.8-flash-low conflicts with --effort=high`, which reaches the log as an info line.
+  `Runner.or` carries the profile's effort onto an entry of another binary, which the codex peer relies
+  on, so a suffixed agy entry under a profile with an effort fails every attempt and degrades.
+  An inherited effort the family does not offer fails the same way: `gemini-3.8-flash` has no `xhigh`.
 - **Tool-name deny rules such as `invoke_subagent(*)` are accepted and silently ignored**, so nothing stops an
   agy reviewer starting subagents.
   Their writes are denied, but their tool calls never reach the stream; only the `invoke_subagent` step does.
@@ -420,7 +429,7 @@ Measured against agy 1.5.16. agy is a peer executor on the shared `proc`, like t
   Measured at 83s on `gemini-3.8-flash-medium` and 125s on `gemini-4-neon-high`, where a second step was
   killed at 2m and retried.
   revmux does not tail anything for agy, so the documented answer is `--idle-timeout=5m` for a run whose
-  roster names agy; the cost is that a hung agent, of any executor in that run, is noticed later.
+  roster or stages run agy; the cost is that a hung agent, of any executor in that run, is noticed later.
   agy's conversation store, `~/.gemini/antigravity-cli/conversations/<conversation_id>.db-wal`, grew every
   3-4s through 45s of silent thinking, so it is the liveness source a tail would read if this changes.
 - There is no typed rate-limit signal and no agy rate limit has been captured, so no pattern is matched:

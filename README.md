@@ -106,7 +106,7 @@ revmux this branch, revmux pr 123, re-review after fixes. See [Agent skills](#ag
 revmux drives the model CLIs as subprocesses, so whichever ones your profile names must already be installed
 and authenticated: both for `comprehensive`, `focused`, `final`, `grill-me`, `triage` and `expert`, claude
 alone for `claude-only`, codex alone for `codex-only`. No shipped profile names `agy`, the Antigravity CLI;
-a review whose roster does should pass `--idle-timeout=5m`, since an agy thinking step writes nothing and can
+a review that runs it, in the roster or a stage, should pass `--idle-timeout=5m`, since an agy thinking step writes nothing and can
 run past the 2m default. `preflight.sh` in the shipped skill answers it for any profile and any invocation.
 
 `ANTHROPIC_API_KEY` is stripped from the child environment by default so `claude` uses interactive
@@ -260,8 +260,8 @@ independently agreed".
 ## Profiles
 
 A profile is roster front matter plus a body that is the shared preamble and severity bar. Every roster entry
-composes lenses, and one `model:` string selects the binary, the model and the effort together, so claude and
-codex mix inside one review.
+composes lenses, and one `model:` string selects the binary, the model and the effort together, so claude,
+codex and agy mix inside one review.
 
 | profile | roster |
 |---|---|
