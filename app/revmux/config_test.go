@@ -33,7 +33,7 @@ func TestParseArgs_defaults(t *testing.T) {
 	assert.Equal(t, 2*time.Minute, o.IdleTimeout)
 	assert.Equal(t, 20*time.Minute, o.HardTimeout)
 	assert.Equal(t, 30*time.Second, o.StaggerDelay)
-	assert.Equal(t, 4, o.MaxParallel)
+	assert.Equal(t, 6, o.MaxParallel)
 	assert.Equal(t, 6, o.VerifyGroups)
 	assert.Equal(t, "dir", o.VerifyGroupBy, "a code review groups by directory unless the caller says otherwise")
 	assert.Equal(t, "./.revmux/tasks", o.TasksDir)
@@ -573,6 +573,32 @@ func TestOptions_executorOpts(t *testing.T) {
 	assert.Equal(t, executor.Opts{IdleTimeout: time.Minute, HardTimeout: time.Hour, CodexSandbox: "danger-full-access",
 		WorkDir: "/resolved", PreserveAPIKey: true, Clock: clk}, got,
 		"the subprocess runs where {{WORKDIR}} points, never where the raw flag does")
+}
+
+func TestOptions_agyOpts(t *testing.T) {
+	tests := []struct {
+		name    string
+		origins map[string]string
+		idle    time.Duration
+		want    time.Duration
+	}{
+		{name: "default origin raises to agy's own", origins: map[string]string{"idle-timeout": originDefault}, idle: 2 * time.Minute, want: 5 * time.Minute},
+		{name: "flag wins", origins: map[string]string{"idle-timeout": originFlag}, idle: 2 * time.Minute, want: 2 * time.Minute},
+		{name: "flag disabling the watchdog wins", origins: map[string]string{"idle-timeout": originFlag}, idle: 0, want: 0},
+		{name: "project config wins", origins: map[string]string{"idle-timeout": originProject}, idle: time.Minute, want: time.Minute},
+		{name: "user config wins", origins: map[string]string{"idle-timeout": originUser}, idle: 3 * time.Minute, want: 3 * time.Minute},
+		{name: "no recorded origin is left alone", idle: time.Minute, want: time.Minute},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			o := options{IdleTimeout: tt.idle, HardTimeout: time.Hour, knobOrigins: tt.origins}
+			base := o.executorOpts(reviewContext{WorkDir: "/w"}, nil)
+			got := o.agyOpts(base)
+			assert.Equal(t, tt.want, got.IdleTimeout)
+			base.IdleTimeout = tt.want
+			assert.Equal(t, base, got, "only the idle timeout differs from what claude and codex get")
+		})
+	}
 }
 
 func TestOptions_promptOptsUsesResolvedLayers(t *testing.T) {

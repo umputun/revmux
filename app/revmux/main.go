@@ -379,7 +379,8 @@ func (o runOpts) runnerFactory(rc reviewContext) func(pipeline.RunnerSpec) pipel
 		return o.newRunner
 	}
 	runner, eo := executor.NewRunner(), o.opts.executorOpts(rc, o.clock)
-	claude, codex, agy := executor.NewClaude(runner, eo), executor.NewCodex(runner, eo), executor.NewAgy(runner, eo)
+	claude, codex := executor.NewClaude(runner, eo), executor.NewCodex(runner, eo)
+	agy := executor.NewAgy(runner, o.opts.agyOpts(eo))
 	return func(spec pipeline.RunnerSpec) pipeline.Runner {
 		switch spec.Executor {
 		case executorCodex:

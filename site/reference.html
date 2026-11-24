@@ -139,10 +139,10 @@
               <tr><td>--no-tui</td><td></td><td class="prose">disable the terminal UI</td></tr>
               <tr><td>--markdown</td><td></td><td class="prose">write the report as markdown instead of JSON</td></tr>
               <tr><td>--preserve-anthropic-api-key</td><td></td><td class="prose">pass <code>ANTHROPIC_API_KEY</code> to the model CLIs</td></tr>
-              <tr><td>--idle-timeout=&lt;d&gt;</td><td>2m</td><td class="prose">kill and retry an agent after this long with no output. Also a <a href="#knobs">config key</a></td></tr>
+              <tr><td>--idle-timeout=&lt;d&gt;</td><td>2m</td><td class="prose">kill and retry an agent after this long with no output; 5m for an agy agent when unset. Also a <a href="#knobs">config key</a></td></tr>
               <tr><td>--hard-timeout=&lt;d&gt;</td><td>20m</td><td class="prose">kill an agent after this long, per attempt. Also a config key</td></tr>
               <tr><td>--stagger-delay=&lt;d&gt;</td><td>30s</td><td class="prose">how long to wait for the first agent before releasing the rest. Also a config key</td></tr>
-              <tr><td>--max-parallel=&lt;n&gt;</td><td>4</td><td class="prose">how many agents run at once. Also a config key</td></tr>
+              <tr><td>--max-parallel=&lt;n&gt;</td><td>6</td><td class="prose">how many agents run at once. Also a config key</td></tr>
               <tr><td>--verify-groups=&lt;n&gt;</td><td>6</td><td class="prose">cap on the number of verifier groups. Also a config key</td></tr>
               <tr><td>--verify-group-by=&lt;k&gt;</td><td>dir</td><td class="prose"><code>dir</code> or <code>source</code>. Also a config key</td></tr>
               <tr><td>--tasks-dir=&lt;dir&gt;</td><td>./.revmux/tasks</td><td class="prose">root directory holding task directories. Also a config key</td></tr>
@@ -170,10 +170,10 @@
               <tr><th>key</th><th>default</th><th>description</th></tr>
             </thead>
             <tbody>
-              <tr><td>idle-timeout</td><td>2m</td><td class="prose">kill and retry an agent after this long with no output</td></tr>
+              <tr><td>idle-timeout</td><td>2m</td><td class="prose">kill and retry an agent after this long with no output; 5m for an agy agent when unset</td></tr>
               <tr><td>hard-timeout</td><td>20m</td><td class="prose">kill an agent after this long, per attempt</td></tr>
               <tr><td>stagger-delay</td><td>30s</td><td class="prose">how long to wait for the first agent before releasing the rest</td></tr>
-              <tr><td>max-parallel</td><td>4</td><td class="prose">how many agents run at once</td></tr>
+              <tr><td>max-parallel</td><td>6</td><td class="prose">how many agents run at once</td></tr>
               <tr><td>verify-groups</td><td>6</td><td class="prose">cap on the number of verifier groups</td></tr>
               <tr><td>verify-group-by</td><td>dir</td><td class="prose"><code>dir</code> or <code>source</code></td></tr>
               <tr><td>tasks-dir</td><td>./.revmux/tasks</td><td class="prose">root directory holding task directories</td></tr>
@@ -333,6 +333,7 @@ claude/opus:hgih         <span class="c-crimson">refused: not an effort</span></
             </thead>
             <tbody>
               <tr><td>comprehensive</td><td>both</td><td class="prose">three claude lens splits plus an adversarial codex peer. The default</td></tr>
+              <tr><td>comprehensive-plus</td><td>claude, codex, agy</td><td class="prose"><code>comprehensive</code> plus a second adversarial peer on agy</td></tr>
               <tr><td>focused</td><td>both</td><td class="prose">one <code>bugs</code> agent plus the codex peer</td></tr>
               <tr><td>final</td><td>both</td><td class="prose"><code>bugs+impl</code> plus the codex peer, nothing below major reported</td></tr>
               <tr><td>claude-only</td><td>claude</td><td class="prose">the four lens splits on claude alone</td></tr>

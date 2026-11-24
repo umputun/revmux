@@ -39,8 +39,9 @@ Timeouts are configurable if a run is genuinely stuck rather than slow: `--idle-
 `2m`) kills and retries an agent that has produced no output for that long, and `--hard-timeout`
 (default `20m`) caps a single attempt. Raising them makes a stalled run take longer to fail, not more
 likely to succeed.
-The one exception is a review that runs `agy`, in the roster or a stage: its thinking steps write nothing until they finish and
-were measured past two minutes on a high-effort model, so pass `--idle-timeout=5m` for such a run.
+An `agy` agent runs under `5m` unless `idle-timeout` is set: its thinking steps write nothing until they
+finish and were measured past two minutes on a high-effort model. Each agy agent logs the value as
+`idle timeout: 5m0s`. Passing `--idle-timeout` sets every executor, agy included, to that value.
 
 ## Relay the milestones while it runs
 
@@ -222,6 +223,7 @@ will not read, and an unwritable `./.revmux/` under `revmux init`.
 | profile | roster | when |
 |---|---|---|
 | `comprehensive` | `bugs+impl`, `arch+quality`, `docs+tests` on claude, plus an adversarial codex peer | default; a real change with real risk |
+| `comprehensive-plus` | `comprehensive` plus a second adversarial peer on agy `gemini-4-neon:high` — five agents | a change worth a third vendor's adversarial read; needs claude, codex and agy |
 | `focused` | one `bugs` agent plus the codex peer | small or time-boxed change, correctness is the concern |
 | `final` | `bugs+impl` plus the codex peer, nothing below major reported | last look before merging |
 | `claude-only` | `bugs+impl`, `arch+quality`, `docs+tests`, `adversarial` — all on claude | codex is unavailable or unwanted |
@@ -577,9 +579,11 @@ authenticated:
 
 - `claude` — every lens agent and both model stages run on it by default
 - `codex` — needed when a profile, a roster entry or a stage names it in its `model:`. `claude-only`
-  needs claude alone and `codex-only` needs codex alone; the other six shipped profiles need both.
-  `preflight.sh <profile>` answers it for the profile that will actually run
-- `agy` — needed only when a profile, a roster entry or a stage names it; no shipped profile does
+  needs claude alone, `codex-only` needs codex alone and `comprehensive-plus` needs agy as well; the
+  other six shipped profiles need both. `preflight.sh <profile>` answers it for the profile that will
+  actually run
+- `agy` — needed when a profile, a roster entry or a stage names it; of the shipped profiles only
+  `comprehensive-plus` does
 
 `ANTHROPIC_API_KEY` is stripped from the child environment by default so `claude` uses interactive
 subscription auth; `--preserve-anthropic-api-key` passes it through for key-based auth. `CLAUDECODE`
@@ -612,10 +616,10 @@ These also read from the config file, under the same name as the flag:
 
 | Flag | Config key | Default | Description |
 |---|---|---|---|
-| `--idle-timeout=<d>` | `idle-timeout` | `2m` | kill and retry an agent after this long with no output |
+| `--idle-timeout=<d>` | `idle-timeout` | `2m` | kill and retry an agent after this long with no output; `5m` for an agy agent when unset |
 | `--hard-timeout=<d>` | `hard-timeout` | `20m` | kill an agent after this long, per attempt |
 | `--stagger-delay=<d>` | `stagger-delay` | `30s` | how long to wait for the first agent before releasing the rest |
-| `--max-parallel=<n>` | `max-parallel` | `4` | how many agents run at once |
+| `--max-parallel=<n>` | `max-parallel` | `6` | how many agents run at once |
 | `--verify-groups=<n>` | `verify-groups` | `6` | cap on the number of verifier groups |
 | `--verify-group-by=<k>` | `verify-group-by` | `dir` | key verifier groups by directory or by the agent that raised the finding (`source`) |
 | `--tasks-dir=<dir>` | `tasks-dir` | `./.revmux/tasks` | root directory holding task directories |

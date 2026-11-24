@@ -390,7 +390,8 @@ Measured against agy 1.5.16. agy is a peer executor on the shared `proc`, like t
   may mention braces of its own.
 - Tool parameters are PascalCase (`Path`, `CommandLine`), which `toolArg` folds.
   A tool step in state `ERROR`, a denial included, goes out as `EventInfo` for the reason claude's
-  `permission_denials` do.
+  `permission_denials` do, carrying `tool_info.error.message` when agy reports one: without it a read of
+  a file that does not exist was taken for a permission failure in a live trial.
 - **Under a schema agy is silent like claude, so it gets the same `NarrationContract`.**
   Measured on one review without it: no step but the last carried any text. With it, every step did.
 - **The settings overlay is `{"permissions":{"allow":["read_file(*)"],"deny":["write_file(*)"]}}`.**
@@ -428,10 +429,17 @@ Measured against agy 1.5.16. agy is a peer executor on the shared `proc`, like t
   the default `--idle-timeout`.**
   Measured at 83s on `gemini-3.8-flash-medium` and 125s on `gemini-4-neon-high`, where a second step was
   killed at 2m and retried.
-  revmux does not tail anything for agy, so the documented answer is `--idle-timeout=5m` for a run whose
-  roster or stages run agy; the cost is that a hung agent, of any executor in that run, is noticed later.
+  revmux does not tail anything for agy, so the composition root hands the agy executor a 5m idle timeout
+  (`options.agyOpts`) whenever `idle-timeout` came from the built-in default; claude and codex keep 2m, so a
+  hang in either is still caught there. An explicit flag or config value wins for every executor.
+  `Agy.Run` emits the value it runs under as `EventInfo`, which keeps it out of the stagger gate and puts
+  it in `events.jsonl`, since `revmux config` reports the knob and not the per-executor result.
   agy's conversation store, `~/.gemini/antigravity-cli/conversations/<conversation_id>.db-wal`, grew every
   3-4s through 45s of silent thinking, so it is the liveness source a tail would read if this changes.
+  **Prompt wording does not close the window at an acceptable price.** A profile body asking for one
+  question per step halved the longest silence on an adversarial review (129s to 65s) and cost 38% more
+  wall time and tokens, since every extra step resends the whole conversation; it would charge claude and
+  codex the same overhead without their having the blind window.
 - There is no typed rate-limit signal and no agy rate limit has been captured, so no pattern is matched:
   a failed run reports `result.error` as `EventInfo` and degrades through the no-answer path.
 - There is no session-persistence flag, so every run is a saved agy conversation.

@@ -168,6 +168,19 @@ func TestAgy_Run_clean(t *testing.T) {
 	assert.Empty(t, eventsOf(events(), executor.EventInfo))
 }
 
+func TestAgy_Run_reportsIdleTimeout(t *testing.T) {
+	sink, events := collectSink()
+	a := executor.NewAgy(fakeRunner("emit", writeFixture(t, agyCapture(t))), executor.Opts{IdleTimeout: 5 * time.Minute})
+	_, err := a.Run(context.Background(), executor.Request{Prompt: "x", Schema: json.RawMessage(`{"type":"object"}`)}, sink)
+	require.NoError(t, err)
+
+	evs := events()
+	require.NotEmpty(t, evs)
+	assert.Equal(t, executor.Event{Kind: executor.EventInfo, Text: "idle timeout: 5m0s"}, evs[0],
+		"the watchdog agy runs under is on record before anything it streams")
+	assert.Equal(t, []string{"idle timeout: 5m0s"}, eventsOf(evs, executor.EventInfo))
+}
+
 func TestAgy_Run_modelMismatch(t *testing.T) {
 	data := agyPatch(t, func(ev map[string]any) bool { return ev["event"] == "init" }, func(ev map[string]any) {
 		ev["init"].(map[string]any)["model"] = "gemini-3.8-flash-low"
@@ -219,14 +232,31 @@ func TestAgy_Run_errorStatus(t *testing.T) {
 }
 
 func TestAgy_Run_toolError(t *testing.T) {
-	data := agyPatch(t, agyToolDone, func(ev map[string]any) {
-		ev["step_update"].(map[string]any)["state"] = "ERROR"
-	})
-	sink, events := collectSink()
-	_, err := executor.NewAgy(fakeRunner("emit", writeFixture(t, data)), executor.Opts{}).Run(context.Background(),
-		executor.Request{Prompt: "x"}, sink)
-	require.NoError(t, err)
-	assert.Equal(t, []string{"tool failed: run_command wc -l stream.go"}, eventsOf(events(), executor.EventInfo))
+	tests := []struct {
+		name  string
+		error map[string]any
+		want  string
+	}{
+		{name: "no reason reported", want: "tool failed: run_command wc -l stream.go"},
+		{name: "reason reported", error: map[string]any{"type": "TOOL_ERROR", "message": "file does not exist"},
+			want: "tool failed: run_command wc -l stream.go: file does not exist"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := agyPatch(t, agyToolDone, func(ev map[string]any) {
+				step := ev["step_update"].(map[string]any)
+				step["state"] = "ERROR"
+				if tt.error != nil {
+					step["tool_info"].(map[string]any)["error"] = tt.error
+				}
+			})
+			sink, events := collectSink()
+			_, err := executor.NewAgy(fakeRunner("emit", writeFixture(t, data)), executor.Opts{}).Run(context.Background(),
+				executor.Request{Prompt: "x"}, sink)
+			require.NoError(t, err)
+			assert.Equal(t, []string{tt.want}, eventsOf(events(), executor.EventInfo))
+		})
+	}
 }
 
 func TestAgy_Run_truncatedStream(t *testing.T) {

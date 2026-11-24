@@ -335,6 +335,7 @@ scale numbers are what Step 4's one-line announcement is built from.
 | profile | roster | when |
 |---|---|---|
 | `comprehensive` (default) | `bugs+impl`, `arch+quality`, `docs+tests`, codex peer | real change, real risk |
+| `comprehensive-plus` | `comprehensive` plus a second adversarial peer on agy | a third vendor's adversarial read; needs agy |
 | `focused` | one `bugs` agent plus codex peer | small or time-boxed |
 | `final` | `bugs+impl` plus codex peer, nothing below major | pre-merge |
 | `claude-only` | the same four lens splits, all on claude | no codex available |
@@ -357,6 +358,7 @@ fails the run.
 | the user says | profile |
 |---|---|
 | full, everything, deep, thorough, the works | `comprehensive` |
+| comprehensive plus, with agy, add agy, three vendors | `comprehensive-plus` |
 | short, quick, fast, light, small, time-boxed | `focused` |
 | last, pre-merge, before merge, strict | `final` |
 | claude only, no codex, skip codex | `claude-only` |
