@@ -240,7 +240,7 @@ codex plugin add revmux@revmux</pre>
         </p>
         <p>
           <code>preflight.sh</code> in the shipped skill answers it for any profile and any invocation,
-          <code>--lenses</code> included.
+          <code>--lenses</code>, <code>--no-synthesis</code> and <code>--no-verify</code> included.
         </p>
         <p>
           <code>ANTHROPIC_API_KEY</code> is stripped from the child environment by default so
@@ -1307,8 +1307,8 @@ receives, including what counts as critical, major and minor here.</pre>
         <dl class="deflist">
           <dt>preflight.sh</dt>
           <dd>
-            check revmux plus the binaries a given profile and invocation need, <code>--lenses</code> and
-            <code>--config-dir</code> included
+            check revmux plus the binaries a given profile and invocation need, <code>--lenses</code>,
+            <code>--no-synthesis</code>, <code>--no-verify</code> and <code>--config-dir</code> included
           </dd>
           <dt>task-state.sh</dt>
           <dd>

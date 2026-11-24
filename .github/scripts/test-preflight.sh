@@ -2,6 +2,7 @@
 # tests for the skill's scripts/preflight.sh, run against a fake revmux and fake model CLIs.
 # regression: an explicit --config-dir never reached `revmux config`, so a profile defined only there
 # failed as unknown and a roster changed there was checked against the default one.
+# regression: a stage turned off by --no-synthesis or --no-verify still required its binary.
 set -u
 
 script="${1:-.claude-plugin/skills/revmux/scripts/preflight.sh}"
@@ -32,11 +33,12 @@ while [ $# -gt 0 ]; do
 done
 claude='{name: "base", runner: {executor: "claude"}, roster: [{executor: "claude"}], stages: [{executor: "claude"}]}'
 local='{name: "local", runner: {executor: "claude"}, roster: [{executor: "codex"}], stages: [{executor: "claude"}]}'
+staged='{name: "staged", runner: {executor: "claude"}, roster: [{executor: "claude"}], stages: [{name: "synthesis", executor: "codex"}, {name: "verify", executor: "agy"}]}'
 if [ -n "$dir" ]; then
     jq -n "{knobs: [{name: \"profile\", value: \"local\"}], profiles: [$claude, $local]}"
     exit 0
 fi
-jq -n "{knobs: [{name: \"profile\", value: \"base\"}], profiles: [$claude]}"
+jq -n "{knobs: [{name: \"profile\", value: \"base\"}], profiles: [$claude, $staged]}"
 FAKE
 printf '#!/bin/sh\nexit 0\n' > "$work/models/claude"
 printf '#!/bin/sh\nexit 0\n' > "$work/models/codex"
@@ -106,6 +108,28 @@ run "$work/claude-only"
 expect_argv "bare default" config
 expect_line "bare default" "$out" "profile: base (resolved default)"
 expect_line "bare default" "$out" "ok: true"
+
+stage_cases=(
+    "|codex agy|"
+    "--no-synthesis|agy|codex"
+    "--no-verify|codex|agy"
+)
+for c in "${stage_cases[@]}"; do
+    IFS='|' read -r flag missing present <<<"$c"
+    # shellcheck disable=SC2086
+    run "$work/claude-only" staged $flag
+    [ "$code" -eq 1 ] || fail "staged '$flag': exit $code, want 1"
+    for exe in $missing; do
+        expect_line "staged '$flag'" "$out" "$exe: MISSING - required by this invocation"
+    done
+    for exe in $present; do
+        printf '%s\n' "$out" | grep -q "^$exe:" && fail "staged '$flag': $exe checked for a stage the run skips"
+    done
+done
+
+run "$work/claude-only" staged --no-synthesis --no-verify
+[ "$code" -eq 0 ] || fail "both stages off: exit $code, out: $out, stderr: $err"
+expect_line "both stages off" "$out" "ok: true"
 
 usage_cases=(
     "option without a value|--config-dir"

@@ -12,12 +12,15 @@
 # it also depends on the invocation. --lenses replaces the roster with one agent running on the
 # profile's own base runner, so that run needs the base plus the stages and none of the roster's
 # own binaries — while an ordinary run needs the roster and the stages and not the base, which
-# may name a binary nothing else uses.
+# may name a binary nothing else uses. A stage the run turns off with --no-synthesis or --no-verify
+# runs nothing, so its binary is not needed either.
 #
-# usage: preflight.sh [profile] [--lenses] [--config-dir <dir>]
-#   profile       profile to check; defaults to whatever revmux resolves as its default
-#   --lenses      check the invocation --lenses produces rather than the profile's own roster
-#   --config-dir  the run's own --config-dir, so the profiles and rosters checked are the ones it loads
+# usage: preflight.sh [profile] [--lenses] [--no-synthesis] [--no-verify] [--config-dir <dir>]
+#   profile         profile to check; defaults to whatever revmux resolves as its default
+#   --lenses        check the invocation --lenses produces rather than the profile's own roster
+#   --no-synthesis  the run skips synthesis, so its runner is not checked
+#   --no-verify     the run skips verification, so its runner is not checked
+#   --config-dir    the run's own --config-dir, so the profiles and rosters checked are the ones it loads
 #
 # output: one `key: value` line per check, then `ok: true|false`
 # exit:   0 all good, 1 something missing
@@ -25,10 +28,12 @@
 set -u
 
 usage() {
-    echo "usage: $(basename "$0") [profile] [--lenses] [--config-dir <dir>]" >&2
-    echo "  profile       profile to check; defaults to whatever revmux resolves as its default" >&2
-    echo "  --lenses      check the invocation --lenses produces rather than the profile's own roster" >&2
-    echo "  --config-dir  the run's own --config-dir, so the profiles and rosters checked are the ones it loads" >&2
+    echo "usage: $(basename "$0") [profile] [--lenses] [--no-synthesis] [--no-verify] [--config-dir <dir>]" >&2
+    echo "  profile         profile to check; defaults to whatever revmux resolves as its default" >&2
+    echo "  --lenses        check the invocation --lenses produces rather than the profile's own roster" >&2
+    echo "  --no-synthesis  the run skips synthesis, so its runner is not checked" >&2
+    echo "  --no-verify     the run skips verification, so its runner is not checked" >&2
+    echo "  --config-dir    the run's own --config-dir, so the profiles and rosters checked are the ones it loads" >&2
 }
 
 # strict: an argument that is not understood is a caller mistake, and silently dropping it checks a
@@ -36,6 +41,8 @@ usage() {
 # clean host for a run that then fails to launch its only finder
 profile=""
 lenses=""
+no_synthesis=false
+no_verify=false
 cfg_args=()
 while [ $# -gt 0 ]; do
     arg=$1
@@ -43,6 +50,12 @@ while [ $# -gt 0 ]; do
     case "$arg" in
         --lenses)
             lenses=1
+            ;;
+        --no-synthesis)
+            no_synthesis=true
+            ;;
+        --no-verify)
+            no_verify=true
             ;;
         --config-dir)
             if [ -z "${1:-}" ]; then
@@ -72,18 +85,20 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-# executorQuery is the jq that names the binaries this invocation needs. The stages always count; the
-# roster counts only when it will actually run, and the profile's base runner only when --lenses
-# replaces that roster with one agent on it. Unioning both over-checks and turns a review revmux can
+# executorQuery is the jq that names the binaries this invocation needs. The stages count unless the run
+# turns them off; the roster counts only when it will actually run, and the profile's base runner only
+# when --lenses replaces that roster with one agent on it. Unioning both over-checks and turns a review revmux can
 # run into a preflight failure, which is worse than the gap it would close.
-# $p is jq's own variable, bound by --arg, so the single quotes are deliberate.
+# $p, $ns and $nv are jq's own variables, bound by --arg and --argjson, so the single quotes are
+# deliberate. The stage names are the ones revmux config reports and the two flags skip.
 # shellcheck disable=SC2016
 executorQuery() {
+    local stages='(.stages[] | select((.name == "synthesis" and $ns) or (.name == "verify" and $nv) | not) | .executor)'
     if [ -n "$lenses" ]; then
-        echo '[.profiles[] | select(.name == $p) | (.runner.executor, .stages[].executor)] | unique | .[]'
+        echo "[.profiles[] | select(.name == \$p) | (.runner.executor, $stages)] | unique | .[]"
         return
     fi
-    echo '[.profiles[] | select(.name == $p) | (.roster[].executor, .stages[].executor)] | unique | .[]'
+    echo "[.profiles[] | select(.name == \$p) | (.roster[].executor, $stages)] | unique | .[]"
 }
 
 ok=true
@@ -126,10 +141,6 @@ if command -v jq >/dev/null 2>&1; then
             exit 1
         fi
         echo "profile: $profile"
-        # the stages always count, since a stage runs on every review regardless of the roster. What
-        # joins them is the roster, or — under --lenses, which replaces it — the profile's base runner
-        executors=$(printf '%s' "$cfg" | jq -r --arg p "$profile" \
-            "$(executorQuery)")
     else
         # the resolved default profile, not every profile: checking rosters that will not run reports
         # a missing binary the review never needed
@@ -140,9 +151,11 @@ if command -v jq >/dev/null 2>&1; then
             exit 1
         fi
         echo "profile: $profile (resolved default)"
-        executors=$(printf '%s' "$cfg" | jq -r --arg p "$profile" \
-            "$(executorQuery)")
     fi
+    # a stage runs on every review regardless of the roster unless the run turns it off. What joins
+    # the stages is the roster, or — under --lenses, which replaces it — the profile's base runner
+    executors=$(printf '%s' "$cfg" | jq -r --arg p "$profile" \
+        --argjson ns "$no_synthesis" --argjson nv "$no_verify" "$(executorQuery)")
 else
     # jq is how the resolved profile is read, and there is no honest answer without it: checking both
     # binaries instead refuses a single-binary profile on a host that can run it, which is a false

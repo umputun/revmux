@@ -93,7 +93,7 @@ the `paths.tasks_dir` that `revmux config` reports under those flags.
 ### Step 0: Preflight
 
 ```bash
-${CLAUDE_SKILL_DIR}/scripts/preflight.sh [profile] [--lenses] [--config-dir <dir>]
+${CLAUDE_SKILL_DIR}/scripts/preflight.sh [profile] [--lenses] [--no-synthesis] [--no-verify] [--config-dir <dir>]
 ```
 
 Checks revmux plus every binary the invocation needs. Exits `1` naming what is missing.
@@ -111,6 +111,9 @@ profile's own base runner, so the binaries needed are that base plus the stages,
 roster's own. Checked as an ordinary run, a `--lenses` invocation can pass preflight and then have its
 only finder fail to launch; checked the other way round, an ordinary run can be refused over a binary
 it never touches.
+
+**Pass `--no-synthesis` and `--no-verify` when the run will use them.** A stage the run turns off
+launches nothing, so its binary is not needed, and checking it refuses a review that would run.
 
 If revmux is absent:
 
