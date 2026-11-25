@@ -310,8 +310,8 @@ the review quality is not comparable.
 
 `--min-confidence=<n>` drops findings below that confidence. It filters **once, before anything
 renders**, so the report, the findings browser and the exit code all agree — a finding the exit code
-says is absent is never listed anywhere. Open questions, pre-existing and immaterial findings pass
-through untouched.
+says is absent is never listed anywhere. Open questions, pre-existing, immaterial and rejected findings
+pass through untouched.
 
 `70` is a reasonable floor for "only show me things worth acting on". `0` (the default) shows
 everything that survived verification.

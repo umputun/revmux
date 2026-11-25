@@ -166,8 +166,9 @@ configuration.
    confidence where distinct sources corroborate, and splits out open questions and pre-existing issues.
    It drops nothing: a single-source, low-confidence finding still reaches verify.
 3. **verify**. Parallel agents grouped by directory. Each verifier sees only its own group, so it cannot
-   anchor on a neighbouring finding. Every finding comes back with a verdict: confirmed, refined, rejected,
-   immaterial or pre-existing.
+   anchor on a neighbouring finding. Every finding comes back with a verdict, and with the verifier's
+   one-line reason when it gave one: confirmed, refined, rejected, immaterial or pre-existing. A rejected
+   finding is kept in its own list, so a wrong rejection stays visible.
 
 **Codex is a peer source, not a second pass.** It runs alongside the lens agents and its findings go through
 the same synthesis and verification. Ordering the two would mean the second reviewer sees the first's
@@ -239,9 +240,9 @@ display running.
      "severity": "major", "confidence": 90,
      "title": "…", "body": "…", "fix": "…",
      "sources": ["bugs+impl", "adversarial"], "lenses": ["bugs", "adversarial"],
-     "verdict": "confirmed"}
+     "verdict": "confirmed", "reason": "…"}
   ],
-  "open_questions": [], "pre_existing": [], "immaterial": [],
+  "open_questions": [], "pre_existing": [], "immaterial": [], "rejected": [],
   "stats": {"duration_ms": 333000, "tokens": 184920, "stages": []}
 }
 ```

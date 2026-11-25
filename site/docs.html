@@ -332,7 +332,7 @@ revmux --task pr-123 --run 02-after-fix &gt; findings.json</pre>
           <li>
             <strong>verify.</strong> Parallel agents grouped by directory, thin directories merged and the group
             count capped. Each verifier sees only its own group, so it cannot anchor on a neighbouring finding.
-            Every finding comes back with a verdict: confirmed, refined, rejected, immaterial or pre-existing.
+            Every finding comes back with a verdict, and with the verifier's reason when it gave one: confirmed, refined, rejected, immaterial or pre-existing.
           </li>
         </ol>
         <p>
@@ -860,9 +860,9 @@ receives, including what counts as critical, major and minor here.</pre>
      "severity": "major", "confidence": 90,
      "title": "...", "body": "...", "fix": "...",
      "sources": ["bugs+impl", "adversarial"], "lenses": ["bugs", "adversarial"],
-     "verdict": "confirmed"}
+     "verdict": "confirmed", "reason": "..."}
   ],
-  "open_questions": [], "pre_existing": [], "immaterial": [],
+  "open_questions": [], "pre_existing": [], "immaterial": [], "rejected": [],
   "stats": {
     "started_at": "2026-07-26T16:02:11Z", "finished_at": "2026-07-26T16:07:44Z",
     "duration_ms": 333000, "tokens": 184920,
@@ -876,13 +876,16 @@ receives, including what counts as critical, major and minor here.</pre>
           zero <code>line</code> means a file-level finding that renders as the bare path.
           <code>verdict</code> is one of <code>confirmed</code>, <code>refined</code>, <code>rejected</code>,
           <code>immaterial</code>, <code>pre_existing</code>, or <code>unverified</code> when nobody checked it,
-          whether because the stage was skipped or because that group's verifier failed. Empty lists are emitted as arrays rather than <code>null</code>.
+          whether because the stage was skipped or because that group's verifier failed. <code>reason</code> is the
+          verifier's one-line account of its verdict when it gave one, and a rejected finding moves to
+          <code>rejected</code> with it.
+          Empty lists are emitted as arrays rather than <code>null</code>.
         </p>
         <p>
           <code>--min-confidence</code> filters once, before anything renders, and the printed report, the
           findings browser and the exit code are all computed from the filtered set. A finding the exit code
-          says is absent is never listed in the TUI. Open questions, pre-existing and immaterial findings pass
-          through untouched.
+          says is absent is never listed in the TUI. Open questions, pre-existing, immaterial and rejected
+          findings pass through untouched.
         </p>
 
         <h2 id="exit-codes">Exit codes <a class="anchor" href="#exit-codes">#</a></h2>

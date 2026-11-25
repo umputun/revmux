@@ -17,6 +17,7 @@ type Report struct {
 	OpenQuestions []Finding    `json:"open_questions"`
 	PreExisting   []Finding    `json:"pre_existing"`
 	Immaterial    []Finding    `json:"immaterial"`
+	Rejected      []Finding    `json:"rejected"`
 	Stats         Stats        `json:"stats"`
 }
 
@@ -121,6 +122,7 @@ func (r Report) Markdown(w io.Writer) error {
 	out = append(out, r.listLines("Open questions", r.OpenQuestions)...)
 	out = append(out, r.listLines("Pre-existing", r.PreExisting)...)
 	out = append(out, r.listLines("Immaterial", r.Immaterial)...)
+	out = append(out, r.listLines("Rejected", r.Rejected)...)
 	out = append(out, r.sourcesLines()...)
 	for len(out) > 0 && out[len(out)-1] == "" {
 		out = out[:len(out)-1]
@@ -242,6 +244,7 @@ func (r Report) withEmptyLists() Report {
 	out.OpenQuestions = r.normalizeList(r.OpenQuestions)
 	out.PreExisting = r.normalizeList(r.PreExisting)
 	out.Immaterial = r.normalizeList(r.Immaterial)
+	out.Rejected = r.normalizeList(r.Rejected)
 	if out.Sources.DegradedSources == nil {
 		out.Sources.DegradedSources = []string{}
 	}

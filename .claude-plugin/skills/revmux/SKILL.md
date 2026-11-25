@@ -462,7 +462,8 @@ Read `references/output.md` for the full shape.
    completed.
 2. **`sources`.** Non-empty `degraded` means partial; lead with that.
 3. **`findings`.** Group by severity.
-4. **`open_questions`**, **`pre_existing`** and **`immaterial`** — report each separately.
+4. **`open_questions`**, **`pre_existing`**, **`immaterial`** and **`rejected`** — report each separately,
+   a rejected entry with its `reason` when it has one.
 
 `sources` holds **agent names** and is the only evidence of independent corroboration. `lenses` holds
 lens names and is informational. One agent flagging under two lenses is still one source.
@@ -485,9 +486,10 @@ tags. Format the heading `[surface, severity] Title — file:line, conf N`.
 Carry the same combined tags into the counts. "3 findings" says nothing about where the risk is;
 "2 [code, major], 1 [docs, minor]" does.
 
-Actionable is `findings` alone — what revmux kept. Report the other three, and keep them out of the
+Actionable is `findings` alone — what revmux kept. Report the other four, and keep them out of the
 count: `immaterial` is real and judged not worth the fix, `pre_existing` is real and not this change's,
-`open_questions` wants a decision rather than an edit.
+`open_questions` wants a decision rather than an edit, and `rejected` is what the verifier judged not
+real, shown with its `reason` so a wrong rejection can be caught.
 
 Recommend the option that fits the outcome:
 
@@ -517,8 +519,8 @@ Once he answers with anything other than another round, run the archive check be
 ### Step 7: Fix and re-run, if asked
 
 1. Agree which findings to act on. An `immaterial` verdict means revmux already dismissed it — it is in
-   its own list, not in `findings`. A `rejected` one appears nowhere at all: the verifier judged it not
-   real and dropped it, so only the archive's stage snapshots still hold it.
+   its own list, not in `findings`. A `rejected` one is in `rejected` with the verifier's `reason`: it
+   judged the finding not real, and the reason is what to check before overriding it.
 2. Make the fixes.
 
 **Before committing a fix, do these three checks, in this order.**
@@ -654,7 +656,7 @@ The archive is the round directory `revmux new` reported, beside the `input/` it
 | why did this agent report nothing? | `agents/<name>.jsonl` |
 | did an agent stall or get retried? | `events.jsonl`; a `<name>.retry.jsonl` means it did |
 | did synthesis drop something? | `stages/1-found.json` vs `2-synthesized.json` |
-| did verify reject wrongly? | `stages/2-synthesized.json` vs `3-verified.json` |
+| did verify reject wrongly? | `rejected` in `findings.json`, each with its `reason`; a round written before that field: `stages/2-synthesized.json` vs `3-verified.json` |
 | what was this agent asked? | `prompts/agents/<name>.md` |
 | which lens text, from which layer? | `manifest.json` |
 

@@ -71,11 +71,12 @@ type verdict struct {
 	Title      string           `json:"title"`
 	Body       string           `json:"body"`
 	Fix        string           `json:"fix"`
+	Reason     string           `json:"reason"`
 }
 
-// run verifies every finding and routes it by the verdict it came back with. Rejected findings are
-// dropped; immaterial and pre-existing move to their own lists, which is why the stage returns a
-// whole report rather than a slice.
+// run verifies every finding and routes it by the verdict it came back with. Rejected, immaterial and
+// pre-existing each move to their own list, which is why the stage returns a whole report rather than
+// a slice; the report keeps rejected findings with their reason for audit.
 func (v *verifier) run(ctx context.Context, rep finding.Report) (finding.Report, error) {
 	groups := v.groupByDir(rep.Findings)
 	if len(groups) == 0 {
@@ -97,6 +98,8 @@ func (v *verifier) run(ctx context.Context, rep finding.Report) (finding.Report,
 	for _, list := range judged {
 		for _, f := range list {
 			switch f.Verdict {
+			case finding.Rejected:
+				rep.Rejected = append(rep.Rejected, f)
 			case finding.Immaterial:
 				rep.Immaterial = append(rep.Immaterial, f)
 			case finding.PreExisting:
@@ -204,8 +207,9 @@ func (v *verifier) runOne(ctx context.Context, g verifyGroup) ([]finding.Finding
 	if err != nil {
 		return nil, err
 	}
-	v.emit(Event{Kind: EventAgentDone, Agent: agent, Text: strconv.Itoa(len(out)) + " of " +
-		strconv.Itoa(len(g.findings)) + " kept" + v.adjusted(g.findings, out)})
+	kept := slices.DeleteFunc(slices.Clone(out), func(f finding.Finding) bool { return f.Verdict == finding.Rejected })
+	v.emit(Event{Kind: EventAgentDone, Agent: agent, Text: strconv.Itoa(len(kept)) + " of " +
+		strconv.Itoa(len(g.findings)) + " kept" + v.adjusted(g.findings, kept)})
 	return out, nil
 }
 
@@ -232,20 +236,17 @@ func (v *verifier) apply(g verifyGroup, raw json.RawMessage) ([]finding.Finding,
 		byID[d.ID] = d
 	}
 
-	kept := make([]finding.Finding, 0, len(g.findings))
+	judged := make([]finding.Finding, 0, len(g.findings))
 	for _, f := range g.findings {
 		d, ok := byID[f.ID]
 		if !ok || !d.known() {
 			f.Verdict = finding.Unverified
-			kept = append(kept, f)
+			judged = append(judged, f)
 			continue
 		}
-		if d.Verdict == finding.Rejected {
-			continue
-		}
-		kept = append(kept, d.applyTo(f))
+		judged = append(judged, d.applyTo(f))
 	}
-	return kept, nil
+	return judged, nil
 }
 
 // rank orders the severity vocabulary so a change between two can be read as a direction. An
@@ -425,7 +426,7 @@ func (d verdict) knownSeverity() bool {
 // applyTo folds one verdict into the finding it judged. Only a refined verdict carries corrections,
 // and an omitted field leaves the original value in place.
 func (d verdict) applyTo(f finding.Finding) finding.Finding {
-	f.Verdict = d.Verdict
+	f.Verdict, f.Reason = d.Verdict, d.Reason
 	if d.Verdict != finding.Refined {
 		return f
 	}

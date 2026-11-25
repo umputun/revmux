@@ -99,6 +99,30 @@ func TestRoundReader_readFullRound(t *testing.T) {
 	})
 }
 
+func TestRoundReader_rejectedIsNotASurvivor(t *testing.T) {
+	dir := t.TempDir()
+	kept := finding.Finding{ID: "codex-1", File: "a.go", Line: 1, Sources: []string{"codex"},
+		Lenses: []string{"adversarial"}}
+	dropped := finding.Finding{ID: "codex-2", File: "b.go", Line: 2, Sources: []string{"codex"},
+		Lenses: []string{"adversarial"}}
+	writeArtifact(t, dir, foundFile, finding.Report{Sources: roster(), Findings: []finding.Finding{kept, dropped}})
+	writeArtifact(t, dir, synthesizedFile, finding.Report{Sources: roster(), Findings: []finding.Finding{kept, dropped}})
+	kept.Verdict, dropped.Verdict, dropped.Reason = finding.Confirmed, finding.Rejected, "unreachable"
+	writeArtifact(t, dir, verifiedFile, finding.Report{Sources: roster(), Findings: []finding.Finding{kept},
+		Rejected: []finding.Finding{dropped}})
+
+	r := newRoundReader(dir)
+	require.NoError(t, r.read())
+	got := r.stats()
+
+	assert.Contains(t, got.stages, stageFlow{Name: "verify", In: 2, Out: 1}, "a rejection is attrition")
+	for _, a := range got.agents {
+		if a.Name == "codex" {
+			assert.Equal(t, 1, a.Survived, "a rejected finding did not survive")
+		}
+	}
+}
+
 // --no-synthesis --no-verify writes neither snapshot, so stages/1-found.json is the last word and nothing
 // filtered anything: survived equals raised because no stage ran, not because the agent earned it.
 func TestRoundReader_read(t *testing.T) {

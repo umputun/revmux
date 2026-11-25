@@ -298,7 +298,7 @@ func (s *synthesizer) attribute(list []synthesized, inputs map[string]finding.Fi
 		}
 
 		f := item.Finding
-		f.ID, f.Sources, f.Lenses = item.MergedIDs[0], nil, nil
+		f.ID, f.Sources, f.Lenses, f.Reason = item.MergedIDs[0], nil, nil, ""
 		mine := map[string]bool{}
 		for _, id := range item.MergedIDs {
 			in, ok := inputs[id]

@@ -32,7 +32,7 @@ Never show in full a body the reader will not act on.
 3. **Counts** — one line, by `[surface, severity]` tag.
 4. **Findings** — grouped by severity, each headed `[surface, severity] Title — file:line, conf N`,
    then the body's trigger, consequence and fix. Mark any finding with more than one entry in `sources`.
-5. **`open_questions`, `pre_existing`, `immaterial`** — their own short sections, one line per entry,
+5. **`open_questions`, `pre_existing`, `immaterial`, `rejected`** — their own short sections, one line per entry,
    kept out of the counts.
 6. **The decision block, then the question** — below.
 

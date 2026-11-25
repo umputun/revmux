@@ -117,6 +117,16 @@ func TestFinding_MarkdownLines(t *testing.T) {
 		"`app/main.go`", "",
 		"_confidence: 50_", "",
 	}, bare.markdownLines())
+
+	judged := Finding{File: "app/main.go", Title: "verified", Fix: "close it", Confidence: 90, Verdict: Confirmed,
+		Reason: "the handle leaks on the error path"}
+	assert.Equal(t, []string{
+		"### verified", "",
+		"`app/main.go`", "",
+		"Fix: close it", "",
+		"Verifier: the handle leaks on the error path", "",
+		"_confidence: 90 | verdict: confirmed_", "",
+	}, judged.markdownLines())
 }
 
 func TestSeverity_Rank(t *testing.T) {

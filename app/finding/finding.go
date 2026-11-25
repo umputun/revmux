@@ -37,7 +37,8 @@ const (
 // Finding is one reported problem. Sources holds agent names and is the only input to the
 // cross-source confidence boost; Lenses holds the lens names that raised it and is informational.
 // The two are never interchangeable: a source is a process, so an agent carrying two lenses that
-// flags an issue under both is still one source.
+// flags an issue under both is still one source. Reason is the verifier's one-line account of its
+// verdict and is set by verification alone.
 type Finding struct {
 	ID         string   `json:"id"`
 	File       string   `json:"file"`
@@ -51,6 +52,7 @@ type Finding struct {
 	Sources    []string `json:"sources"`
 	Lenses     []string `json:"lenses"`
 	Verdict    Verdict  `json:"verdict"`
+	Reason     string   `json:"reason"`
 }
 
 // Location renders the three shapes a finding anchor can take: a file with no line at all,
@@ -74,6 +76,9 @@ func (f Finding) markdownLines() []string {
 	}
 	if f.Fix != "" {
 		out = append(out, "Fix: "+f.Fix, "")
+	}
+	if f.Reason != "" {
+		out = append(out, "Verifier: "+f.Reason, "")
 	}
 	return append(out, f.metaLine(), "")
 }

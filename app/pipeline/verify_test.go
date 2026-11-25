@@ -270,19 +270,36 @@ func TestVerifier_run_verdicts(t *testing.T) {
 	t.Run("every verdict routes its finding", func(t *testing.T) {
 		h := newHarness(t)
 		h.cfg.NewRunner = verdictRunner(map[string]string{
-			"bugs-1": `{"id":"bugs-1","verdict":"confirmed"}`,
-			"bugs-2": `{"id":"bugs-2","verdict":"rejected"}`,
-			"impl-1": `{"id":"impl-1","verdict":"immaterial"}`,
+			"bugs-1": `{"id":"bugs-1","verdict":"confirmed","reason":"the timer is never reset"}`,
+			"bugs-2": `{"id":"bugs-2","verdict":"rejected","reason":"the map is created in New"}`,
+			"impl-1": `{"id":"impl-1","verdict":"immaterial","reason":"one call per run"}`,
 			"impl-2": `{"id":"impl-2","verdict":"pre_existing"}`,
 		})
 
-		v := h.verifier(func(Event) {})
+		var (
+			mu   sync.Mutex
+			done []string
+		)
+		v := h.verifier(func(ev Event) {
+			if ev.Kind == EventAgentDone {
+				mu.Lock()
+				done = append(done, ev.Text)
+				mu.Unlock()
+			}
+		})
 		rep, err := v.run(context.Background(), judgedReport())
 		require.NoError(t, err)
 
-		require.Len(t, rep.Findings, 1, "rejected is dropped, the two reclassified move out")
+		require.Len(t, rep.Findings, 1, "rejected and the two reclassified all leave findings")
 		assert.Equal(t, "bugs-1", rep.Findings[0].ID)
 		assert.Equal(t, finding.Confirmed, rep.Findings[0].Verdict)
+		assert.Equal(t, "the timer is never reset", rep.Findings[0].Reason)
+
+		require.Len(t, rep.Rejected, 1)
+		assert.Equal(t, "bugs-2", rep.Rejected[0].ID)
+		assert.Equal(t, finding.Rejected, rep.Rejected[0].Verdict)
+		assert.Equal(t, "the map is created in New", rep.Rejected[0].Reason)
+		assert.Contains(t, done, "1 of 2 kept", "a rejected finding is not counted as kept")
 
 		require.Len(t, rep.Immaterial, 1)
 		assert.Equal(t, "impl-1", rep.Immaterial[0].ID)
@@ -581,9 +598,11 @@ func TestPipeline_Run_verify(t *testing.T) {
 		rep, err := p.Run(context.Background())
 		require.NoError(t, err)
 
-		require.Len(t, rep.Findings, 1, "the rejected finding is dropped")
+		require.Len(t, rep.Findings, 1, "the rejected finding leaves findings")
 		assert.Equal(t, "bugs-1", rep.Findings[0].ID)
 		assert.Equal(t, finding.Confirmed, rep.Findings[0].Verdict)
+		require.Len(t, rep.Rejected, 1, "and is kept on record in rejected")
+		assert.Equal(t, "impl-1", rep.Rejected[0].ID)
 
 		require.Len(t, rep.Stats.Stages, 2)
 		assert.Equal(t, stageVerify, rep.Stats.Stages[1].Name)
