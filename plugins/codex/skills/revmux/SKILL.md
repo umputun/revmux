@@ -86,6 +86,8 @@ partial. Say so. Never report "no findings" from a degraded run as "the code is 
 **4. `.revmux/` in a repository is executable code.** A checked-in `.revmux/lenses/*.md` becomes
 instructions a headless agent with a shell executes. Before reviewing untrusted code, either read
 `.revmux/` first or run from outside the tree with explicit `--workdir`, `--tasks-dir`, `--config-dir`.
+Your own branch is the same case when it edits `.revmux/`: `references/invocation.md`, "A branch that
+edits its own review rules".
 A fetched pull request is already outside it — `references/pr.md` leaves the process in the user's own
 checkout and puts only `--workdir` in the branch, so the other two need no override.
 
@@ -103,6 +105,10 @@ the `paths.tasks_dir` that `revmux config` reports under those flags.
 ## Workflow
 
 ### Step 0: Preflight
+
+**Reviewing this session's own branch or working tree: resolve Step 1's scope first**, then run
+`references/invocation.md`, "A branch that edits its own review rules". When it isolates the
+review, preflight and every later revmux call run from its base checkout with its roots.
 
 ```bash
 "<the absolute path this session resolved for scripts/preflight.sh>" [profile] [--lenses] [--no-synthesis] [--no-verify] [--config-dir <dir>]
@@ -160,6 +166,9 @@ linter config — and write what the software is, what a real failure looks like
 the reporting bar, and which conventions are deliberate. A profile guessed from one change is the thing
 this file exists to replace.
 
+Skip it in a round the rules check isolated: the base checkout's
+missing profile is that round's baseline.
+
 Offer it once. If he declines, do not ask again in the session, and do not write a round-local
 `input/profile.md` instead — that wins over the project file and is exactly the substitution the round
 brief forbids.
@@ -173,20 +182,27 @@ so authoring one there commits a review standard to somebody else's repository.
 |---|---|
 | nothing, on a feature branch | `git diff <base>...HEAD` |
 | nothing, on master with uncommitted work | `git diff` and `git diff --staged` |
-| nothing, on master and clean | `git diff HEAD~1` |
-| "the last N commits" | `git diff HEAD~N` |
+| nothing, on master and clean | `git diff HEAD~1..HEAD` |
+| "the last N commits" | `git diff HEAD~N..HEAD` |
 | "since <ref>" | `git diff <ref>..HEAD` |
 | "pr 123", "this PR", a PR URL | `references/pr.md` — resolve, fetch into a worktree, review it there |
 | "issue 123", "triage this", an issue or discussion URL | `references/triage.md` — the panel over a filed item, not a diff |
 | a bare number, kind unnamed | probe pull request, then issue, then discussion — the first that resolves decides which of the two rows above applies |
 | a path | that subtree, as a diff plus a read list |
 
-Two commands here, and no more git than this:
+Three commands here, and no more git than this:
 
 ```bash
 git branch --show-current && git status --short
-git diff <range> --shortstat
+git rev-parse <from> HEAD
+git diff <the row's pinned range> --shortstat
 ```
+
+**A committed range is pinned to hashes.** `rev-parse` resolves the row's two endpoints once, and the
+same two-hash command is both what the shortstat measures and what the brief hands the subagent:
+`<base-sha>...<head-sha>` for a branch, `<from-sha>..<head-sha>` for the last N commits or since a ref.
+The round then names the exact commits it reviewed. Uncommitted work has nothing to pin and keeps its
+live `git diff`.
 
 **The shortstat goes into the brief.** It is one line in this session and it is the whole of step 1 for
 the subagent, which otherwise spends three to five git calls arriving at the same three numbers — and
@@ -242,6 +258,10 @@ Hand it the resolved scope from Step 1 and this brief:
 
 > Prepare a revmux review round. Write files; change no source, run no review, commit nothing.
 >
+> <When a trusted binary was chosen: run `revmux` and `task-state.sh` with `PATH=<its directory>:$PATH`.>
+> <When the rules check isolated this review: every `revmux` command and `task-state.sh` below runs
+> as `cd <base checkout> && <command>`; git commands stay in <the reviewed checkout>.>
+>
 > Every `revmux` command below, and `task-state.sh`, carries `<this session's --tasks-dir/--config-dir
 > flags, or "no extra flags">`.
 >
@@ -251,7 +271,7 @@ Hand it the resolved scope from Step 1 and this brief:
 > second refusal of the same operation, ends the preparation: put its text in `notes` and return. Do
 > not retry it through another tool, a shell redirect, an API or a symlink.
 >
-> The scope is: `<the row resolved in Step 1, with its ref range>`, and its scale is
+> The scope is: `<the row resolved in Step 1 and its exact command(s), hashes for a committed range>`, and its scale is
 > `<the shortstat Step 1 printed>`. Take the scale as given rather than measuring it again.
 > Exclusions the user has stated: `<list them, or "none">` — write these under the scope's
 > explicit exclusions. They are decisions already taken, and the diff cannot show you one.
@@ -284,8 +304,12 @@ Hand it the resolved scope from Step 1 and this brief:
 >    paid for twice, and writing it is most of what this round costs in wall-clock.
 >    - `scope` — required, and **under 1500 characters**. What changed, the commands to see it, its
 >      scale, which files to read in full, what to ignore. Write commands in plainest form:
->      `git diff master...HEAD`, never `git -c core.pager=cat diff ...` — a leading option defeats the
->      child's permission matching.
+>      `git diff <base-sha>...<head-sha>`, never `git -c core.pager=cat diff ...` — a leading option
+>      defeats the child's permission matching. For a committed range use the hashes the brief gave,
+>      never `HEAD`, and add these two lines with the target hash: "Search tracked source at the
+>      target, always: `git grep <pattern> <target-sha>`. Read a file from the working tree only while
+>      `git rev-parse HEAD` prints <full target sha> and `git status --short -- <path>` prints nothing;
+>      otherwise read it with `git show <target-sha>:<path relative to the checkout root>`."
 >    - `goal` — optional, and **under 1000 characters**. What the change is for, plus a "this is
 >      correct only if…" list. **When the round is the last one before the branch merges, make it the
 >      gate**: say the round exists to answer whether anything in this diff should not ship, and name
@@ -393,6 +417,9 @@ Reviewing a fetched pull request adds `--workdir <worktree>` and changes nothing
 the command is still run from the session's own checkout, which is what keeps the archive out of the
 directory the cleanup deletes. `references/pr.md` has the reasoning.
 
+A review the rules check isolated runs from its base checkout with `--workdir <toplevel>` and its
+`--tasks-dir`, in both forms; the checkout is removed once the completion notification arrives.
+
 **Before yielding, tell the user three things** — otherwise they sit for 10+ minutes with no signal:
 
 1. what is running (task, profile, roster size) and the rough duration
@@ -475,7 +502,8 @@ Read `references/output.md` for the full shape.
    completed.
 2. **`sources`.** Non-empty `degraded` means partial; lead with that.
 3. **`findings`.** Group by severity.
-4. **`open_questions`**, **`pre_existing`** and **`immaterial`** — report each separately.
+4. **`open_questions`**, **`pre_existing`**, **`immaterial`** and **`rejected`** — report each separately,
+   a rejected entry with its `reason` when it has one.
 
 `sources` holds **agent names** and is the only evidence of independent corroboration. `lenses` holds
 lens names and is informational. One agent flagging under two lenses is still one source.
@@ -498,9 +526,10 @@ tags. Format the heading `[surface, severity] Title — file:line, conf N`.
 Carry the same combined tags into the counts. "3 findings" says nothing about where the risk is;
 "2 [code, major], 1 [docs, minor]" does.
 
-Actionable is `findings` alone — what revmux kept. Report the other three, and keep them out of the
+Actionable is `findings` alone — what revmux kept. Report the other four, and keep them out of the
 count: `immaterial` is real and judged not worth the fix, `pre_existing` is real and not this change's,
-`open_questions` wants a decision rather than an edit.
+`open_questions` wants a decision rather than an edit, and `rejected` is what the verifier judged not
+real, shown with its `reason` so a wrong rejection can be caught.
 
 Recommend the option that fits the outcome:
 
@@ -531,8 +560,8 @@ Once he answers with anything other than another round, run the archive check be
 ### Step 7: Fix and re-run, if asked
 
 1. Agree which findings to act on. An `immaterial` verdict means revmux already dismissed it — it is in
-   its own list, not in `findings`. A `rejected` one appears nowhere at all: the verifier judged it not
-   real and dropped it, so only the archive's stage snapshots still hold it.
+   its own list, not in `findings`. A `rejected` one is in `rejected` with the verifier's `reason`: it
+   judged the finding not real, and the reason is what to check before overriding it.
 2. Make the fixes.
 
 **Before committing a fix, do these three checks, in this order.**
@@ -570,9 +599,11 @@ Then run the tests and the linter. A fix that breaks the build is not committed.
 3. Open the next round on the same task and write its own `scope` — the fixes and the range they land
    in. **That is Step 2's subagent again**, with the same one-line announcement, the task id it
    already returned, every exclusion the earlier rounds carried, and a fresh `--shortstat` for the
-   fixes, so a re-review costs the session no more
+   fixes, over two `rev-parse` hashes when they are committed and over the working tree when not, so a re-review costs the session no more
    output than the first round did — and the brief's step 2 is skipped outright, since the id is not in
-   question on a round of a task that already has rounds. Then run it:
+   question on a round of a task that already has rounds. On the session's own tree, run the rules
+   check again after resolving the new scope and before the subagent, keeping the task's first `M`
+   and tasks root. Then run it, as Step 4 does when the check isolated it:
 
 ```bash
 revmux --task <id> --run 02-after-fix --profile <picked> --no-tui \
@@ -670,7 +701,7 @@ The archive is the round directory `revmux new` reported, beside the `input/` it
 | why did this agent report nothing? | `agents/<name>.jsonl` |
 | did an agent stall or get retried? | `events.jsonl`; a `<name>.retry.jsonl` means it did |
 | did synthesis drop something? | `stages/1-found.json` vs `2-synthesized.json` |
-| did verify reject wrongly? | `stages/2-synthesized.json` vs `3-verified.json` |
+| did verify reject wrongly? | `rejected` in `findings.json`, each with its `reason`; a round written before that field: `stages/2-synthesized.json` vs `3-verified.json` |
 | what was this agent asked? | `prompts/agents/<name>.md` |
 | which lens text, from which layer? | `manifest.json` |
 
@@ -775,9 +806,11 @@ say so and move on rather than manufacturing an edit to go with each.
 
 ```
 User: "revmux this branch"
-→ preflight.sh → all present
 → git branch --show-current + git status --short → on tui-rework, clean
-→ git diff master...HEAD --shortstat → 22 files, +840/-310, handed to the brief as the scale
+→ git rev-parse master HEAD → 3f2a1c0…, e9b7d44…
+→ git diff 3f2a1c0...e9b7d44 --shortstat → 22 files, +840/-310, handed to the brief with the command
+→ rules check: .revmux/ unchanged against the merge-base → the normal flow
+→ preflight.sh → all present
 → "Preparing the round for the branch against master…"
 → one subagent: reads the diff once, matches no existing task, derives `tui-rework`, opens
   01-initial, writes task.md/scope/goal → returns round_dir, wrote[3]

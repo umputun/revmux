@@ -242,6 +242,7 @@ func (f *finder) parse(spec prompt.AgentSpec, raw json.RawMessage) ([]finding.Fi
 	for i := range out.Findings {
 		out.Findings[i].ID = spec.Name + "-" + strconv.Itoa(i+1)
 		out.Findings[i].Sources = []string{spec.Name}
+		out.Findings[i].Reason = ""
 		out.Findings[i].Lenses = f.lenses(spec, out.Findings[i].Lenses)
 	}
 	return out.Findings, nil

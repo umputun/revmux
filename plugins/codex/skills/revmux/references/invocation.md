@@ -310,8 +310,8 @@ the review quality is not comparable.
 
 `--min-confidence=<n>` drops findings below that confidence. It filters **once, before anything
 renders**, so the report, the findings browser and the exit code all agree — a finding the exit code
-says is absent is never listed anywhere. Open questions, pre-existing and immaterial findings pass
-through untouched.
+says is absent is never listed anywhere. Open questions, pre-existing, immaterial and rejected findings
+pass through untouched.
 
 `70` is a reasonable floor for "only show me things worth acting on". `0` (the default) shows
 everything that survived verification.
@@ -358,6 +358,62 @@ revmux --task pr-123 \
 ```
 
 This is worth doing unprompted for any review of code from an untrusted author.
+
+## A branch that edits its own review rules
+
+The project layer is the process working directory's `.revmux/`, so a branch that edits its
+`profile.md`, a lens, a stage or `config` is reviewed under the rules it proposes, and so is every later
+round while it still carries the edit. A review of the session's own branch or working tree therefore
+runs these steps after Step 1 resolves the scope (git only) and before preflight, on every round. A
+fetched pull request skips them: `pr.md` already runs it from outside its tree.
+
+0. **An explicit `--config-dir`.** Resolve it against the original checkout when relative. One inside
+   the reviewed checkout loads the branch's own text as the user layer whatever `.revmux/` holds: stop
+   and ask the user.
+1. **The binary, before any revmux call.** When `realpath "$(command -v revmux)"` is under a path
+   `git worktree list --porcelain` reports, it is a build of this repository and may carry the
+   branch's embedded prompts. Ask the user which binary to trust, then put its directory first on
+   `PATH` for everything below, both launch forms included.
+2. **The trust anchor `M`**, a full hash. The branch decides first, the scope second:
+   - on a feature branch, always `git merge-base <base-branch> HEAD`, whatever the scope, so a branch
+     that committed a profile edit and then asks for a review of its uncommitted code is still judged
+     by the base's profile
+   - on the base branch, a committed range: the range's start; the merge-base there is `HEAD`, which
+     would let the reviewed commit supply its own rules
+   - on the base branch, uncommitted work: `HEAD`
+
+   A re-review in the same session keeps the first round's `M` whenever the new one would be later.
+3. **The check.**
+   - `git diff --quiet <M> -- .revmux ':(exclude).revmux/tasks'`: `0` unchanged, `1` changed, anything
+     else stops the review.
+   - A working-tree scope also runs `git ls-files --others --exclude-standard -- .revmux
+     ':(exclude).revmux/tasks'`, and any output counts as changed, an unrelated local override
+     included. Say so in one line: an override meant to stay belongs in `.gitignore` or
+     `~/.config/revmux`.
+   - Unchanged: the normal flow, local overrides included. Steps 4-8 do not apply.
+4. **The base checkout.** `mktemp -d /tmp/revmux-base-XXXXXX` prints its path, `<wt>` below; write
+   it literally into every later command, since a shell variable does not survive between calls.
+   Then `git worktree add --detach <wt> <M>`. A failure stops the review after `rmdir <wt>`: there is
+   no fallback to generic rules. A base with no `.revmux/` is simply a checkout without one.
+5. **Roots.** Pass the `--config-dir` from step 0 to every call, the lookup below included. The
+   tasks root is an explicit
+   `--tasks-dir` already in use, resolved against the original checkout when relative; otherwise the
+   `tasks-dir` knob's `value` from `revmux config` run in `<wt>`, joined to the original checkout's
+   toplevel when relative. Never `paths.tasks_dir` there: it is absolute against `<wt>`, which is
+   deleted. The root the task's first round used stays the task's for the rest of the session, in both
+   directions, so the task match never starts a second history. Every call from here on carries
+   `--tasks-dir`, except `preflight.sh`, which takes only `--config-dir`.
+6. **Every revmux call runs from `<wt>`**: preflight, the task match, Step 2's `revmux new` and
+   `task-state.sh`, and the launch, which adds `--workdir <toplevel>`. Git reads stay in the original
+   checkout. The overlay launcher finds the session from `<wt>`, since it shares the repository.
+   A subagent does not inherit this session's `PATH` change: Step 2's brief names the binary
+   directory from step 1 whenever one was chosen, isolated round or not.
+7. **No profile offer.** Step 0.5 is skipped: an absent profile in `<wt>` is this round's baseline, and
+   the change may be the one adding it.
+8. **Cleanup.** `git worktree remove <wt>` on every exit once it exists: after the launch's
+   completion notification, never while it runs, and right away on any path that ends the round
+   without a launch. A retry of the same round repeats steps 4-6 with the same `M` and tasks root.
+   Report a failed removal with its path.
 
 ## Config precedence
 
@@ -503,7 +559,7 @@ lists every agent, every lens and every stage, and `totals` carries those same t
 than the empty ones above.
 
 **Per agent** — `raised` is what it put on the table in `stages/1-found.json`; `survived` is what was
-still there in the round's last stage snapshot, counted across all four of that report's arrays;
+still there in the round's last stage snapshot, counted across its four survivor arrays (`rejected` is not one);
 `corroborated` is the survived subset another agent independently reached. These are exact: revmux
 stamps `sources` from the process that emitted the finding, so no model supplied them.
 

@@ -437,15 +437,17 @@ claude/opus:hgih         <span class="c-crimson">refused: not an effort</span></
               <tr><td>findings[].sources</td><td class="prose"><strong>agent names</strong>. The only input to the confidence boost</td></tr>
               <tr><td>findings[].lenses</td><td class="prose">the lens names that raised it. Informational, never a vote count</td></tr>
               <tr><td>findings[].verdict</td><td class="prose">the verify stage's answer, see below</td></tr>
+              <tr><td>findings[].reason</td><td class="prose">the verifier's one-line account of its verdict; empty when it gave none or nobody checked it</td></tr>
               <tr><td>open_questions[]</td><td class="prose">what a reviewer could not settle from the code</td></tr>
               <tr><td>pre_existing[]</td><td class="prose">real, but not introduced by this change</td></tr>
               <tr><td>immaterial[]</td><td class="prose">true and not worth acting on</td></tr>
+              <tr><td>rejected[]</td><td class="prose">judged not real, kept with its reason</td></tr>
               <tr><td>stats</td><td class="prose">timings, total tokens, and per-stage duration with the runner each resolved to</td></tr>
             </tbody>
           </table>
         </div>
         <p class="small">
-          Empty lists are emitted as arrays rather than <code>null</code>. The three side arrays are not filtered
+          Empty lists are emitted as arrays rather than <code>null</code>. The four side arrays are not filtered
           by <code>--min-confidence</code> and do not affect the exit code.
         </p>
 
@@ -458,7 +460,7 @@ claude/opus:hgih         <span class="c-crimson">refused: not an effort</span></
             <tbody>
               <tr><td>confirmed</td><td class="prose">checked against the code and it stands</td></tr>
               <tr><td>refined</td><td class="prose">real, with the severity, the location or the claim corrected</td></tr>
-              <tr><td>rejected</td><td class="prose">does not hold; dropped from the report</td></tr>
+              <tr><td>rejected</td><td class="prose">does not hold; moved to <code>rejected</code></td></tr>
               <tr><td>immaterial</td><td class="prose">true and not worth acting on; moved to <code>immaterial</code></td></tr>
               <tr><td>pre_existing</td><td class="prose">real but not introduced here; moved to <code>pre_existing</code></td></tr>
               <tr><td>unverified</td><td class="prose">nobody checked it: the stage was skipped with <code>--no-verify</code>, its verifier group failed, or the model returned no usable verdict for it</td></tr>

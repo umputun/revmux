@@ -21,7 +21,7 @@ loop up front, in which case round 1 is still reported before any fixing and Ste
 Gating is `critical` and `major` in `findings`. Nothing else:
 
 - `minor` never gates — it is what the loop is expected to leave behind.
-- `immaterial`, `pre_existing` and `open_questions` are not in `findings` and never gate. An open
+- `rejected`, `immaterial`, `pre_existing` and `open_questions` are not in `findings` and never gate. An open
   question is a decision for the user, so the loop must not edit code to resolve one.
 - **A finding restating a scope the round's own `scope.md` or `goal.md` puts outside the change does not
   gate.** The loop cannot overturn that decision by editing code, so the same finding returns unchanged
@@ -54,7 +54,7 @@ minors is not an iteration and ends the loop — see Stopping.
    revertible.
 4. Open the next round and run it. Its `scope` is the cumulative diff from the starting commit, not just
    this round's fixes, and it repeats every exclusion the earlier rounds carried — a round that drops one
-   is a round the excluded finding gates again.
+   is a round the excluded finding gates again. It goes through Step 7's route, rules check included.
 
 Profile per round follows Step 7: `final` when the fixes stayed inside what the last round flagged,
 `comprehensive` when they spilled into tests or structure.

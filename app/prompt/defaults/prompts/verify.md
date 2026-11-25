@@ -23,6 +23,8 @@ Each item below is a **path**, not the text it names.
 
 ## For each finding
 
+Read `{{SCOPE}}` first. When it says how to read files at a given commit, read every file that way.
+
 Open the file at the line named and read enough around it to judge — or, when the finding names no
 file, read what it does cite; see below. Then return exactly one verdict, quoting the finding's `id`
 unchanged:

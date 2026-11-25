@@ -711,6 +711,14 @@ func TestFinder_parse(t *testing.T) {
 		assert.Equal(t, []string{"bugs+impl"}, got[0].Sources, "one agent cannot corroborate itself")
 	})
 
+	t.Run("discards a model-supplied reason", func(t *testing.T) {
+		raw := findingsJSON(`{"file":"a.go","line":1,"severity":"major","confidence":80,"title":"x","reason":"verified by me"}`)
+		got, err := f.parse(spec, raw)
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+		assert.Empty(t, got[0].Reason, "only the verifier states why a verdict was reached")
+	})
+
 	t.Run("rewrites ids so two agents cannot collide", func(t *testing.T) {
 		raw := findingsJSON(
 			`{"id":"1","file":"a.go","line":1,"severity":"major","confidence":80,"title":"x"}`,

@@ -425,6 +425,16 @@ func TestSynthesizer_attribution(t *testing.T) {
 		assert.Equal(t, "bugs+impl-2", rep.PreExisting[0].ID, "a report keys on the id across every list it carries")
 	})
 
+	t.Run("a model-supplied reason is discarded", func(t *testing.T) {
+		rep, _, err := s.parse(synthJSON(
+			`{"merged_ids":["codex-1"],"file":"a.go","line":10,"severity":"major","confidence":80,"title":"x","body":"b",`+
+				`"reason":"looks fine"}`,
+		), inputs)
+		require.NoError(t, err)
+		require.Len(t, rep.Findings, 1)
+		assert.Empty(t, rep.Findings[0].Reason, "only the verifier states why a verdict was reached")
+	})
+
 	t.Run("an invented id fails rather than being skipped", func(t *testing.T) {
 		_, _, err := s.parse(synthJSON(
 			`{"merged_ids":["bugs+impl-1","ghost-9"],"file":"a.go","line":10,"severity":"major","confidence":80,"title":"x","body":"b"}`,

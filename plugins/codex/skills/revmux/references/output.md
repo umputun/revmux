@@ -26,9 +26,9 @@ Prefer JSON when a model consumes it. Use `--markdown` only for output going str
      "severity": "major", "confidence": 90,
      "title": "…", "body": "…", "fix": "…",
      "sources": ["bugs+impl", "adversarial"], "lenses": ["bugs", "adversarial"],
-     "verdict": "confirmed"}
+     "verdict": "confirmed", "reason": "…"}
   ],
-  "open_questions": [], "pre_existing": [], "immaterial": [],
+  "open_questions": [], "pre_existing": [], "immaterial": [], "rejected": [],
   "stats": {
     "started_at": "2026-07-26T16:02:11Z", "finished_at": "2026-07-26T16:07:44Z",
     "duration_ms": 333000, "tokens": 184920,
@@ -78,6 +78,7 @@ claim until read back. A mismatch does not invalidate the review but explains a 
 | `title` | the claim, one line |
 | `body` | the argument — trigger and consequence |
 | `fix` | the suggested change |
+| `reason` | the verifier's one-line account of its verdict; empty when verification did not run |
 | `sources` | **agent names** that raised it |
 | `lenses` | **lens names** it was raised under |
 | `verdict` | verify's judgment |
@@ -100,14 +101,14 @@ Go stamps `sources` after parsing; no schema exposes it to the model.
 |---|---|
 | `confirmed` | act on it |
 | `refined` | act on it; the body is the corrected version |
-| `rejected` | do not act on it |
+| `rejected` | do not act on it; report it separately with its `reason` so a wrong rejection can be caught |
 | `immaterial` | do not act on it; report it separately so the dismissal can be audited |
 | `pre_existing` | report separately, not this change's responsibility |
 | `unverified` | verify was skipped; every finding is unchecked, say so |
 
-`immaterial` and `pre_existing` move out of `findings` into their own top-level lists. `rejected` gets no
-list — a finding the verifier judged not real is dropped, and only the stage snapshots in the archive
-still hold it.
+`rejected`, `immaterial` and `pre_existing` move out of `findings` into their own top-level lists, and
+none of them gates. `reason` is the verifier's one-line account of its verdict when it gave one, and
+is empty when it gave none, verification was skipped, or its group failed.
 
 ## The other lists
 
@@ -116,6 +117,8 @@ still hold it.
 - `immaterial` — real, and judged not worth acting on. Report it as its own short section and keep it out
   of the actionable count. It is where a wrong dismissal hides, and the reader is the only one who can
   catch one.
+- `rejected` — the verifier judged it not real. Report it as its own short section with its `reason`:
+  a rejection is the one verdict that removes a finding outright, so a wrong one costs a real bug.
 
 ## Reporting to a human
 
@@ -180,7 +183,7 @@ the recovery path when a run's stdout was lost.
 | why did this agent report nothing? | `agents/<name>.jsonl` |
 | did an agent stall or get retried? | `events.jsonl`, plus a `<name>.retry.jsonl` |
 | did synthesis drop something real? | the `dropped` event in `events.jsonl` — it carries the findings themselves |
-| did verify reject wrongly? | `stages/2-synthesized.json` vs `3-verified.json` |
+| did verify reject wrongly? | `rejected` in `findings.json`, each with its `reason`; a round written before that field: `stages/2-synthesized.json` vs `3-verified.json` |
 | what was this agent asked? | `prompts/agents/<name>.md` |
 | which lens text, from which layer? | `manifest.json` |
 | what calibrated this round? | `input/profile.md`, or `prompts/input-profile.md` when it inherited the project's |

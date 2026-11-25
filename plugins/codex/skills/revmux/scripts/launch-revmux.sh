@@ -645,7 +645,7 @@ if is_cmux_session; then
         exit "$RC_LAUNCH_FAIL"
     fi
     new_sentinel
-    new_launch_script "$(write_rc_cmd "$SENTINEL")"
+    new_launch_script "$(write_rc_cmd "$SENTINEL" "$CWD")"
 
     CMUX_NEW=$(cmux new-split down 2>&1) || true
     CMUX_SURF=$(echo "$CMUX_NEW" | grep -o 'surface:[0-9]*' | head -1 || true)

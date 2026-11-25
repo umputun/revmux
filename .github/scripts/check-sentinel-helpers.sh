@@ -1,8 +1,8 @@
 #!/bin/sh
 # the nine overlay backends inside launch-revmux.sh block on a sentinel, and each must claim its round
-# through new_sentinel and build its inner command through write_rc_cmd or write_fifo_rc_cmd. The three
+# through new_sentinel and build its inner command through write_rc_cmd or write_fifo_rc_cmd. The four
 # that change directory inside the generated shell pass it as the helper's second argument; the other
-# six hand it to the backend itself, through --cwd or an initial-working-directory setting, and pass
+# five hand it to the backend itself, through --cwd or an initial-working-directory setting, and pass
 # nothing here. A backend that hand-rolls any of that is still valid shell, which the linter
 # passes, and both plugin trees carry the same mistake, which `diff -r` passes. That is how the iTerm2
 # path shipped waiting ten seconds for a pid nothing ever wrote (#29), losing the report of a review

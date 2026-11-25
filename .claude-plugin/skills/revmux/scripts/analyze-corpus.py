@@ -41,7 +41,7 @@ def rank(severity: Any) -> int:
 
 
 def findings_of(report: dict[str, Any]) -> list[dict[str, Any]]:
-    """Every finding a stage report carries, across all four of its arrays.
+    """Every surviving finding a stage report carries, across its four survivor arrays (not `rejected`).
 
     A report splits its findings by what became of them, so any count taken from `findings` alone moves
     when verification reclassifies one — which is a stage doing its job, not attrition.

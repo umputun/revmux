@@ -124,11 +124,17 @@ func TestReport_MarkdownExtraSections(t *testing.T) {
 		OpenQuestions: []Finding{{File: "app/main.go", Line: 3, Title: "is this intentional", Confidence: 40}},
 		PreExisting:   []Finding{{File: "app/old.go", Title: "predates the change", Confidence: 60}},
 		Immaterial:    []Finding{{File: "app/x.go", Line: 9, Title: "true but not worth it", Confidence: 55}},
+		Rejected: []Finding{{File: "app/y.go", Line: 2, Title: "nil map write", Confidence: 70, Verdict: Rejected,
+			Reason: "the map is created in New"}},
 	}
 
 	buf := &bytes.Buffer{}
 	require.NoError(t, rep.Markdown(buf))
 	out := buf.String()
+
+	assert.Contains(t, out, "## Rejected")
+	assert.Contains(t, out, "### nil map write")
+	assert.Contains(t, out, "Verifier: the map is created in New")
 
 	assert.Contains(t, out, "## Open questions")
 	assert.Contains(t, out, "### is this intentional")
@@ -147,6 +153,7 @@ func TestReport_MarkdownOmitsEmptySections(t *testing.T) {
 	assert.NotContains(t, out, "## Open questions")
 	assert.NotContains(t, out, "## Pre-existing")
 	assert.NotContains(t, out, "## Immaterial")
+	assert.NotContains(t, out, "## Rejected")
 	assert.NotContains(t, out, "## Sources")
 }
 
@@ -236,6 +243,8 @@ func TestReport_JSONRoundTrip(t *testing.T) {
 	in.OpenQuestions = []Finding{{ID: "q1", File: "a.go", Title: "why", Sources: []string{"codex"}, Lenses: []string{"adversarial"}}}
 	in.PreExisting = []Finding{{ID: "p1", File: "b.go", Title: "old", Sources: []string{"codex"}, Lenses: []string{"adversarial"}}}
 	in.Immaterial = []Finding{{ID: "i1", File: "c.go", Title: "meh", Sources: []string{"codex"}, Lenses: []string{"adversarial"}}}
+	in.Rejected = []Finding{{ID: "r1", File: "d.go", Title: "no", Sources: []string{"codex"}, Lenses: []string{"adversarial"},
+		Verdict: Rejected, Reason: "unreachable"}}
 
 	buf := &bytes.Buffer{}
 	require.NoError(t, in.JSON(buf))
@@ -251,7 +260,7 @@ func TestReport_JSONShape(t *testing.T) {
 
 	raw := map[string]json.RawMessage{}
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &raw))
-	for _, key := range []string{"scope", "sources", "findings", "open_questions", "pre_existing", "immaterial", "stats"} {
+	for _, key := range []string{"scope", "sources", "findings", "open_questions", "pre_existing", "immaterial", "rejected", "stats"} {
 		assert.Contains(t, raw, key)
 	}
 
@@ -272,6 +281,7 @@ func TestReport_JSONEmptyListsAreArrays(t *testing.T) {
 	assert.Contains(t, out, `"open_questions": []`)
 	assert.Contains(t, out, `"pre_existing": []`)
 	assert.Contains(t, out, `"immaterial": []`)
+	assert.Contains(t, out, `"rejected": []`)
 	assert.Contains(t, out, `"degraded": []`)
 	assert.Contains(t, out, `"agents": []`)
 	assert.Contains(t, out, `"stages": []`)
@@ -326,6 +336,7 @@ func TestReport_AboveKeepsTheOtherLists(t *testing.T) {
 		OpenQuestions: []Finding{{ID: "q", Confidence: 10}},
 		PreExisting:   []Finding{{ID: "p", Confidence: 0}},
 		Immaterial:    []Finding{{ID: "i", Confidence: 5}},
+		Rejected:      []Finding{{ID: "r", Confidence: 5}},
 		Stats:         Stats{Tokens: 42},
 	}
 
@@ -334,6 +345,7 @@ func TestReport_AboveKeepsTheOtherLists(t *testing.T) {
 	assert.Equal(t, rep.OpenQuestions, got.OpenQuestions, "open questions are never filtered by confidence")
 	assert.Equal(t, rep.PreExisting, got.PreExisting)
 	assert.Equal(t, rep.Immaterial, got.Immaterial)
+	assert.Equal(t, rep.Rejected, got.Rejected)
 	assert.Equal(t, rep.Scope, got.Scope)
 	assert.Equal(t, rep.Sources, got.Sources)
 	assert.Equal(t, rep.Stats, got.Stats)
@@ -348,6 +360,7 @@ func TestReport_ExitCode(t *testing.T) {
 		{"no findings", Report{}, 0},
 		{"findings", Report{Findings: []Finding{{ID: "a"}}}, 1},
 		{"only open questions", Report{OpenQuestions: []Finding{{ID: "q"}}}, 0},
+		{"only rejected", Report{Rejected: []Finding{{ID: "r", Verdict: Rejected, Reason: "not reachable"}}}, 0},
 		{"filtered out", Report{Findings: []Finding{{ID: "a", Confidence: 10}}}.Above(80), 0},
 		{"survives filter", Report{Findings: []Finding{{ID: "a", Confidence: 90}}}.Above(80), 1},
 	}

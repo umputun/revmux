@@ -63,6 +63,7 @@ Then compute the merge base inside whichever one exists, and diff against that:
 
 ```bash
 merge_base=$(git -C "$workdir" merge-base origin/<baseRefName> revmux-pr-<n>)
+head_sha=$(git -C "$workdir" rev-parse revmux-pr-<n>)
 ```
 
 **Diff against the merge base, never against the base branch head.** `origin/master..` picks up
@@ -114,7 +115,7 @@ identifiers are already in hand:
 - **`task.md`** — `description` from the PR title, `url`, `branch` from `headRefName`, `base` from
   `merge_base`. revmux stores these and resolves none of them.
 - **`scope.md`** — the agents run in the worktree, so write the plain form and no `-C`:
-  `git diff <merge_base>...HEAD`. `git -C <path> diff` breaks the child's permission prefix match for
+  `git diff <merge_base>...<head_sha>`, both as hashes. `git -C <path> diff` breaks the child's permission prefix match for
   the reason `task-dir.md` gives, and `--workdir` has already put the agent in the right tree. Say the
   scale from `additions`/`deletions`/`changedFiles`, and name the files worth reading in full.
 - **`goal.md`** — the PR title and body are the author's own statement of intent, which is what this
