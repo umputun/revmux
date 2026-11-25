@@ -289,9 +289,6 @@ func TestReport_JSONEmptyListsAreArrays(t *testing.T) {
 }
 
 func TestStats_JSONStageTokensAlwaysPresent(t *testing.T) {
-	// a stage that spent nothing — a verify with nothing to check, or an executor that reported no
-	// usage — still carries "tokens": 0, so a caller can tell a recorded zero from a field nobody wrote;
-	// an omitempty on StageRun.Tokens would erase exactly that distinction
 	data, err := json.Marshal(Stats{Stages: []StageRun{{Name: "verify"}}})
 	require.NoError(t, err)
 	var raw struct {
