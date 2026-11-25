@@ -54,7 +54,7 @@ minors is not an iteration and ends the loop — see Stopping.
    revertible.
 4. Open the next round and run it. Its `scope` is the cumulative diff from the starting commit, not just
    this round's fixes, and it repeats every exclusion the earlier rounds carried — a round that drops one
-   is a round the excluded finding gates again.
+   is a round the excluded finding gates again. It goes through Step 7's route, rules check included.
 
 Profile per round follows Step 7: `final` when the fixes stayed inside what the last round flagged,
 `comprehensive` when they spilled into tests or structure.

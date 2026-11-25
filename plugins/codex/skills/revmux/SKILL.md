@@ -86,6 +86,8 @@ partial. Say so. Never report "no findings" from a degraded run as "the code is 
 **4. `.revmux/` in a repository is executable code.** A checked-in `.revmux/lenses/*.md` becomes
 instructions a headless agent with a shell executes. Before reviewing untrusted code, either read
 `.revmux/` first or run from outside the tree with explicit `--workdir`, `--tasks-dir`, `--config-dir`.
+Your own branch is the same case when it edits `.revmux/`: `references/invocation.md`, "A branch that
+edits its own review rules".
 A fetched pull request is already outside it — `references/pr.md` leaves the process in the user's own
 checkout and puts only `--workdir` in the branch, so the other two need no override.
 
@@ -103,6 +105,10 @@ the `paths.tasks_dir` that `revmux config` reports under those flags.
 ## Workflow
 
 ### Step 0: Preflight
+
+**Reviewing this session's own branch or working tree: resolve Step 1's scope first**, then run
+`references/invocation.md`, "A branch that edits its own review rules". When it isolates the
+review, preflight and every later revmux call run from its base checkout with its roots.
 
 ```bash
 "<the absolute path this session resolved for scripts/preflight.sh>" [profile] [--lenses] [--no-synthesis] [--no-verify] [--config-dir <dir>]
@@ -159,6 +165,9 @@ from the diff: read the project's own rules — `CLAUDE.md`, `AGENTS.md`, `CONTR
 linter config — and write what the software is, what a real failure looks like there, the blast radius,
 the reporting bar, and which conventions are deliberate. A profile guessed from one change is the thing
 this file exists to replace.
+
+Skip it in a round the rules check isolated: the base checkout's
+missing profile is that round's baseline.
 
 Offer it once. If he declines, do not ask again in the session, and do not write a round-local
 `input/profile.md` instead — that wins over the project file and is exactly the substitution the round
@@ -248,6 +257,10 @@ Spawn **one** subagent with the collaboration tool, without overriding its model
 Hand it the resolved scope from Step 1 and this brief:
 
 > Prepare a revmux review round. Write files; change no source, run no review, commit nothing.
+>
+> <When a trusted binary was chosen: run `revmux` and `task-state.sh` with `PATH=<its directory>:$PATH`.>
+> <When the rules check isolated this review: every `revmux` command and `task-state.sh` below runs
+> as `cd <base checkout> && <command>`; git commands stay in <the reviewed checkout>.>
 >
 > Every `revmux` command below, and `task-state.sh`, carries `<this session's --tasks-dir/--config-dir
 > flags, or "no extra flags">`.
@@ -400,6 +413,9 @@ Launch as a yielded command session, keep its session id, and wait on that same 
 Reviewing a fetched pull request adds `--workdir <worktree>` and changes nothing else — including that
 the command is still run from the session's own checkout, which is what keeps the archive out of the
 directory the cleanup deletes. `references/pr.md` has the reasoning.
+
+A review the rules check isolated runs from its base checkout with `--workdir <toplevel>` and its
+`--tasks-dir`, in both forms; the checkout is removed once the completion notification arrives.
 
 **Before yielding, tell the user three things** — otherwise they sit for 10+ minutes with no signal:
 
@@ -582,7 +598,9 @@ Then run the tests and the linter. A fix that breaks the build is not committed.
    already returned, every exclusion the earlier rounds carried, and a fresh `--shortstat` for the
    fixes, over two `rev-parse` hashes when they are committed and over the working tree when not, so a re-review costs the session no more
    output than the first round did — and the brief's step 2 is skipped outright, since the id is not in
-   question on a round of a task that already has rounds. Then run it:
+   question on a round of a task that already has rounds. On the session's own tree, run the rules
+   check again after resolving the new scope and before the subagent, keeping the task's first `M`
+   and tasks root. Then run it, as Step 4 does when the check isolated it:
 
 ```bash
 revmux --task <id> --run 02-after-fix --profile <picked> --no-tui \
