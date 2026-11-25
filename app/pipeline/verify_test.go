@@ -585,10 +585,11 @@ func TestPipeline_Run_verify(t *testing.T) {
 		h := newHarness(t)
 		h.cfg.NoSynthesis, h.cfg.NoVerify = true, false
 		h.cfg.NewRunner = h.runner(map[string]executor.Result{
+			// find spends tokens too, so a verify entry carrying the running total would fail below
 			"bugs": {StructuredOutput: findingsJSON(
-				`{"file":"app/executor/proc.go","line":10,"severity":"major","confidence":80,"title":"leak","lenses":["bugs"]}`)},
+				`{"file":"app/executor/proc.go","line":10,"severity":"major","confidence":80,"title":"leak","lenses":["bugs"]}`), Tokens: 100},
 			"impl": {StructuredOutput: findingsJSON(
-				`{"file":"app/ui/model.go","line":4,"severity":"minor","confidence":60,"title":"naming","lenses":["impl"]}`)},
+				`{"file":"app/ui/model.go","line":4,"severity":"minor","confidence":60,"title":"naming","lenses":["impl"]}`), Tokens: 40},
 			stageVerify: {StructuredOutput: json.RawMessage(
 				`{"verdicts":[{"id":"bugs-1","verdict":"confirmed"},{"id":"impl-1","verdict":"rejected"}]}`), Tokens: 25},
 		})
@@ -607,6 +608,9 @@ func TestPipeline_Run_verify(t *testing.T) {
 		require.Len(t, rep.Stats.Stages, 2)
 		assert.Equal(t, stageVerify, rep.Stats.Stages[1].Name)
 		assert.Positive(t, rep.Stats.Stages[1].DurationMS)
+		assert.Equal(t, map[string]int{stageFind: 140, stageVerify: 25}, stageTokens(rep),
+			"one merged group ran, so verify spent its one process's tokens")
+		assertStageTokensSum(t, rep)
 
 		var stages []string
 		for _, ev := range <-events {
@@ -617,14 +621,80 @@ func TestPipeline_Run_verify(t *testing.T) {
 		assert.Equal(t, []string{stageFind, stageVerify}, stages)
 	})
 
+	t.Run("every group's tokens count, a failed one's included", func(t *testing.T) {
+		h := newHarness(t)
+		// explicit rather than the harness default: with synthesis on, the findings and their sources
+		// would come from a synthesis fixture and the groups would not be one per agent
+		h.cfg.NoSynthesis, h.cfg.NoVerify, h.cfg.VerifyGroupBy = true, false, groupBySource
+		finders := h.runner(map[string]executor.Result{
+			"bugs": {StructuredOutput: findingsJSON(
+				`{"file":"a.go","line":10,"severity":"major","confidence":80,"title":"leak","lenses":["bugs"]}`), Tokens: 100},
+			"impl": {StructuredOutput: findingsJSON(
+				`{"file":"a.go","line":20,"severity":"minor","confidence":60,"title":"naming","lenses":["impl"]}`), Tokens: 40},
+		})
+		// the verify marker is checked before any lens match, since a stage prompt can carry a lens name;
+		// the groups run concurrently, so the runner keeps no state at all
+		h.cfg.NewRunner = func(spec RunnerSpec) Runner {
+			find := finders(spec)
+			return &mocks.RunnerMock{RunFunc: func(ctx context.Context, req executor.Request, sink executor.EventSink) (executor.Result, error) {
+				switch {
+				case !strings.Contains(req.Prompt, verifyMarker):
+					return find.Run(ctx, req, sink)
+				case strings.Contains(req.Prompt, `"id": "bugs-1"`):
+					return executor.Result{Tokens: 7}, errors.New("verifier crashed")
+				case strings.Contains(req.Prompt, `"id": "impl-1"`):
+					return executor.Result{StructuredOutput: json.RawMessage(
+						`{"verdicts":[{"id":"impl-1","verdict":"confirmed"}]}`), Tokens: 10}, nil
+				}
+				return executor.Result{}, errors.New("no fixture for verify group")
+			}}
+		}
+
+		p := New(h.cfg)
+		drain(p)
+		rep, err := p.Run(context.Background())
+		require.NoError(t, err)
+
+		bugs, ok := byID(rep.Findings, "bugs-1")
+		require.True(t, ok)
+		assert.Equal(t, finding.Unverified, bugs.Verdict, "the failed group degraded to unverified")
+		impl, ok := byID(rep.Findings, "impl-1")
+		require.True(t, ok)
+		assert.Equal(t, finding.Confirmed, impl.Verdict)
+
+		assert.Equal(t, map[string]int{stageFind: 140, stageVerify: 17}, stageTokens(rep),
+			"verify sums both groups, the failed one's 7 included, and none of find's")
+		assertStageTokensSum(t, rep)
+	})
+
+	t.Run("a verify with nothing to check keeps its entry with no runner", func(t *testing.T) {
+		h := newHarness(t)
+		h.cfg.NoVerify = false
+		h.cfg.NewRunner = h.runner(map[string]executor.Result{
+			"bugs": {StructuredOutput: findingsJSON(), Tokens: 100},
+			"impl": {StructuredOutput: findingsJSON(), Tokens: 40},
+		})
+
+		p := New(h.cfg)
+		drain(p)
+		rep, err := p.Run(context.Background())
+		require.NoError(t, err)
+
+		require.Len(t, rep.Stats.Stages, 2, "the stage ran, so it has an entry")
+		assert.Equal(t, stageVerify, rep.Stats.Stages[1].Name)
+		assert.Empty(t, rep.Stats.Stages[1].Executor, "no group dispatched, so no runner was resolved")
+		assert.Equal(t, map[string]int{stageFind: 140, stageVerify: 0}, stageTokens(rep))
+		assertStageTokensSum(t, rep)
+	})
+
 	t.Run("--no-verify marks every finding unverified", func(t *testing.T) {
 		h := newHarness(t)
 		h.cfg.NoVerify = true
 		h.cfg.NewRunner = h.runner(map[string]executor.Result{
 			"bugs": {StructuredOutput: findingsJSON(
-				`{"file":"a.go","line":10,"severity":"major","confidence":80,"title":"leak","lenses":["bugs"]}`)},
+				`{"file":"a.go","line":10,"severity":"major","confidence":80,"title":"leak","lenses":["bugs"]}`), Tokens: 100},
 			"impl": {StructuredOutput: findingsJSON(
-				`{"file":"b.go","line":4,"severity":"minor","confidence":60,"title":"naming","lenses":["impl"]}`)},
+				`{"file":"b.go","line":4,"severity":"minor","confidence":60,"title":"naming","lenses":["impl"]}`), Tokens: 40},
 		})
 
 		p := New(h.cfg)
@@ -637,6 +707,8 @@ func TestPipeline_Run_verify(t *testing.T) {
 			assert.Equal(t, finding.Unverified, f.Verdict, "a skipped stage must not read as a clean bill of health")
 		}
 		require.Len(t, rep.Stats.Stages, 1, "the skipped stage records no timing")
+		assert.Equal(t, map[string]int{stageFind: 140}, stageTokens(rep), "the skipped stage has no entry")
+		assertStageTokensSum(t, rep)
 		for _, ev := range <-events {
 			assert.NotEqual(t, stageVerify, ev.Stage, "a skipped stage is not announced")
 		}

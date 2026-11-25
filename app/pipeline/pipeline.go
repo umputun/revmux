@@ -184,9 +184,12 @@ func (p *Pipeline) runFind(ctx context.Context) (finding.Report, []sourceResult,
 	p.stagger.leaderStarted()
 
 	rep := f.report(sources)
-	// find records no runner: it has one per roster entry, and those are the manifest's agent rows
-	rep.Stats.Stages = append(rep.Stats.Stages,
-		finding.StageRun{Name: stageFind, DurationMS: p.cfg.Clock.Now().Sub(at).Milliseconds()})
+	// find records no runner: it has one per roster entry, and those are the manifest's agent rows.
+	// Its tokens are rep.Stats.Tokens, which at this point is exactly the agents' sum, so the stage
+	// entries add up to the run total.
+	rep.Stats.Stages = append(rep.Stats.Stages, finding.StageRun{
+		Name: stageFind, DurationMS: p.cfg.Clock.Now().Sub(at).Milliseconds(), Tokens: rep.Stats.Tokens,
+	})
 	p.saveStage(task.FoundFile, rep)
 	return rep, sources, nil
 }
@@ -209,7 +212,8 @@ func (p *Pipeline) runSynthesis(ctx context.Context, rep finding.Report, sources
 
 	rep.Findings, rep.OpenQuestions, rep.PreExisting = out.Findings, out.OpenQuestions, out.PreExisting
 	rep.Stats.Tokens += out.Stats.Tokens
-	rep.Stats.Stages = append(rep.Stats.Stages, p.stageRun(stageSynthesis, s.stage, p.cfg.Clock.Now().Sub(at)))
+	rep.Stats.Stages = append(rep.Stats.Stages,
+		p.stageRun(stageSynthesis, s.stage, p.cfg.Clock.Now().Sub(at), out.Stats.Tokens))
 	p.saveStage(task.SynthesizedFile, rep)
 	return rep, nil
 }
@@ -229,7 +233,9 @@ func (p *Pipeline) runVerify(ctx context.Context, rep finding.Report) (finding.R
 	if err != nil {
 		return finding.Report{}, err
 	}
-	out.Stats.Stages = append(out.Stats.Stages, p.stageRun(stageVerify, v.stage, p.cfg.Clock.Now().Sub(at)))
+	// out.Stats.Tokens is the running total across every stage so far, so verify's own count comes from v
+	out.Stats.Stages = append(out.Stats.Stages,
+		p.stageRun(stageVerify, v.stage, p.cfg.Clock.Now().Sub(at), v.spent()))
 	p.saveStage(task.VerifiedFile, out)
 	return out, nil
 }
@@ -238,8 +244,9 @@ func (p *Pipeline) runVerify(ctx context.Context, rep finding.Report) (finding.R
 // profile can override it, and nothing else in a finished round says which binary produced that stage.
 // A nil stage dispatched nothing and resolved no runner — verify returns early when synthesis left
 // nothing to check — and the entry stays, since the stage did run and took time.
-func (p *Pipeline) stageRun(name string, st *prompt.Stage, took time.Duration) finding.StageRun {
-	out := finding.StageRun{Name: name, DurationMS: took.Milliseconds()}
+// tokens is the count the stage itself spent, never one cumulative total subtracted from another.
+func (p *Pipeline) stageRun(name string, st *prompt.Stage, took time.Duration, tokens int) finding.StageRun {
+	out := finding.StageRun{Name: name, DurationMS: took.Milliseconds(), Tokens: tokens}
 	if st != nil {
 		out.Executor, out.Model, out.Effort = st.Executor, st.Model, st.Effort
 	}

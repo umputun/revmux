@@ -72,16 +72,22 @@ type Stats struct {
 	Stages     []StageRun `json:"stages"`
 }
 
-// StageRun is one pipeline stage: how long it took and which runner it was resolved to. A profile can
-// override that runner, so nothing else in a finished round says which binary synthesized it. The fields
-// carry the requested triple, never the model that answered — verify fans out into one process per
-// group. The find stage leaves all three empty; its runners are the per-agent rows.
+// StageRun is one pipeline stage: how long it took, what it spent, and which runner it was resolved to.
+// A profile can override that runner, so nothing else in a finished round says which binary synthesized
+// it. The runner fields carry the requested triple, never the model that answered — verify fans out into
+// one process per group. The find stage leaves the runner fields empty; its runners are the per-agent rows.
 type StageRun struct {
 	Name       string `json:"name"`
 	DurationMS int64  `json:"duration_ms"`
-	Executor   string `json:"executor,omitempty"`
-	Model      string `json:"model,omitempty"`
-	Effort     string `json:"effort,omitempty"`
+
+	// Tokens is what the stage's CLI reported, failed attempts included. find carries its agents' sum, so
+	// the entries add up to Stats.Tokens exactly. The count is not the same quantity across executors;
+	// see SourceStat.Tokens.
+	Tokens int `json:"tokens"`
+
+	Executor string `json:"executor,omitempty"`
+	Model    string `json:"model,omitempty"`
+	Effort   string `json:"effort,omitempty"`
 }
 
 // Degraded reports whether any source failed to deliver. A degraded run that reads like a

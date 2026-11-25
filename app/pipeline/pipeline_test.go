@@ -87,6 +87,8 @@ func TestPipeline_Run_stats(t *testing.T) {
 	assert.Positive(t, rep.Stats.Stages[0].DurationMS)
 	assert.Empty(t, rep.Stats.Stages[0].Executor, "find has one runner per roster entry, not one of its own")
 	assert.Equal(t, 10, rep.Stats.Tokens)
+	assert.Equal(t, 10, rep.Stats.Stages[0].Tokens, "find carries its agents' sum, 7 + 3")
+	assertStageTokensSum(t, rep)
 }
 
 // a profile can override which binary runs a stage, so a finished round that does not record the
@@ -95,10 +97,10 @@ func TestPipeline_Run_recordsTheStageRunner(t *testing.T) {
 	h := newHarnessWith(t, map[string]string{"prompts/profiles/testprof.md": codexStageProfile})
 	h.cfg.NoSynthesis, h.cfg.NoVerify = false, false
 	h.cfg.NewRunner = h.runner(map[string]executor.Result{
-		"bugs":         {StructuredOutput: findingsJSON(`{"file":"a.go","line":1,"severity":"major","confidence":90,"title":"x"}`)},
-		"impl":         {StructuredOutput: findingsJSON(``)},
-		stageSynthesis: {StructuredOutput: json.RawMessage(`{"findings":[{"merged_ids":["bugs-1"],"file":"a.go","line":1,"severity":"major","confidence":90,"title":"x","body":"b"}]}`)},
-		stageVerify:    {StructuredOutput: json.RawMessage(`{"verdicts":[{"id":"bugs-1","verdict":"confirmed"}]}`)},
+		"bugs":         {StructuredOutput: findingsJSON(`{"file":"a.go","line":1,"severity":"major","confidence":90,"title":"x"}`), Tokens: 100},
+		"impl":         {StructuredOutput: findingsJSON(``), Tokens: 40},
+		stageSynthesis: {StructuredOutput: json.RawMessage(`{"findings":[{"merged_ids":["bugs-1"],"file":"a.go","line":1,"severity":"major","confidence":90,"title":"x","body":"b"}]}`), Tokens: 200},
+		stageVerify:    {StructuredOutput: json.RawMessage(`{"verdicts":[{"id":"bugs-1","verdict":"confirmed"}]}`), Tokens: 25},
 	})
 
 	p := New(h.cfg)
@@ -117,6 +119,10 @@ func TestPipeline_Run_recordsTheStageRunner(t *testing.T) {
 	assert.Equal(t, "high", byName[stageSynthesis].Effort)
 	assert.Equal(t, "codex", byName[stageVerify].Executor)
 	assert.Equal(t, "gpt-5.6-sol", byName[stageVerify].Model)
+
+	assert.Equal(t, map[string]int{stageFind: 140, stageSynthesis: 200, stageVerify: 25}, stageTokens(rep),
+		"each stage carries what it spent, never a running total")
+	assertStageTokensSum(t, rep)
 }
 
 func TestNew_stagger(t *testing.T) {
@@ -439,6 +445,26 @@ func (h *harness) runner(byAgent map[string]executor.Result) func(RunnerSpec) Ru
 			},
 		}
 	}
+}
+
+// stageTokens maps each stage entry's name to its token count, so a test asserts every stage at once.
+func stageTokens(rep finding.Report) map[string]int {
+	out := make(map[string]int, len(rep.Stats.Stages))
+	for _, st := range rep.Stats.Stages {
+		out[st.Name] = st.Tokens
+	}
+	return out
+}
+
+// assertStageTokensSum checks the invariant the per-stage counts exist for: nothing spends tokens
+// outside a stage, so the entries add up to the run total exactly.
+func assertStageTokensSum(t *testing.T, rep finding.Report) {
+	t.Helper()
+	sum := 0
+	for _, st := range rep.Stats.Stages {
+		sum += st.Tokens
+	}
+	assert.Equal(t, rep.Stats.Tokens, sum, "stage tokens must add up to the run total")
 }
 
 // drain reads the whole event stream in the background and hands it back once the channel closes,
