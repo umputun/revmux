@@ -251,7 +251,7 @@ The claude `result` event carries per-model `usage`, so per-agent totals cost no
 Record tokens per agent, per stage and summed per run, and stop there —
 revmux reports what was spent, it does not model or optimize it.
 A stage's count comes from the stage that spent it: synthesis from `dispatch`'s sum across attempts, verify from `verifier.tokens` across every group, failed ones included.
-It is never derived by subtracting one cumulative total from another, since nothing promises those totals are cumulative.
+It is never derived by subtracting one cumulative total from another.
 find's count is its agents' sum, so the stage entries add up to the run total exactly.
 
 ### Event channel

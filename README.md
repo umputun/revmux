@@ -243,7 +243,7 @@ display running.
      "verdict": "confirmed", "reason": "…"}
   ],
   "open_questions": [], "pre_existing": [], "immaterial": [], "rejected": [],
-  "stats": {"duration_ms": 333000, "tokens": 184920, "stages": []}
+  "stats": {"duration_ms": 333000, "tokens": 184920, "stages": [...]}
 }
 ```
 
