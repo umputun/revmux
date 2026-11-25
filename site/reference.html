@@ -442,13 +442,16 @@ claude/opus:hgih         <span class="c-crimson">refused: not an effort</span></
               <tr><td>pre_existing[]</td><td class="prose">real, but not introduced by this change</td></tr>
               <tr><td>immaterial[]</td><td class="prose">true and not worth acting on</td></tr>
               <tr><td>rejected[]</td><td class="prose">judged not real, kept with its reason</td></tr>
-              <tr><td>stats</td><td class="prose">timings, total tokens, and per-stage duration with the runner each resolved to</td></tr>
+              <tr><td>stats</td><td class="prose">timings, total tokens, and per-stage duration, tokens and the runner each resolved to</td></tr>
             </tbody>
           </table>
         </div>
         <p class="small">
           Empty lists are emitted as arrays rather than <code>null</code>. The four side arrays are not filtered
-          by <code>--min-confidence</code> and do not affect the exit code.
+          by <code>--min-confidence</code> and do not affect the exit code. The per-stage list is
+          <code>stats.stages</code> in the report and stage snapshots, and the top-level <code>stages</code> in
+          <code>manifest.json</code>; its tokens add up to <code>stats.tokens</code>. A snapshot lists only the
+          stages finished when it was written.
         </p>
 
         <h2 id="verdicts">Verdicts <a class="anchor" href="#verdicts">#</a></h2>
@@ -507,8 +510,8 @@ claude/opus:hgih         <span class="c-crimson">refused: not an effort</span></
         <h2 id="archive">Run archive <a class="anchor" href="#archive">#</a></h2>
         <pre class="code">&lt;tasks-dir&gt;/&lt;task&gt;/&lt;run&gt;/
 ├── manifest.json      resolved roster, prompt provenance and hashes, requested vs actual model,
-│                      timings. Created empty as the run starts and filled in when it finishes,
-│                      so it doubles as the marker claiming the round
+│                      per-agent and per-stage tokens, timings. Created empty as the run starts
+│                      and filled in when it finishes, so it doubles as the marker claiming the round
 ├── prompts/agents/    the composed prompt each agent received, post-substitution
 ├── prompts/stages/    synthesis and one file per verify group
 ├── prompts/input-profile.md  the project profile's bytes, when the round inherited one
