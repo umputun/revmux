@@ -175,6 +175,7 @@ Unchanged edge cases:
 - Modify: `site/reference.html`
 - Modify: `.claude-plugin/skills/revmux/references/output.md`
 - Modify: `plugins/codex/skills/revmux/references/output.md`
+- ➕ Modify: `CLAUDE.md` (archive tree line only, added in review; see Task 5)
 
 - [x] `.claude/rules/pipeline.md` Token accounting, with semantic line breaks:
   - per agent, per stage and summed per run, and stop there;
@@ -197,6 +198,9 @@ Unchanged edge cases:
       Name both locations (`stats.stages` in the report and stage snapshots, top-level `stages` in
       `manifest.json`): in the row if a short clause fits, otherwise in the `<p class="small">` note right below
       the table (~:447). The maintainer asked for both to be named, so it must land in one of the two.
+- [x] ➕ the `manifest.json` line of the archive tree mentions per-agent and per-stage tokens in `site/docs.html`,
+      `site/reference.html` and both `references/output.md` (added in review); `README.md` and `site/index.html`
+      keep their shorter lines
 - [x] `diff -r .claude-plugin/skills/revmux/references plugins/codex/skills/revmux/references` is empty
       (and the same for `scripts/`)
 
@@ -207,9 +211,9 @@ Unchanged edge cases:
 - [x] `--no-verify` has no verify entry; an empty verify has an entry with no executor (unchanged)
       (verified by the `--no-verify` and nothing-to-check subtests in `verify_test.go`)
 - [x] `make test` (script tests + race + coverage): all packages ok, both script tests pass, total 93.7%
-- [x] `make lint` — PARTIAL, golangci-lint half NOT run: neither `golangci-lint` nor `shellcheck` is installed on
-      this machine. Ran instead: `go vet ./app/...` (clean), `gofmt -l app/` (clean), and
-      `.github/scripts/check-sentinel-helpers.sh` (passes). No `.sh` file changed on this branch. CI must gate it
+- [x] `make lint` — PARTIAL: `golangci-lint` reports 0 issues; `shellcheck` is not installed on this machine, so
+      `lint-scripts` stops there. `sh .github/scripts/check-sentinel-helpers.sh` passes when run on its own.
+      No `.sh` file changed on this branch; CI gates the shellcheck half
 - [x] `make build` and a quick look at the JSON shape (`stats.stages[].tokens` present) with no real model call
       (build ok; a throwaway marshal of `Stats` gave
       `"stages":[{"name":"find","duration_ms":5,"tokens":10},{"name":"verify","duration_ms":1,"tokens":0}]`)
@@ -220,7 +224,10 @@ Unchanged edge cases:
 - [x] CLAUDE.md: no new pattern expected; confirm
       (confirmed: its one `StageRun` statement, that it records the runner resolution, still holds; the stage-schemas
       keep-in-sync bullet already names the sites a `Report.JSON` shape change touches, and those were updated in Task 3)
-- [x] move this plan to `docs/plans/completed/` (skipped - the harness moves the plan after all phases finish)
+- [x] ➕ CLAUDE.md archive tree (~:236): the `manifest.json` line now reads "requested vs. actual model and tokens
+      per agent, tokens per stage, timings" (added in review: the layout keep-in-sync bullet names seven files that
+      draw the tree, and this one predated per-agent tokens too, so both are now stated)
+- [x] move this plan to `docs/plans/completed/` (moved after all review phases finished, in its own commit)
 
 ## Post-Completion
 *Items requiring manual intervention or external systems - no checkboxes, informational only*
