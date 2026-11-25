@@ -424,6 +424,13 @@ func TestRun_tokensPerAgentSumToTheRunTotal(t *testing.T) {
 	assert.Equal(t, want, sum)
 	assert.Equal(t, want, got2.Tokens, "the manifest and the report must not disagree on what a run cost")
 
+	// the manifest's top-level stages is the second place per-stage tokens appear; this run shape
+	// skips synthesis and verify, so find is the only stage and carries the whole run's spend
+	assert.Equal(t, rep.Stats.Stages, got2.Stages, "the manifest and the report must not disagree per stage")
+	require.Len(t, got2.Stages, 1)
+	assert.Equal(t, "find", got2.Stages[0].Name)
+	assert.Equal(t, want, got2.Stages[0].Tokens, "find's tokens are its agents' sum")
+
 	// the per-agent table is part of the rendered report, which lives in the archive now that stdout
 	// carries the machine shape
 	rendered, err := os.ReadFile(filepath.Join(dir, "report.md")) //nolint:gosec // path built from t.TempDir

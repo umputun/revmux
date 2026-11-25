@@ -32,14 +32,24 @@ Prefer JSON when a model consumes it. Use `--markdown` only for output going str
   "stats": {
     "started_at": "2026-07-26T16:02:11Z", "finished_at": "2026-07-26T16:07:44Z",
     "duration_ms": 333000, "tokens": 184920,
-    "stages": [{"name": "find", "duration_ms": 201000},
-               {"name": "synthesis", "duration_ms": 62000,
+    "stages": [{"name": "find", "duration_ms": 201000, "tokens": 141200},
+               {"name": "synthesis", "duration_ms": 62000, "tokens": 25270,
+                "executor": "claude", "model": "opus", "effort": "high"},
+               {"name": "verify", "duration_ms": 68000, "tokens": 18450,
                 "executor": "claude", "model": "opus", "effort": "high"}]
   }
 }
 ```
 
-Empty lists are arrays, never `null`.
+Empty lists are arrays, never `null`. The `agents` list above is shortened to its first entry; a real run
+lists every roster agent, and their tokens add up to find's.
+
+Each `stats.stages` entry carries the tokens that stage's CLI reported, failed attempts included, and
+find's is the sum of its agents', so the entries add up to the run total exactly. A skipped stage has no
+entry. The report's `stats.stages` lists every stage that ran, with the run total in `stats.tokens`, and
+`manifest.json` repeats it as its top-level `stages`, with the run total in its top-level `tokens`. A stage snapshot is written as its own stage finishes, so it lists only the stages
+done by then, and its entries add up to its own `stats.tokens`. Counts are not the same quantity across executors, and find's may add up
+claude, codex and agy agents together, so compare stage counts only within one executor.
 
 ## Check `sources` before reading `findings`
 
@@ -155,7 +165,8 @@ Every artifact lands in the round directory — the `round_dir` `revmux new` rep
 ```
 02-after-fix/
 ├── input/                    the scope, goal, profile and context this round was reviewed against
-├── manifest.json             roster, prompt provenance + hashes, requested vs actual model, timings
+├── manifest.json             roster, prompt provenance + hashes, requested vs actual model,
+│                             per-agent and per-stage tokens, timings
 ├── prompts/
 │   ├── agents/               composed prompt per agent, post-substitution
 │   ├── stages/               synthesis.md, verify-<group>.md

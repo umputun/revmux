@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -490,6 +491,8 @@ func TestPipeline_Run_synthesis(t *testing.T) {
 		require.Len(t, rep.Stats.Stages, 2)
 		assert.Equal(t, stageSynthesis, rep.Stats.Stages[1].Name)
 		assert.Positive(t, rep.Stats.Stages[1].DurationMS)
+		assert.Equal(t, map[string]int{stageFind: 140, stageSynthesis: 200}, stageTokens(rep))
+		assertStageTokensSum(t, rep)
 
 		var stages []string
 		for _, ev := range <-events {
@@ -500,13 +503,51 @@ func TestPipeline_Run_synthesis(t *testing.T) {
 		assert.Equal(t, []string{stageFind, stageSynthesis}, stages)
 	})
 
+	t.Run("a retried synthesis carries both attempts' tokens", func(t *testing.T) {
+		h := newHarness(t)
+		h.cfg.NoSynthesis = false
+		finders := h.runner(map[string]executor.Result{
+			"bugs": {StructuredOutput: findingsJSON(
+				`{"file":"a.go","line":10,"severity":"major","confidence":80,"title":"leak","lenses":["bugs"]}`), Tokens: 100},
+			"impl": {StructuredOutput: findingsJSON(
+				`{"file":"a.go","line":11,"severity":"minor","confidence":60,"title":"same leak","lenses":["impl"]}`), Tokens: 40},
+		})
+		// only synthesis requests are counted: the find agents share this factory and run first, so a
+		// global counter would take one of them for the first synthesis attempt
+		var attempts atomic.Int32
+		h.cfg.NewRunner = func(spec RunnerSpec) Runner {
+			find := finders(spec)
+			return &mocks.RunnerMock{RunFunc: func(ctx context.Context, req executor.Request, sink executor.EventSink) (executor.Result, error) {
+				if !strings.Contains(req.Prompt, synthesisMarker) {
+					return find.Run(ctx, req, sink)
+				}
+				if attempts.Add(1) == 1 {
+					return executor.Result{Tokens: 100}, errors.New("529 overloaded")
+				}
+				return executor.Result{StructuredOutput: synthJSON(
+					`{"merged_ids":["bugs-1","impl-1"],"file":"a.go","line":10,"severity":"major","confidence":90,"title":"leak","body":"b"}`,
+				), Tokens: 150}, nil
+			}}
+		}
+
+		p := New(h.cfg)
+		drain(p)
+		rep, err := p.Run(context.Background())
+		require.NoError(t, err)
+
+		assert.Equal(t, int32(2), attempts.Load(), "the first attempt failed and was retried")
+		assert.Equal(t, map[string]int{stageFind: 140, stageSynthesis: 250}, stageTokens(rep),
+			"the failed attempt still spent what it spent")
+		assertStageTokensSum(t, rep)
+	})
+
 	t.Run("--no-synthesis passes findings through with their attribution intact", func(t *testing.T) {
 		h := newHarness(t)
 		h.cfg.NewRunner = h.runner(map[string]executor.Result{
 			"bugs": {StructuredOutput: findingsJSON(
-				`{"file":"a.go","line":10,"severity":"major","confidence":80,"title":"leak","lenses":["bugs"]}`)},
+				`{"file":"a.go","line":10,"severity":"major","confidence":80,"title":"leak","lenses":["bugs"]}`), Tokens: 100},
 			"impl": {StructuredOutput: findingsJSON(
-				`{"file":"b.go","line":4,"severity":"minor","confidence":60,"title":"naming","lenses":["impl"]}`)},
+				`{"file":"b.go","line":4,"severity":"minor","confidence":60,"title":"naming","lenses":["impl"]}`), Tokens: 40},
 		})
 
 		p := New(h.cfg)
@@ -519,6 +560,8 @@ func TestPipeline_Run_synthesis(t *testing.T) {
 		assert.Equal(t, []string{"bugs"}, rep.Findings[0].Lenses)
 		assert.Equal(t, []string{"impl"}, rep.Findings[1].Sources)
 		require.Len(t, rep.Stats.Stages, 1, "the skipped stage records no timing")
+		assert.Equal(t, map[string]int{stageFind: 140}, stageTokens(rep), "the skipped stage has no entry")
+		assertStageTokensSum(t, rep)
 
 		for _, ev := range <-events {
 			assert.NotEqual(t, stageSynthesis, ev.Stage, "a skipped stage is not announced")

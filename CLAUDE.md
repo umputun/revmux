@@ -234,7 +234,8 @@ the final report, so a round directory holds:
 <tasks-root>/<id>/<run>/
 ├── input/            the caller's own scope, goal, profile and context for this round
 ├── manifest.json     resolved roster, per-lens prompt provenance + content hash,
-│                     requested vs. actual model per agent, timings
+│                     requested vs. actual model and tokens per agent, tokens per stage,
+│                     timings
 ├── prompts/          the prompt material this run used, composed and referenced alike,
 │   ├── agents/       post-substitution — exactly the bytes the model saw
 │   ├── stages/       split so a roster agent named `verify` cannot overwrite a stage prompt

@@ -109,8 +109,14 @@ func (v *verifier) run(ctx context.Context, rep finding.Report) (finding.Report,
 			}
 		}
 	}
-	rep.Stats.Tokens += int(v.tokens.Load())
+	rep.Stats.Tokens += v.spent()
 	return rep, nil
+}
+
+// spent is what this stage's own processes reported, summed over every group, failed ones included.
+// run adds it to the report's running total, so the stage entry reads it here rather than from that total.
+func (v *verifier) spent() int {
+	return int(v.tokens.Load())
 }
 
 // compose builds every group's prompt before any of them is dispatched. A prompt tree that does not

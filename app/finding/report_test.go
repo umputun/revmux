@@ -288,6 +288,19 @@ func TestReport_JSONEmptyListsAreArrays(t *testing.T) {
 	assert.NotContains(t, out, "null")
 }
 
+func TestStats_JSONStageTokensAlwaysPresent(t *testing.T) {
+	data, err := json.Marshal(Stats{Stages: []StageRun{{Name: "verify"}}})
+	require.NoError(t, err)
+	var raw struct {
+		Stages []map[string]json.RawMessage `json:"stages"`
+	}
+	require.NoError(t, json.Unmarshal(data, &raw))
+	require.Len(t, raw.Stages, 1)
+	require.Contains(t, raw.Stages[0], "tokens", "the stage entry itself, not the run total beside it")
+	assert.JSONEq(t, "0", string(raw.Stages[0]["tokens"]))
+	assert.NotContains(t, raw.Stages[0], "executor", "nothing ran, so the runner fields stay omitted")
+}
+
 func TestReport_JSONFindingListsAreArrays(t *testing.T) {
 	buf := &bytes.Buffer{}
 	require.NoError(t, Report{Findings: []Finding{{ID: "a-1", File: "a.go"}}}.JSON(buf))
@@ -439,8 +452,9 @@ func TestStats_JSONRoundTrip(t *testing.T) {
 	in := Stats{
 		StartedAt:  time.Date(2026, 7, 26, 16, 2, 11, 0, time.UTC),
 		FinishedAt: time.Date(2026, 7, 26, 16, 7, 44, 0, time.UTC),
-		DurationMS: 333000, Tokens: 79210,
-		Stages: []StageRun{{Name: "find", DurationMS: 200000}, {Name: "synthesis", DurationMS: 133000}},
+		DurationMS: 333000, Tokens: 166470,
+		Stages: []StageRun{{Name: "find", DurationMS: 200000, Tokens: 141200},
+			{Name: "synthesis", DurationMS: 133000, Tokens: 25270}},
 	}
 
 	data, err := json.Marshal(in)
