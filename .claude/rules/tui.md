@@ -212,8 +212,8 @@ cover both.
   total alone plus the hint is 59, and the input viewer adds 28 more to both.
   The hint goes at the third rung, so below roughly 59 columns in review mode the header carries run state
   only. The completion notice that replaces it sits outside the ladder entirely.
-  **The count is rebuilt from the final report, not left as the last event's.** Verify moves rejected
-  findings into `Immaterial` and `PreExisting` and `--min-confidence` filters, both without emitting a
+  **The count is rebuilt from the final report, not left as the last event's.** Verify moves findings
+  out of `Findings` into `Rejected`, `Immaterial` and `PreExisting`, and `--min-confidence` filters, both without emitting a
   findings event, so a header fed only by events names severities the browser below it does not list.
   **Its color is the worst severity in it, never a fixed accent** — red on any critical, yellow on any
   major, green only when nothing above minor was found. Green is what a reader takes as a verdict on the

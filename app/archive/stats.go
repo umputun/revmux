@@ -53,8 +53,8 @@ type agentStats struct {
 	// Raised is findings in stages/1-found.json naming this agent in sources.
 	Raised int `json:"raised"`
 
-	// Survived is findings naming this agent in the round's last stage snapshot, across all four of that
-	// report's arrays. That is stages/3-verified.json for a full pipeline, the stage before it for a run
+	// Survived is findings naming this agent in the round's last stage snapshot, across that report's four
+	// survivor arrays, Rejected excluded. That is stages/3-verified.json for a full pipeline, the stage before it for a run
 	// that skipped verification. findings.json is never read for it: that is the filtered report.
 	Survived int `json:"survived"`
 
@@ -94,7 +94,7 @@ type lensStats struct {
 }
 
 // stageFlow is how many findings went into one stage and how many came out. Name is the stage that
-// produced Out; the find stage has no entry. Each count is the union of a report's four arrays, so a
+// produced Out; the find stage has no entry. Each count is the union of a report's four survivor arrays, so a
 // finding moved into immaterial or pre-existing leaves the total unchanged — which is why Reclassified
 // and Refined exist. Measured over one corpus, verify dropped 2 of 150 while lowering 21 severities.
 type stageFlow struct {

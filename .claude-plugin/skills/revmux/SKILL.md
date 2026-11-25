@@ -183,7 +183,7 @@ Three commands here, and no more git than this:
 ```bash
 git branch --show-current && git status --short
 git rev-parse <from> HEAD
-git diff <from-sha>...<head-sha> --shortstat
+git diff <the row's pinned range> --shortstat
 ```
 
 **A committed range is pinned to hashes.** `rev-parse` resolves the row's two endpoints once, and the
@@ -293,7 +293,10 @@ Spawn **one** `general-purpose` agent. Hand it the resolved scope from Step 1 an
 >      scale, which files to read in full, what to ignore. Write commands in plainest form:
 >      `git diff <base-sha>...<head-sha>`, never `git -c core.pager=cat diff ...` — a leading option
 >      defeats the child's permission matching. For a committed range use the hashes the brief gave,
->      never `HEAD`, and add the read-at-target line `task-dir.md` shows.
+>      never `HEAD`, and add these two lines with the target hash: "Search tracked source at the
+>      target, always: `git grep <pattern> <target-sha>`. Read a file from the working tree only while
+>      `git rev-parse HEAD` prints <full target sha> and `git status --short -- <path>` prints nothing;
+>      otherwise read it with `git show <target-sha>:<path>`."
 >    - `goal` — optional, and **under 1000 characters**. What the change is for, plus a "this is
 >      correct only if…" list. **When the round is the last one before the branch merges, make it the
 >      gate**: say the round exists to answer whether anything in this diff should not ship, and name
@@ -786,10 +789,11 @@ say so and move on rather than manufacturing an edit to go with each.
 
 ```
 User: "revmux this branch"
-→ preflight.sh → all present
 → git branch --show-current + git status --short → on tui-rework, clean
 → git rev-parse master HEAD → 3f2a1c0…, e9b7d44…
 → git diff 3f2a1c0...e9b7d44 --shortstat → 22 files, +840/-310, handed to the brief with the command
+→ rules check: .revmux/ unchanged against the merge-base → the normal flow
+→ preflight.sh → all present
 → "Preparing the round for the branch against master…"
 → one subagent: reads the diff once, matches no existing task, derives `tui-rework`, opens
   01-initial, writes task.md/scope/goal → returns round_dir, wrote[3]

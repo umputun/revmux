@@ -391,27 +391,29 @@ fetched pull request skips them: `pr.md` already runs it from outside its tree.
      included. Say so in one line: an override meant to stay belongs in `.gitignore` or
      `~/.config/revmux`.
    - Unchanged: the normal flow, local overrides included. Steps 4-8 do not apply.
-4. **The base checkout.** `wt=$(mktemp -d /tmp/revmux-base-XXXXXX)`, then
-   `git worktree add --detach "$wt" <M>`. A failure stops the review: there is no fallback to
-   generic rules. A base with no `.revmux/` is simply a checkout without one.
+4. **The base checkout.** `mktemp -d /tmp/revmux-base-XXXXXX` prints its path, `<wt>` below; write
+   it literally into every later command, since a shell variable does not survive between calls.
+   Then `git worktree add --detach <wt> <M>`. A failure stops the review after `rmdir <wt>`: there is
+   no fallback to generic rules. A base with no `.revmux/` is simply a checkout without one.
 5. **Roots.** Pass the `--config-dir` from step 0 to every call, the lookup below included. The
    tasks root is an explicit
    `--tasks-dir` already in use, resolved against the original checkout when relative; otherwise the
-   `tasks-dir` knob's `value` from `revmux config` run in `$wt`, joined to the original checkout's
-   toplevel when relative. Never `paths.tasks_dir` there: it is absolute against `$wt`, which is
+   `tasks-dir` knob's `value` from `revmux config` run in `<wt>`, joined to the original checkout's
+   toplevel when relative. Never `paths.tasks_dir` there: it is absolute against `<wt>`, which is
    deleted. The root the task's first round used stays the task's for the rest of the session, in both
    directions, so the task match never starts a second history. Every call from here on carries
    `--tasks-dir`, except `preflight.sh`, which takes only `--config-dir`.
-6. **Every revmux call runs from `$wt`**: preflight, the task match, Step 2's `revmux new` and
+6. **Every revmux call runs from `<wt>`**: preflight, the task match, Step 2's `revmux new` and
    `task-state.sh`, and the launch, which adds `--workdir <toplevel>`. Git reads stay in the original
-   checkout. The overlay launcher finds the session from `$wt`, since it shares the repository.
+   checkout. The overlay launcher finds the session from `<wt>`, since it shares the repository.
    A subagent does not inherit this session's `PATH` change: Step 2's brief names the binary
    directory from step 1 whenever one was chosen, isolated round or not.
-7. **No profile offer.** Step 0.5 is skipped: an absent profile in `$wt` is this round's baseline, and
+7. **No profile offer.** Step 0.5 is skipped: an absent profile in `<wt>` is this round's baseline, and
    the change may be the one adding it.
-8. **Cleanup.** `git worktree remove "$wt"` after the launch's completion notification, never while
-   it runs, and right away when preflight or the round preparation fails. Report a failed removal with
-   its path.
+8. **Cleanup.** `git worktree remove <wt>` on every exit once it exists: after the launch's
+   completion notification, never while it runs, and right away on any path that ends the round
+   without a launch. A retry of the same round repeats steps 4-6 with the same `M` and tasks root.
+   Report a failed removal with its path.
 
 ## Config precedence
 
@@ -557,7 +559,7 @@ lists every agent, every lens and every stage, and `totals` carries those same t
 than the empty ones above.
 
 **Per agent** — `raised` is what it put on the table in `stages/1-found.json`; `survived` is what was
-still there in the round's last stage snapshot, counted across all four of that report's arrays;
+still there in the round's last stage snapshot, counted across its four survivor arrays (`rejected` is not one);
 `corroborated` is the survived subset another agent independently reached. These are exact: revmux
 stamps `sources` from the process that emitted the finding, so no model supplied them.
 

@@ -146,7 +146,7 @@ func (f *findingsState) rowLines(v finding.Finding, width int) []string {
 }
 
 // detail is the rest of the report's entry, in the report's own order: where it is, the body, the fix,
-// then the attribution, all on screen without a keystroke. The body and the fix are rendered as
+// the verifier's reason, then the attribution, all on screen without a keystroke. The body and the fix are rendered as
 // documents and separately, never composed into one: an unbalanced fence in a body would otherwise
 // swallow the fix and the attribution under it.
 func (f *findingsState) detail(v finding.Finding, row findingRow, width int) []string {
@@ -160,6 +160,10 @@ func (f *findingsState) detail(v finding.Finding, row findingRow, width int) []s
 		// a fence or a bullet stops being a block and renders as literal punctuation
 		out = append(out, "")
 		out = append(out, f.document(row.key("fix"), "fix:\n"+v.Fix, width)...)
+	}
+	if v.Reason != "" {
+		out = append(out, "")
+		out = append(out, f.indent("verifier: "+v.Reason, width)...)
 	}
 	if meta := f.meta(v); meta != "" {
 		out = append(out, "")

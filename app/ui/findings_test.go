@@ -224,6 +224,20 @@ func TestFindingsState_rendersBodyAndFixAsDocuments(t *testing.T) {
 		assert.NotContains(t, pane, "```", "and the fence delimiters are consumed")
 	})
 
+	t.Run("the verifier reason follows the fix, as in the report", func(t *testing.T) {
+		rep := finding.Report{Findings: []finding.Finding{{
+			File: "a.go", Line: 1, Severity: finding.Major, Title: "reasoned", Fix: "guard it",
+			Reason: "the nil check is missing on the retry path", Sources: []string{"bugs"},
+			Verdict: finding.Confirmed}}}
+		pane := plainMD(browsed(t, rep).findingsPane())
+		fix := strings.Index(pane, "fix: guard it")
+		reason := strings.Index(pane, "verifier: the nil check is missing on the retry path")
+		require.NotEqual(t, -1, fix)
+		require.NotEqual(t, -1, reason)
+		assert.Less(t, fix, reason)
+		assert.Less(t, reason, strings.Index(pane, "sources: bugs"))
+	})
+
 	t.Run("an unclosed fence in a body cannot swallow the fix and the attribution", func(t *testing.T) {
 		rep := finding.Report{Findings: []finding.Finding{{
 			File: "a.go", Line: 1, Severity: finding.Major, Title: "ragged",

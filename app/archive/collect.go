@@ -348,7 +348,7 @@ func (r *roundReader) addRaised(found []finding.Finding) {
 }
 
 // addSurvived counts what came out the far end, from the round's last stage snapshot. Every one of that
-// report's four arrays is a survivor: a finding reclassified as an open question, a pre-existing issue or
+// report's four survivor arrays (not Rejected) is a survivor: a finding reclassified as an open question, a pre-existing issue or
 // an immaterial one still came from the agent that raised it.
 func (r *roundReader) addSurvived(survived []finding.Finding) {
 	for _, f := range survived {
@@ -407,7 +407,7 @@ func (r *roundReader) judged(prev, rep finding.Report) (reclassified, refined in
 	return grew(class(prev), class(rep)), grew(refine(prev), refine(rep))
 }
 
-// count is how many findings a report carries across its four arrays. The flow needs the number alone, and
+// count is how many findings a report carries across its four survivor arrays, Rejected excluded. The flow needs the number alone, and
 // materializing the findings to take len of them is four copies of every finding per stage transition.
 func (r *roundReader) count(rep finding.Report) int {
 	return len(rep.Findings) + len(rep.OpenQuestions) + len(rep.PreExisting) + len(rep.Immaterial)
@@ -479,7 +479,7 @@ func (r *roundReader) lastStage(reps []namedReport) finding.Report {
 	return finding.Report{}
 }
 
-// all is every finding a report carries, across its four arrays.
+// all is every finding a report carries across its four survivor arrays, Rejected excluded.
 func (r *roundReader) all(rep finding.Report) []finding.Finding {
 	out := make([]finding.Finding, 0, r.count(rep))
 	out = append(out, rep.Findings...)

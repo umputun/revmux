@@ -145,7 +145,7 @@ func (r Report) JSON(w io.Writer) error {
 }
 
 // Above returns the report with findings below minConfidence removed. Open questions,
-// pre-existing and immaterial findings pass through untouched: they are never boosted or
+// pre-existing, immaterial and rejected findings pass through untouched: they are never boosted or
 // dropped, and filtering them by confidence would discard what the reviewer most needs.
 func (r Report) Above(minConfidence int) Report {
 	out := r

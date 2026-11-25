@@ -78,6 +78,7 @@ claim until read back. A mismatch does not invalidate the review but explains a 
 | `title` | the claim, one line |
 | `body` | the argument — trigger and consequence |
 | `fix` | the suggested change |
+| `reason` | the verifier's one-line account of its verdict; empty when verification did not run |
 | `sources` | **agent names** that raised it |
 | `lenses` | **lens names** it was raised under |
 | `verdict` | verify's judgment |

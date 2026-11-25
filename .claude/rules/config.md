@@ -614,7 +614,7 @@ declaration on the subcommand parses both spellings and lands them in different 
 nothing else in the suite would notice.
 
 **`stageFlow` carries `reclassified` and `refined` because `in` and `out` cannot show what verification
-does.** Both counts are the union of a report's four arrays, so moving a finding into `immaterial` or
+does.** Both counts are the union of a report's four survivor arrays, `rejected` excluded, so moving a finding into `immaterial` or
 `pre_existing` changes neither — measured over one corpus, verify dropped 2 of the 150 that reached it
 while demoting 21
 severities, which reads as a stage doing nothing. They are each stage's own contribution, taken as growth
@@ -628,7 +628,7 @@ honest per agent and over time, and does not support ranking agents of different
 comparison is the natural thing to reach for and it is wrong.
 
 **Every survivor and every per-lens number comes from the per-stage snapshots, never from `findings.json`.**
-That file is the `--min-confidence`-filtered report and its survivors are split across four arrays; counting
+That file is the `--min-confidence`-filtered report and its survivors are split across four arrays beside `rejected`; counting
 them there undercounts, and the agent that looks unproductive as a result is the one a reflection agent
 proposes dropping. Two numbers come from elsewhere by design, and each field's godoc names its artifact: the
 `report` entry in the stage chain reads `findings.json` precisely to measure that filter's attrition, and
