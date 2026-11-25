@@ -894,9 +894,10 @@ receives, including what counts as critical, major and minor here.</pre>
         </p>
         <p>
           Each stage entry carries the tokens that stage's CLI reported, failed attempts included, and find's is
-          the sum of its agents', so the entries add up to <code>stats.tokens</code> exactly. A skipped stage has no
-          entry. The report's <code>stats.stages</code> lists every stage that ran, and <code>manifest.json</code>
-          repeats it as its top-level <code>stages</code>. A stage snapshot is written as its own stage finishes,
+          the sum of its agents', so the entries add up to the run total exactly. A skipped stage has no entry.
+          The report's <code>stats.stages</code> lists every stage that ran, with the run total in
+          <code>stats.tokens</code>, and <code>manifest.json</code> repeats it as its top-level <code>stages</code>,
+          with the run total in its top-level <code>tokens</code>. A stage snapshot is written as its own stage finishes,
           so it lists only the stages done by then, and its entries add up to its own <code>stats.tokens</code>.
           Counts are not the same quantity across executors, and find's may add up claude, codex and agy agents
           together, so compare stage counts only within one executor.

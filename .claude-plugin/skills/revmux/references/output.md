@@ -53,9 +53,9 @@ Prefer JSON when a model consumes it. Use `--markdown` only for output going str
 Empty lists are arrays, never `null`.
 
 Each `stats.stages` entry carries the tokens that stage's CLI reported, failed attempts included, and
-find's is the sum of its agents', so the entries add up to `stats.tokens` exactly. A skipped stage has no
-entry. The report's `stats.stages` lists every stage that ran, and `manifest.json` repeats it as its
-top-level `stages`. A stage snapshot is written as its own stage finishes, so it lists only the stages
+find's is the sum of its agents', so the entries add up to the run total exactly. A skipped stage has no
+entry. The report's `stats.stages` lists every stage that ran, with the run total in `stats.tokens`, and
+`manifest.json` repeats it as its top-level `stages`, with the run total in its top-level `tokens`. A stage snapshot is written as its own stage finishes, so it lists only the stages
 done by then, and its entries add up to its own `stats.tokens`. Counts are not the same quantity across executors, and find's may add up
 claude, codex and agy agents together, so compare stage counts only within one executor.
 

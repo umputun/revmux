@@ -34,7 +34,9 @@
   - `h.runner` (`pipeline_test.go:422`) gives every verify group the same fixture, keyed only on
     `verifyMarker`, and counts no calls. Per-group answers and attempt counting need a custom runner.
   - No test compares a `StageRun` or a JSON golden exactly, so the new field breaks nothing existing.
-  - No `package main` test decodes the manifest's `stages`, so none is added for the free copy.
+  - No `package main` test decodes the manifest's `stages`, so none was planned for the free copy.
+    ➕ Review added one anyway: `TestRun_tokensPerAgentSumToTheRunTotal` in `app/revmux/artifacts_test.go`
+    asserts the manifest's top-level `stages` equal the report's, with find's tokens equal to the agents' sum.
 - Maintainer's constraints (issue #62 comment):
   - no `omitempty`;
   - amend `.claude/rules/pipeline.md` and the `StageRun` godoc;
@@ -111,6 +113,9 @@ Unchanged edge cases:
 - Modify: `app/pipeline/pipeline_test.go`
 - Modify: `app/pipeline/synthesize_test.go`
 - Modify: `app/pipeline/verify_test.go`
+- ➕ Modify: `app/pipeline/verify.go` (the `verifier.spent()` accessor, added in review)
+- ➕ Modify: `app/finding/report_test.go` (the no-`omitempty` guard and the round-trip fixture, added in review)
+- ➕ Modify: `app/revmux/artifacts_test.go` (the manifest `stages` assertion, added in review)
 
 - [x] add `Tokens int \`json:"tokens"\`` to `StageRun` after `DurationMS` (no `omitempty`)
 - [x] `StageRun` godoc:
@@ -123,6 +128,7 @@ Unchanged edge cases:
       add up to the run total
 - [x] synthesis: pass `out.Stats.Tokens`
 - [x] verify: pass `int(v.tokens.Load())`, with a comment that `out.Stats.Tokens` is the running total
+      (revised in review: read through a `verifier.spent()` accessor, which `verifier.run` uses too)
 - [x] add a test helper `stageTokens(rep) map[string]int` plus a sum check against `rep.Stats.Tokens`, if it
       keeps the assertions short
 - [x] extend existing tests:

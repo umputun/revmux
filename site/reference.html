@@ -450,8 +450,9 @@ claude/opus:hgih         <span class="c-crimson">refused: not an effort</span></
           Empty lists are emitted as arrays rather than <code>null</code>. The four side arrays are not filtered
           by <code>--min-confidence</code> and do not affect the exit code. The per-stage list is
           <code>stats.stages</code> in the report and stage snapshots, and the top-level <code>stages</code> in
-          <code>manifest.json</code>; its tokens add up to <code>stats.tokens</code>. A snapshot lists only the
-          stages finished when it was written.
+          <code>manifest.json</code>. Its tokens add up to the run total, which is <code>stats.tokens</code> in the
+          report and stage snapshots and the top-level <code>tokens</code> in <code>manifest.json</code>. A snapshot
+          lists only the stages finished when it was written.
         </p>
 
         <h2 id="verdicts">Verdicts <a class="anchor" href="#verdicts">#</a></h2>
