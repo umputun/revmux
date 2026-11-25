@@ -161,20 +161,27 @@ so authoring one there commits a review standard to somebody else's repository.
 |---|---|
 | nothing, on a feature branch | `git diff <base>...HEAD` |
 | nothing, on master with uncommitted work | `git diff` and `git diff --staged` |
-| nothing, on master and clean | `git diff HEAD~1` |
-| "the last N commits" | `git diff HEAD~N` |
+| nothing, on master and clean | `git diff HEAD~1..HEAD` |
+| "the last N commits" | `git diff HEAD~N..HEAD` |
 | "since <ref>" | `git diff <ref>..HEAD` |
 | "pr 123", "this PR", a PR URL | `references/pr.md` — resolve, fetch into a worktree, review it there |
 | "issue 123", "triage this", an issue or discussion URL | `references/triage.md` — the panel over a filed item, not a diff |
 | a bare number, kind unnamed | probe pull request, then issue, then discussion — the first that resolves decides which of the two rows above applies |
 | a path | that subtree, as a diff plus a read list |
 
-Two commands here, and no more git than this:
+Three commands here, and no more git than this:
 
 ```bash
 git branch --show-current && git status --short
-git diff <range> --shortstat
+git rev-parse <from> HEAD
+git diff <from-sha>...<head-sha> --shortstat
 ```
+
+**A committed range is pinned to hashes.** `rev-parse` resolves the row's two endpoints once, and the
+same two-hash command is both what the shortstat measures and what the brief hands the subagent:
+`<base-sha>...<head-sha>` for a branch, `<from-sha>..<head-sha>` for the last N commits or since a ref.
+The round then names the exact commits it reviewed. Uncommitted work has nothing to pin and keeps its
+live `git diff`.
 
 **The shortstat goes into the brief.** It is one line in this session and it is the whole of step 1 for
 the subagent, which otherwise spends three to five git calls arriving at the same three numbers — and
@@ -238,7 +245,7 @@ Spawn **one** `general-purpose` agent. Hand it the resolved scope from Step 1 an
 > second refusal of the same operation, ends the preparation: put its text in `notes` and return. Do
 > not retry it through another tool, a shell redirect, an API or a symlink.
 >
-> The scope is: `<the row resolved in Step 1, with its ref range>`, and its scale is
+> The scope is: `<the row resolved in Step 1 and its exact command(s), hashes for a committed range>`, and its scale is
 > `<the shortstat Step 1 printed>`. Take the scale as given rather than measuring it again.
 > Exclusions the user has stated: `<list them, or "none">` — write these under the scope's
 > explicit exclusions. They are decisions already taken, and the diff cannot show you one.
@@ -271,8 +278,9 @@ Spawn **one** `general-purpose` agent. Hand it the resolved scope from Step 1 an
 >    paid for twice, and writing it is most of what this round costs in wall-clock.
 >    - `scope` — required, and **under 1500 characters**. What changed, the commands to see it, its
 >      scale, which files to read in full, what to ignore. Write commands in plainest form:
->      `git diff master...HEAD`, never `git -c core.pager=cat diff ...` — a leading option defeats the
->      child's permission matching.
+>      `git diff <base-sha>...<head-sha>`, never `git -c core.pager=cat diff ...` — a leading option
+>      defeats the child's permission matching. For a committed range use the hashes the brief gave,
+>      never `HEAD`, and add the read-at-target line `task-dir.md` shows.
 >    - `goal` — optional, and **under 1000 characters**. What the change is for, plus a "this is
 >      correct only if…" list. **When the round is the last one before the branch merges, make it the
 >      gate**: say the round exists to answer whether anything in this diff should not ship, and name
@@ -558,7 +566,7 @@ Then run the tests and the linter. A fix that breaks the build is not committed.
 3. Open the next round on the same task and write its own `scope` — the fixes and the range they land
    in. **That is Step 2's subagent again**, with the same one-line announcement, the task id it
    already returned, every exclusion the earlier rounds carried, and a fresh `--shortstat` for the
-   fixes, so a re-review costs the session no more
+   fixes, over two `rev-parse` hashes when they are committed and over the working tree when not, so a re-review costs the session no more
    output than the first round did — and the brief's step 2 is skipped outright, since the id is not in
    question on a round of a task that already has rounds. Then run it:
 
@@ -762,7 +770,8 @@ say so and move on rather than manufacturing an edit to go with each.
 User: "revmux this branch"
 → preflight.sh → all present
 → git branch --show-current + git status --short → on tui-rework, clean
-→ git diff master...HEAD --shortstat → 22 files, +840/-310, handed to the brief as the scale
+→ git rev-parse master HEAD → 3f2a1c0…, e9b7d44…
+→ git diff 3f2a1c0...e9b7d44 --shortstat → 22 files, +840/-310, handed to the brief with the command
 → "Preparing the round for the branch against master…"
 → one subagent: reads the diff once, matches no existing task, derives `tui-rework`, opens
   01-initial, writes task.md/scope/goal → returns round_dir, wrote[3]

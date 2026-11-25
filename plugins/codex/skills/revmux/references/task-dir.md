@@ -90,9 +90,14 @@ Fifteen files, +115/-36. Small, so review it thoroughly rather than broadly.
 Read the change:
 
 ```
-git diff c06c558..HEAD
-git log --format='%H%n%s%n%n%b' c06c558..HEAD
+git diff c06c558..ce8a9e9
+git log --format='%H%n%s%n%n%b' c06c558..ce8a9e9
 ```
+
+The change is c06c558..ce8a9e9. Search tracked source at the target, always:
+`git grep <pattern> ce8a9e9`. Read a file from the working tree only while `git rev-parse HEAD` prints
+ce8a9e953395b7756c296158fe65cc227d25b1dd and `git status --short -- <path>` prints nothing; otherwise read it with
+`git show ce8a9e9:<path>`.
 
 Then read the files it touches in full:
 
@@ -106,13 +111,26 @@ CLAUDE.md                the stdout rule this rewrote
 Ignore `vendor/` entirely.
 ````
 
+### Pin a committed range to its hashes
+
+A round runs for minutes and verify runs last, so `HEAD` and the working tree can move before an agent
+reads them: a commit made mid-run, or an edit to a file the change calls. A verdict then describes code
+nobody reviewed. For a committed range, resolve both ends once (`git rev-parse <base> HEAD`) and write
+the hashes into every command, never `HEAD`. Add the read-at-target lines from the example above, with
+the target hash, full where it is compared with `rev-parse` output. Searches are always pinned, since a
+local edit that removes a call site leaves a live search nothing to find and no path to check; file
+reads are checked when the agent reads, which is the only time the answer holds.
+
+Uncommitted work has no hash to pin and is reviewed live. A pull request already sits in a worktree
+nobody edits, so its scope names the hashes and needs no read-at-target line.
+
 ### Write the plainest form of every command
 
 The agent subprocess runs under a permission layer matching command **prefixes**. A leading option
 changes the prefix and can turn an allowed command into a denied one.
 
-- write `git diff master...HEAD`
-- not `git -c core.pager=cat diff master...HEAD`
+- write `git diff c06c558...ce8a9e9`
+- not `git -c core.pager=cat diff c06c558...ce8a9e9`
 
 When an agent reports a denied command and falls back to reading files directly, check this first —
 the review completes, but blind to the diff.
