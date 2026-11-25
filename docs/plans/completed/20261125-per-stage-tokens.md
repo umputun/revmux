@@ -121,8 +121,8 @@ Unchanged edge cases:
 - [x] `StageRun` godoc:
   - "how long it took, what it spent, and which runner it was resolved to";
   - "The find stage leaves the runner fields empty";
-  - a `Tokens` comment: what the stage's CLI reported, failed attempts included; find is its agents' sum so the
-    entries add up to `Stats.Tokens`; the per-executor caveat by reference to `SourceStat.Tokens`
+  - ~~a `Tokens` comment~~ dropped: no other `StageRun` field carries one, so the semantics live in
+    `.claude/rules/pipeline.md` and the docs instead
 - [x] `stageRun` gains `tokens int`, and its godoc gets one line about it
 - [x] find literal: `Tokens: rep.Stats.Tokens`, with a comment that it is exactly the agents' sum, so the entries
       add up to the run total
@@ -192,7 +192,8 @@ Unchanged edge cases:
   - `"tokens"` after `duration_ms`: find 141200, synthesis 25270, verify 18450, summing to the sample's 184920
     (revised in review: the sample carries a `confirmed` verdict, so it gained a verify entry, and synthesis
     dropped from the planned 43720 to keep the run total that README and `site/index.html` also state);
-  - the agents list shows all four roster rows, summing to find's 141200 (added in review);
+  - the agents list keeps its single row, with a sentence saying it is shortened and that a real run's
+    agent tokens add up to find's (review first added all four rows; cut back to keep the diff to the issue);
   - one or two sentences beside it:
     - the semantics;
     - that the list is `stats.stages` in the report, and top-level `stages` in `manifest.json`, while each

@@ -852,16 +852,7 @@ receives, including what counts as critical, major and minor here.</pre>
     "agents": [
       {"name": "bugs+impl", "lenses": ["bugs", "impl"], "executor": "claude",
        "requested_model": "opus", "actual_model": "claude-opus-5",
-       "effort": "high", "tokens": 48210, "raised": 6, "degraded": false},
-      {"name": "arch+quality", "lenses": ["architecture", "quality"], "executor": "claude",
-       "requested_model": "opus", "actual_model": "claude-opus-5",
-       "effort": "high", "tokens": 41530, "raised": 4, "degraded": false},
-      {"name": "docs+tests", "lenses": ["docs", "tests", "comments"], "executor": "claude",
-       "requested_model": "opus", "actual_model": "claude-opus-5",
-       "effort": "high", "tokens": 9310, "raised": 0, "degraded": true},
-      {"name": "adversarial", "lenses": ["adversarial"], "executor": "codex",
-       "requested_model": "gpt-6.2-sol", "actual_model": "gpt-6.2-sol",
-       "effort": "high", "tokens": 42150, "raised": 3, "degraded": false}
+       "effort": "high", "tokens": 48210, "raised": 6, "degraded": false}
     ]
   },
   "findings": [
@@ -891,6 +882,8 @@ receives, including what counts as critical, major and minor here.</pre>
           verifier's one-line account of its verdict when it gave one, and a rejected finding moves to
           <code>rejected</code> with it.
           Empty lists are emitted as arrays rather than <code>null</code>.
+          The <code>agents</code> list above is shortened to its first entry; a real run lists every roster agent,
+          and their tokens add up to find's.
         </p>
         <p>
           Each stage entry carries the tokens that stage's CLI reported, failed attempts included, and find's is

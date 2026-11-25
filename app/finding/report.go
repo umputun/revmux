@@ -79,15 +79,10 @@ type Stats struct {
 type StageRun struct {
 	Name       string `json:"name"`
 	DurationMS int64  `json:"duration_ms"`
-
-	// Tokens is what the stage's CLI reported, failed attempts included. find carries its agents' sum, so
-	// the entries add up to Stats.Tokens exactly. The count is not the same quantity across executors;
-	// see SourceStat.Tokens.
-	Tokens int `json:"tokens"`
-
-	Executor string `json:"executor,omitempty"`
-	Model    string `json:"model,omitempty"`
-	Effort   string `json:"effort,omitempty"`
+	Tokens     int    `json:"tokens"`
+	Executor   string `json:"executor,omitempty"`
+	Model      string `json:"model,omitempty"`
+	Effort     string `json:"effort,omitempty"`
 }
 
 // Degraded reports whether any source failed to deliver. A degraded run that reads like a
