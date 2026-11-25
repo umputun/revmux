@@ -296,7 +296,7 @@ Spawn **one** `general-purpose` agent. Hand it the resolved scope from Step 1 an
 >      never `HEAD`, and add these two lines with the target hash: "Search tracked source at the
 >      target, always: `git grep <pattern> <target-sha>`. Read a file from the working tree only while
 >      `git rev-parse HEAD` prints <full target sha> and `git status --short -- <path>` prints nothing;
->      otherwise read it with `git show <target-sha>:<path>`."
+>      otherwise read it with `git show <target-sha>:<path relative to the checkout root>`."
 >    - `goal` — optional, and **under 1000 characters**. What the change is for, plus a "this is
 >      correct only if…" list. **When the round is the last one before the branch merges, make it the
 >      gate**: say the round exists to answer whether anything in this diff should not ship, and name

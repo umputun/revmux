@@ -97,7 +97,7 @@ git log --format='%H%n%s%n%n%b' c06c558..ce8a9e9
 The change is c06c558..ce8a9e9. Search tracked source at the target, always:
 `git grep <pattern> ce8a9e9`. Read a file from the working tree only while `git rev-parse HEAD` prints
 ce8a9e953395b7756c296158fe65cc227d25b1dd and `git status --short -- <path>` prints nothing; otherwise read it with
-`git show ce8a9e9:<path>`.
+`git show ce8a9e9:<path relative to the checkout root>`.
 
 Then read the files it touches in full:
 
